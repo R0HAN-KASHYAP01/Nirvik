@@ -1,7 +1,10 @@
+// lib/features/schemes/presentation/widgets/institute_list_item.dart
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../models/institute.dart';
+import '../../../../models/user.dart';
+import '../../../calls/presentation/widgets/call_button.dart';
 import 'institute_status_chip.dart';
 
 class InstituteListItem extends StatelessWidget {
@@ -67,7 +70,16 @@ class InstituteListItem extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Column(
+              children: [
+                CallButton(
+                  calleeId: institute.id,
+                  calleeName: institute.name,
+                  calleeRole: UserRole.ngoInstitute,
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              ],
+            ),
           ],
         ),
       ),

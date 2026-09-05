@@ -9,7 +9,6 @@ import '../features/dashboard/presentation/official_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_profile_screen.dart';
 import '../features/dashboard/presentation/pmu_monitoring_screen.dart';
-import '../features/ngo/presentation/ngo_dashboard_screen.dart';
 import '../features/ngo/presentation/ngo_profile_screen.dart';
 import '../features/ngo/presentation/attendance_screen.dart';
 import '../features/ngo/presentation/reports_screen.dart';

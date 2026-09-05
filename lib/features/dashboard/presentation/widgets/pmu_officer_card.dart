@@ -1,7 +1,10 @@
+// lib/features/dashboard/presentation/widgets/pmu_officer_card.dart
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../models/pmu_officer_summary.dart';
+import '../../../../models/user.dart';
+import '../../../calls/presentation/widgets/call_button.dart';
 
 class PmuOfficerCard extends StatelessWidget {
   final PmuOfficerSummary officer;
@@ -74,9 +77,19 @@ class PmuOfficerCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                StatusBadge(
-                  label: officer.availability.label,
-                  color: _availabilityColor(officer.availability),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    StatusBadge(
+                      label: officer.availability.label,
+                      color: _availabilityColor(officer.availability),
+                    ),
+                    CallButton(
+                      calleeId: officer.id,
+                      calleeName: officer.name,
+                      calleeRole: UserRole.inspector,
+                    ),
+                  ],
                 ),
               ],
             ),

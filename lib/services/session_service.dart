@@ -1,3 +1,4 @@
+// lib/services/session_service.dart
 import '../models/user.dart';
 
 /// Lightweight in-memory session state.
@@ -14,9 +15,6 @@ class SessionService {
     currentUser = user;
   }
 
-  // Kept for role_selection_screen.dart, which is currently unused in the
-  // real login flow (role now comes from Supabase) but is left in the
-  // codebase rather than deleted. Not called anywhere in the live auth path.
   void updateRole(UserRole role) {
     final user = currentUser;
     if (user != null) {

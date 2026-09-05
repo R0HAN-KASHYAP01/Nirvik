@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'official_home_screen.dart';
 import 'pmu_monitoring_screen.dart';
-import '../../../core/widgets/profile_placeholder_screen.dart';
+import 'official_profile_screen.dart';
 import '../../schemes/presentation/schemes_screen.dart';
 
 class OfficialShellScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
     OfficialHomeScreen(),
     SchemesScreen(),
     PmuMonitoringScreen(),
-    ProfilePlaceholderScreen(),
+    OfficialProfileScreen(),
   ];
 
   @override

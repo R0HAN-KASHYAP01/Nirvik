@@ -8,6 +8,7 @@ import '../features/ngo/presentation/ngo_shell_screen.dart';
 import '../features/dashboard/presentation/official_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_profile_screen.dart';
+import '../features/dashboard/presentation/official_profile_screen.dart';
 import '../features/dashboard/presentation/pmu_monitoring_screen.dart';
 import '../features/ngo/presentation/ngo_profile_screen.dart';
 import '../features/ngo/presentation/attendance_screen.dart';
@@ -28,6 +29,7 @@ class AppRoutes {
   static const String officialDashboard = '/official-dashboard';
   static const String inspectorDashboard = '/inspector-dashboard';
   static const String inspectorProfile = '/inspector-profile';
+  static const String officialProfile = '/official-profile';
   static const String ngoDashboard = '/ngo-dashboard';
   static const String ngoProfile = '/ngo-profile';
 
@@ -57,6 +59,7 @@ class AppRoutes {
         officialDashboard: (context) => const OfficialShellScreen(),
         inspectorDashboard: (context) => const InspectorShellScreen(),
         inspectorProfile: (context) => const InspectorProfileScreen(),
+        officialProfile: (context) => const OfficialProfileScreen(),
         ngoDashboard: (context) => const NgoShellScreen(),
         ngoProfile: (context) => const NgoProfileScreen(),
 

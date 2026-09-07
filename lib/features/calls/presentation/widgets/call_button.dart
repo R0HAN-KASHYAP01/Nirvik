@@ -1,5 +1,6 @@
 // lib/features/calls/presentation/widgets/call_button.dart
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../models/user.dart';
 import '../../../../services/session_service.dart';
 import '../../../../services/video_call_service.dart';
@@ -18,6 +19,19 @@ class CallButton extends StatelessWidget {
     required this.calleeRole,
   });
 
+  Future<bool> _ensurePermissions(BuildContext context) async {
+    final statuses = await [Permission.camera, Permission.microphone].request();
+    final granted = statuses.values.every((s) => s.isGranted);
+    if (!granted && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Camera and microphone permissions are required to make a call.'),
+        ),
+      );
+    }
+    return granted;
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = SessionService.instance.currentUser!;
@@ -28,6 +42,9 @@ class CallButton extends StatelessWidget {
       icon: const Icon(Icons.video_call),
       tooltip: 'Call $calleeName',
       onPressed: () async {
+        final hasPermissions = await _ensurePermissions(context);
+        if (!hasPermissions) return;
+
         final call = await VideoCallService.instance.startCall(
           calleeId: calleeId,
           callType: callType,

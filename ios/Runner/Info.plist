@@ -1,9 +1,14 @@
+<!-- ios/Runner/Info.plist -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	  <key>NSLocationWhenInUseUsageDescription</key>
-  <string>We use your location to record the institute's address.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to record the institute's address.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access so inspectors and officials can make video calls.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access so you can be heard during video calls.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

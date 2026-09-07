@@ -16,7 +16,7 @@ class AiAttendanceService {
   ///
   /// For Flutter Web running on the same computer:
   /// 127.0.0.1 points to the computer running FastAPI.
-  static const String baseUrl = 'http://10.221.136.192:8000';
+  static const String baseUrl = 'http://10.194.183.192:8000';
 
   /// Request timeout used for API calls.
   static const Duration requestTimeout = Duration(seconds: 10);
@@ -116,8 +116,8 @@ class AiAttendanceService {
     final uri = Uri.parse('$baseUrl/api/v1/risk/calculate');
 
     final body = <String, dynamic>{
-      'attendance': attendance ?? <String, dynamic>{},
-      'project': project ?? <String, dynamic>{},
+      if (attendance != null) 'attendance': attendance,
+      if (project != null) 'project': project,
       'inspections': inspections,
     };
 

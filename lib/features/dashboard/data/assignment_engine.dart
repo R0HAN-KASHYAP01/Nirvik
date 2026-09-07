@@ -1,4 +1,3 @@
-
 import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -192,70 +191,68 @@ class AssignmentEngine {
   /// - currently online
   /// - recent last_seen
   /// - corresponding pmu_inspectors profile exists
-  Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
-    final response = await _client
-        .from('profiles')
-        .select(
-          'id, full_name, role, status, is_online, last_seen',
-        )
-        .eq('role', 'pmu_inspector')
-        .eq('status', 'approved')
-        .eq('is_online', true);
+Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
+  final response = await _client
+      .from('profiles')
+      .select(
+        'id, full_name, role, status, is_online, last_seen',
+      )
+      .eq('role', 'pmu_inspector')
+      .eq('status', 'approved')
+      .eq('is_online', true);
 
-    final rows = response as List<dynamic>;
+  final rows = response as List<dynamic>;
 
-    final now = DateTime.now().toUtc();
+  final now = DateTime.now().toUtc();
 
-    final inspectors = <_InspectorCandidate>[];
+  final inspectors = <_InspectorCandidate>[];
 
-    for (final row in rows) {
-      if (row is! Map<String, dynamic>) {
-        continue;
-      }
-
-      final profileId = row['id']?.toString();
-
-      if (profileId == null || profileId.isEmpty) {
-        continue;
-      }
-
-      final lastSeen = _parseDateTime(row['last_seen']);
-
-      if (lastSeen == null) {
-        continue;
-      }
-
-      final age = now.difference(lastSeen.toUtc());
-
-      if (age.isNegative || age > const Duration(minutes: 2)) {
-        continue;
-      }
-
-      final inspectorProfile = await _getInspectorProfile(profileId);
-
-      if (inspectorProfile == null) {
-        continue;
-      }
-
-      final activeAssignments = await _getActiveAssignmentCount(
-        profileId,
-      );
-
-      inspectors.add(
-        _InspectorCandidate(
-          profileId: profileId,
-          fullName: row['full_name']?.toString() ?? 'Unnamed Inspector',
-          latitude: _parseCoordinate(inspectorProfile['latitude']),
-          longitude: _parseCoordinate(inspectorProfile['longitude']),
-          activeAssignments: activeAssignments,
-        ),
-      );
+  for (final row in rows) {
+    if (row is! Map<String, dynamic>) {
+      continue;
     }
 
-    return inspectors;
+    final profileId = row['id']?.toString();
+
+    if (profileId == null || profileId.isEmpty) {
+      continue;
+    }
+
+    final lastSeen = _parseDateTime(row['last_seen']);
+
+    if (lastSeen == null) {
+      continue;
+    }
+
+    final age = now.difference(lastSeen.toUtc());
+
+    if (age.isNegative || age > const Duration(minutes: 2)) {
+      continue;
+    }
+
+    final inspectorProfile = await _getInspectorProfile(profileId);
+
+    if (inspectorProfile == null) {
+      continue;
+    }
+
+    final activeAssignments = await _getActiveAssignmentCount(
+      profileId,
+    );
+
+    inspectors.add(
+      _InspectorCandidate(
+        profileId: profileId,
+        fullName: row['full_name']?.toString() ?? 'Unnamed Inspector',
+        latitude: _parseCoordinate(inspectorProfile['latitude']),
+        longitude: _parseCoordinate(inspectorProfile['longitude']),
+        activeAssignments: activeAssignments,
+      ),
+    );
   }
 
-  /// Fetch PMU-specific inspector information.
+  return inspectors;
+} /// Fetch PMU-specific inspector information.
   Future<Map<String, dynamic>?> _getInspectorProfile(
     String profileId,
   ) async {

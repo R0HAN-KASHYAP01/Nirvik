@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -16,7 +15,7 @@ class AiAttendanceService {
   ///
   /// For Flutter Web running on the same computer:
   /// 127.0.0.1 points to the computer running FastAPI.
-  static const String baseUrl = 'http://10.194.183.192:8000';
+  static const String baseUrl = 'http://127.0.0.1:8000';
 
   /// Request timeout used for API calls.
   static const Duration requestTimeout = Duration(seconds: 10);
@@ -61,9 +60,7 @@ class AiAttendanceService {
   ///
   /// Endpoint:
   /// GET /api/v1/attendance/{sessionId}
-  Future<Map<String, dynamic>> getAttendanceSession(
-    String sessionId,
-  ) async {
+  Future<Map<String, dynamic>> getAttendanceSession(String sessionId) async {
     final uri = Uri.parse('$baseUrl/api/v1/attendance/$sessionId');
 
     final response = await http.get(uri).timeout(requestTimeout);
@@ -110,8 +107,7 @@ class AiAttendanceService {
   Future<Map<String, dynamic>> calculateProjectRisk({
     Map<String, dynamic>? attendance,
     Map<String, dynamic>? project,
-    List<Map<String, dynamic>> inspections =
-        const <Map<String, dynamic>>[],
+    List<Map<String, dynamic>> inspections = const <Map<String, dynamic>>[],
   }) async {
     final uri = Uri.parse('$baseUrl/api/v1/risk/calculate');
 
@@ -124,9 +120,7 @@ class AiAttendanceService {
     final response = await http
         .post(
           uri,
-          headers: <String, String>{
-            'Content-Type': 'application/json',
-          },
+          headers: <String, String>{'Content-Type': 'application/json'},
           body: jsonEncode(body),
         )
         .timeout(requestTimeout);
@@ -226,4 +220,3 @@ class AiAttendanceApiException implements Exception {
         '$message (HTTP $statusCode)';
   }
 }
-

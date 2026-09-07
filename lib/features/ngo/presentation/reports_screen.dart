@@ -108,32 +108,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // ============================================================
 
   Future<void> _pickAttachment() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: [
-        'pdf',
-        'jpg',
-        'jpeg',
-        'png',
-      ],
-      withData: true,
-    );
+  final files = await FilePicker.pickFiles(
+    type: FileType.custom,
+    allowedExtensions: [
+      'pdf',
+      'jpg',
+      'jpeg',
+      'png',
+    ],
+  );
 
-    if (result == null || result.files.isEmpty) {
-      return;
-    }
-
-    final file = result.files.first;
-
-    if (file.bytes == null) {
-      return;
-    }
-
-    setState(() {
-      _attachmentBytes = file.bytes;
-      _attachmentName = file.name;
-    });
+  if (files.isEmpty) {
+    return;
   }
+
+  final file = files.first;
+  final bytes = await file.readAsBytes();
+
+  if (bytes.isEmpty) {
+    return;
+  }
+
+  setState(() {
+    _attachmentBytes = bytes;
+    _attachmentName = file.name;
+  });
+}
 
   // ============================================================
   // SUBMIT REPORT

@@ -140,9 +140,16 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
         _longitude = position.longitude;
       });
 
-      // Reverse geocoding
+      // Reverse geocoding — Geocoding() is constructed lazily, right here,
+      // instead of as an eager field. The geocoding package has no
+      // registered platform implementation on web, so constructing it
+      // eagerly (as a field initializer) threw "Unexpected null value"
+      // the instant this screen's State was created — even just from
+      // sitting inactive in the shell's IndexedStack. Building it here
+      // keeps that failure contained to this already-existing try/catch,
+      // exactly like the comment below always intended.
       try {
-        final placemarks = await placemarkFromCoordinates(
+        final placemarks = await Geocoding().placemarkFromCoordinates(
           position.latitude,
           position.longitude,
         );
@@ -253,9 +260,9 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     }
   }
 
-  // =========================
+  // ============================================================
   // LOGOUT
-  // =========================
+  // ============================================================
 
   Future<void> _handleLogout() async {
     try {
@@ -271,6 +278,17 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.login,
+      (route) => false,
+    );
+  }
+
+  // ============================================================
+  // BACK TO HOME
+  // ============================================================
+
+  void _goBackToHome() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.ngoDashboard,
       (route) => false,
     );
   }
@@ -307,20 +325,22 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     return Scaffold(
       backgroundColor: background,
 
+      // IMPORTANT:
+      // Profile page ka apna bottom navigation nahi hai.
+      // Sirf top AppBar rahega.
       appBar: AppBar(
         backgroundColor: darkBlue,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
 
+        // TOP LEFT BACK BUTTON
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 19,
           ),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
+          onPressed: _goBackToHome,
         ),
 
         title: const Text(
@@ -341,7 +361,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           : SafeArea(
               child: Form(
                 key: _formKey,
-
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                     16,
@@ -349,7 +368,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                     16,
                     32,
                   ),
-
                   children: [
                     _buildInstituteCard(),
 
@@ -401,12 +419,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
                     const SizedBox(height: 26),
 
-                    // SAVE PROFILE
                     _buildSaveButton(),
 
                     const SizedBox(height: 12),
 
-                    // LOGOUT
                     _buildLogoutButton(),
                   ],
                 ),
@@ -414,6 +430,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             ),
     );
   }
+
+  // ============================================================
+  // SECTION TITLE
+  // ============================================================
 
   Widget _buildSectionTitle(
     String title,
@@ -430,9 +450,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             color: textDark,
           ),
         ),
-
         const SizedBox(height: 3),
-
         Text(
           subtitle,
           style: const TextStyle(
@@ -444,10 +462,13 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // INSTITUTE CARD
+  // ============================================================
+
   Widget _buildInstituteCard() {
     return Container(
       padding: const EdgeInsets.all(16),
-
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -457,9 +478,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             Color(0xFF083B66),
           ],
         ),
-
         borderRadius: BorderRadius.circular(16),
-
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -468,13 +487,11 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           ),
         ],
       ),
-
       child: Row(
         children: [
           Container(
             width: 58,
             height: 58,
-
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
@@ -482,7 +499,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                 color: Colors.white.withValues(alpha: 0.20),
               ),
             ),
-
             child: const Icon(
               Icons.account_balance_rounded,
               size: 30,
@@ -503,7 +519,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                         _instituteName(),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -519,12 +534,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                         horizontal: 9,
                         vertical: 5,
                       ),
-
                       decoration: BoxDecoration(
                         color: greenLight,
                         borderRadius: BorderRadius.circular(20),
                       ),
-
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -533,9 +546,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                             size: 12,
                             color: green,
                           ),
-
                           SizedBox(width: 4),
-
                           Text(
                             'Active',
                             style: TextStyle(
@@ -586,7 +597,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                       child: Text(
                         _registrationText(),
                         overflow: TextOverflow.ellipsis,
-
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -604,6 +614,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // REGISTRATION FIELD
+  // ============================================================
+
   Widget _buildRegistrationField() {
     return Container(
       decoration: BoxDecoration(
@@ -613,38 +627,30 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           color: borderColor,
         ),
       ),
-
       child: TextFormField(
         controller: _registrationController,
-
         style: const TextStyle(
           fontSize: 13,
           color: textDark,
           fontWeight: FontWeight.w500,
         ),
-
         decoration: const InputDecoration(
           prefixIcon: Icon(
             Icons.badge_outlined,
             color: primaryBlue,
             size: 21,
           ),
-
           hintText: 'Enter registration number',
-
           hintStyle: TextStyle(
             fontSize: 12,
             color: textGrey,
           ),
-
           border: InputBorder.none,
-
           contentPadding: EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 14,
           ),
         ),
-
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
             return 'Please enter registration number';
@@ -656,6 +662,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // ADDRESS FIELD
+  // ============================================================
+
   Widget _buildAddressField() {
     return Container(
       decoration: BoxDecoration(
@@ -665,39 +675,30 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           color: borderColor,
         ),
       ),
-
       child: TextFormField(
         controller: _addressController,
-
         maxLines: 3,
         minLines: 2,
-
         style: const TextStyle(
           fontSize: 13,
           color: textDark,
           fontWeight: FontWeight.w500,
         ),
-
         decoration: const InputDecoration(
           prefixIcon: Padding(
             padding: EdgeInsets.only(bottom: 35),
-
             child: Icon(
               Icons.location_on_outlined,
               color: primaryBlue,
               size: 21,
             ),
           ),
-
           hintText: 'Registered office / operating address',
-
           hintStyle: TextStyle(
             fontSize: 12,
             color: textGrey,
           ),
-
           border: InputBorder.none,
-
           contentPadding: EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 14,
@@ -707,34 +708,31 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // LOCATION BUTTON
+  // ============================================================
+
   Widget _buildLocationButton() {
     return SizedBox(
       width: double.infinity,
       height: 44,
-
       child: OutlinedButton.icon(
         onPressed:
             _detectingLocation ? null : _detectLocation,
-
         style: OutlinedButton.styleFrom(
           backgroundColor: lightBlue,
-
           foregroundColor: primaryBlue,
-
           side: const BorderSide(
             color: Color(0xFFC7DCEA),
           ),
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-
         icon: _detectingLocation
             ? const SizedBox(
                 width: 17,
                 height: 17,
-
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: primaryBlue,
@@ -744,12 +742,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                 Icons.my_location_rounded,
                 size: 19,
               ),
-
         label: Text(
           _detectingLocation
               ? 'Detecting location...'
               : 'Detect My Location',
-
           style: const TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
@@ -759,22 +755,22 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // LOCATION ERROR
+  // ============================================================
+
   Widget _buildLocationError() {
     return Container(
       padding: const EdgeInsets.all(11),
-
       decoration: BoxDecoration(
         color: Colors.red.shade50,
         borderRadius: BorderRadius.circular(9),
-
         border: Border.all(
           color: Colors.red.shade100,
         ),
       ),
-
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-
         children: [
           Icon(
             Icons.error_outline_rounded,
@@ -787,7 +783,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           Expanded(
             child: Text(
               _locationError!,
-
               style: TextStyle(
                 fontSize: 11.5,
                 color: Colors.red.shade700,
@@ -800,48 +795,43 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // COORDINATES CARD
+  // ============================================================
+
   Widget _buildCoordinatesCard() {
     final hasLocation =
         _latitude != null && _longitude != null;
 
     return Container(
       padding: const EdgeInsets.all(12),
-
       decoration: BoxDecoration(
         color: hasLocation
             ? greenLight
             : Colors.white,
-
         borderRadius: BorderRadius.circular(10),
-
         border: Border.all(
           color: hasLocation
               ? const Color(0xFFBFE8D4)
               : borderColor,
         ),
       ),
-
       child: Row(
         children: [
           Container(
             width: 34,
             height: 34,
-
             decoration: BoxDecoration(
               color: hasLocation
                   ? Colors.white
                   : lightBlue,
-
               shape: BoxShape.circle,
             ),
-
             child: Icon(
               hasLocation
                   ? Icons.location_on_rounded
                   : Icons.location_off_outlined,
-
               size: 18,
-
               color: hasLocation
                   ? green
                   : primaryBlue,
@@ -854,13 +844,11 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             child: Column(
               crossAxisAlignment:
                   CrossAxisAlignment.start,
-
               children: [
                 Text(
                   hasLocation
                       ? 'Location Coordinates'
                       : 'Location',
-
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -872,7 +860,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
                 Text(
                   _coordinatesText(),
-
                   style: const TextStyle(
                     fontSize: 10.5,
                     color: textGrey,
@@ -889,15 +876,12 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                 horizontal: 8,
                 vertical: 5,
               ),
-
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
               ),
-
               child: const Text(
                 'Updated',
-
                 style: TextStyle(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,
@@ -910,6 +894,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
+  // ============================================================
+  // SCHEME DROPDOWN
+  // ============================================================
+
   Widget _buildSchemeDropdown() {
     return Container(
       decoration: BoxDecoration(
@@ -919,47 +907,36 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           color: borderColor,
         ),
       ),
-
       child: DropdownButtonFormField<NgoSchemeType>(
         initialValue: _selectedScheme,
-
         isExpanded: true,
-
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           color: primaryBlue,
         ),
-
         decoration: const InputDecoration(
           prefixIcon: Icon(
             Icons.account_balance_outlined,
             color: primaryBlue,
             size: 20,
           ),
-
           hintText: 'Select Scheme',
-
           hintStyle: TextStyle(
             fontSize: 12,
             color: textGrey,
           ),
-
           border: InputBorder.none,
-
           contentPadding: EdgeInsets.symmetric(
             horizontal: 9,
             vertical: 4,
           ),
         ),
-
         items: NgoSchemeType.values.map(
           (scheme) {
             return DropdownMenuItem<NgoSchemeType>(
               value: scheme,
-
               child: Text(
                 scheme.label,
-
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -969,13 +946,11 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             );
           },
         ).toList(),
-
         onChanged: (value) {
           setState(() {
             _selectedScheme = value;
           });
         },
-
         validator: (value) {
           if (value == null) {
             return 'Please select a scheme';
@@ -987,37 +962,30 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
-  // =========================
+  // ============================================================
   // SAVE PROFILE BUTTON
-  // =========================
+  // ============================================================
 
   Widget _buildSaveButton() {
     return SizedBox(
       width: double.infinity,
       height: 50,
-
       child: ElevatedButton(
         onPressed: _saving ? null : _saveProfile,
-
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
-
           disabledBackgroundColor:
               primaryBlue.withValues(alpha: 0.60),
-
           elevation: 0,
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(11),
           ),
         ),
-
         child: _saving
             ? const SizedBox(
                 width: 22,
                 height: 22,
-
                 child: CircularProgressIndicator(
                   strokeWidth: 2.2,
                   color: Colors.white,
@@ -1026,18 +994,14 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             : const Row(
                 mainAxisAlignment:
                     MainAxisAlignment.center,
-
                 children: [
                   Icon(
                     Icons.save_rounded,
                     size: 19,
                   ),
-
                   SizedBox(width: 8),
-
                   Text(
                     'Save Profile',
-
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -1049,42 +1013,33 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     );
   }
 
-  // =========================
+  // ============================================================
   // LOGOUT BUTTON
-  // =========================
+  // ============================================================
 
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
       height: 46,
-
       child: OutlinedButton.icon(
         onPressed: _handleLogout,
-
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
-
           foregroundColor: const Color(0xFFD64545),
-
           side: const BorderSide(
             color: Color(0xFFE3B8B8),
           ),
-
           elevation: 0,
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(11),
           ),
         ),
-
         icon: const Icon(
           Icons.logout_rounded,
           size: 19,
         ),
-
         label: const Text(
           'Logout',
-
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w800,

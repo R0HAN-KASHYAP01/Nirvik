@@ -168,27 +168,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // ============================================================
 
   Future<void> _pickVideo({required bool isBeneficiary}) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-      withData: true,
-    );
+  final files = await FilePicker.pickFiles(
+    type: FileType.video,
+  );
 
-    if (result == null || result.files.isEmpty) return;
+  if (files.isEmpty) return;
 
-    final file = result.files.first;
+  final file = files.first;
+  final bytes = await file.readAsBytes();
 
-    if (file.bytes == null) return;
+  if (bytes.isEmpty) return;
 
-    setState(() {
-      if (isBeneficiary) {
-        _beneficiaryVideoBytes = file.bytes;
-        _beneficiaryVideoName = file.name;
-      } else {
-        _staffVideoBytes = file.bytes;
-        _staffVideoName = file.name;
-      }
-    });
-  }
+  setState(() {
+    if (isBeneficiary) {
+      _beneficiaryVideoBytes = bytes;
+      _beneficiaryVideoName = file.name;
+    } else {
+      _staffVideoBytes = bytes;
+      _staffVideoName = file.name;
+    }
+  });
+}
 
   // ============================================================
   // MANUAL ATTENDANCE SUBMISSION

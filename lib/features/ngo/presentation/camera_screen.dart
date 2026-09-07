@@ -86,23 +86,23 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-      withData: true,
-    );
+  final files = await FilePicker.pickFiles(
+    type: FileType.video,
+  );
 
-    if (result == null || result.files.isEmpty) return;
+  if (files.isEmpty) return;
 
-    final file = result.files.first;
+  final file = files.first;
+  final bytes = await file.readAsBytes();
 
-    if (file.bytes == null) return;
+  if (bytes.isEmpty) return;
 
-    setState(() {
-      _videoBytes = file.bytes;
-      _videoName = file.name;
-      _uploadError = null;
-    });
-  }
+  setState(() {
+    _videoBytes = bytes;
+    _videoName = file.name;
+    _uploadError = null;
+  });
+}
 
   Future<void> _submitLiveLink() async {
     final user = SessionService.instance.currentUser;

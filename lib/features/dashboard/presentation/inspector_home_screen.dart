@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/routes.dart';
+import '../../../app/theme.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/dashboard_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/section_header.dart';
@@ -58,13 +58,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
 
       debugPrint('Failed to load assignments: $error');
     }
-  }
-
-  void _logout(BuildContext context) {
-    SessionService.instance.clear();
-
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
   }
 
   List<AssignmentSummary> get _todaysAssignments {
@@ -123,21 +116,7 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              DashboardHeader(
-                greeting: 'Welcome back,',
-                userName: user?.name ?? 'PMU Inspector',
-                onNotificationTap: () {},
-                onLogoutTap: () => _logout(context),
-                trailingActions: [
-                  IconButton(
-                    icon: const Icon(Icons.map_outlined),
-                    tooltip: 'Institute Map',
-                    onPressed: () {
-                      Navigator.of(context).pushNamed(AppRoutes.instituteMap);
-                    },
-                  ),
-                ],
-              ),
+              _InspectorHeader(userName: user?.name ?? 'PMU Inspector'),
 
               const SizedBox(height: 20),
 
@@ -151,48 +130,48 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
 
               const SizedBox(height: 24),
 
-              GridView.count(
-                crossAxisCount: 4,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 0.95,
+              // Row of Expanded cards — each sizes to its own content, so it
+              // can never overflow regardless of text length or font scale
+              // (the previous fixed-aspect-ratio GridView could).
+              Row(
                 children: [
-                  SummaryStatCard(
-                    icon: Icons.today,
-                    label: 'Today',
-                    count: _isLoading ? '—' : '$_todayCount',
-                    onTap: () {
-                      _openAssignments(filter: 'today');
-                    },
+                  Expanded(
+                    child: SummaryStatCard(
+                      icon: Icons.today,
+                      label: 'Today',
+                      count: _isLoading ? '—' : '$_todayCount',
+                      onTap: () => _openAssignments(filter: 'today'),
+                    ),
                   ),
-                  SummaryStatCard(
-                    icon: Icons.error_outline,
-                    label: 'Overdue',
-                    count: _isLoading ? '—' : '$_overdueCount',
-                    accentColor: Colors.red,
-                    onTap: () {
-                      _openAssignments(status: AssignmentStatus.overdue);
-                    },
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SummaryStatCard(
+                      icon: Icons.error_outline,
+                      label: 'Overdue',
+                      count: _isLoading ? '—' : '$_overdueCount',
+                      accentColor: Colors.red,
+                      onTap: () => _openAssignments(status: AssignmentStatus.overdue),
+                    ),
                   ),
-                  SummaryStatCard(
-                    icon: Icons.upcoming_outlined,
-                    label: 'Upcoming',
-                    count: _isLoading ? '—' : '$_upcomingCount',
-                    accentColor: Colors.orange,
-                    onTap: () {
-                      _openAssignments(filter: 'upcoming');
-                    },
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SummaryStatCard(
+                      icon: Icons.upcoming_outlined,
+                      label: 'Upcoming',
+                      count: _isLoading ? '—' : '$_upcomingCount',
+                      accentColor: Colors.orange,
+                      onTap: () => _openAssignments(filter: 'upcoming'),
+                    ),
                   ),
-                  SummaryStatCard(
-                    icon: Icons.check_circle_outline,
-                    label: 'Done',
-                    count: _isLoading ? '—' : '$_completedCount',
-                    accentColor: Colors.green,
-                    onTap: () {
-                      _openAssignments(status: AssignmentStatus.completed);
-                    },
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SummaryStatCard(
+                      icon: Icons.check_circle_outline,
+                      label: 'Done',
+                      count: _isLoading ? '—' : '$_completedCount',
+                      accentColor: Colors.green,
+                      onTap: () => _openAssignments(status: AssignmentStatus.completed),
+                    ),
                   ),
                 ],
               ),
@@ -297,6 +276,50 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Header for this screen only — greeting, name, and the map/notification
+/// actions, with no logout button. The shared DashboardHeader (still used
+/// elsewhere, e.g. NGO dashboard) is untouched.
+class _InspectorHeader extends StatelessWidget {
+  final String userName;
+  const _InspectorHeader({required this.userName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.10),
+          child: const Icon(Icons.person, color: AppColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Welcome back,', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              Text(
+                userName,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.map_outlined, color: AppColors.textPrimary),
+          tooltip: 'Institute Map',
+          onPressed: () => Navigator.of(context).pushNamed(AppRoutes.instituteMap),
+        ),
+        IconButton(
+          icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
+          onPressed: () {},
+        ),
+      ],
     );
   }
 }

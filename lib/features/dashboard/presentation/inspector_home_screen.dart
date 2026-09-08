@@ -1,5 +1,4 @@
-// File: lib/features/dashboard/presentation/inspector_home_screen.dart
-
+// lib/features/dashboard/presentation/inspector_home_screen.dart
 import 'package:flutter/material.dart';
 import '../../../services/session_service.dart';
 import '../../../app/routes.dart';
@@ -11,6 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../data/mock_dashboard_data.dart';
 import 'widgets/assignment_card.dart';
+import '../../calls/presentation/widgets/random_call_button.dart';
 
 class InspectorHomeScreen extends StatelessWidget {
   const InspectorHomeScreen({super.key});
@@ -51,6 +51,13 @@ class InspectorHomeScreen extends StatelessWidget {
               onPressed: () => Navigator.of(context).pushNamed(AppRoutes.inspectionWorkflowPlaceholder),
             ),
 
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: RandomVideoCallButton(),
+            ),
+
             const SizedBox(height: 24),
 
             GridView.count(
@@ -59,7 +66,7 @@ class InspectorHomeScreen extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
-              childAspectRatio: 0.95,
+              childAspectRatio: 0.78,
               children: [
                 SummaryStatCard(
                   icon: Icons.today,

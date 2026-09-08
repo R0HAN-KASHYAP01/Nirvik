@@ -44,6 +44,30 @@ class VideoCallService {
     return VideoCall.fromJson(inserted);
   }
 
+  /// Finds a random institute within [radiusKm] of the inspector's
+  /// current position and starts a call to it. The inspector never
+  /// picks who to call — the backend selects one at random.
+  /// Returns null if no institute is within range.
+  Future<VideoCall?> startRandomNearbyCall({
+    required double inspectorLat,
+    required double inspectorLng,
+    double radiusKm = 50,
+  }) async {
+    final response = await _client.rpc('get_random_nearby_institute', params: {
+      'p_lat': inspectorLat,
+      'p_lng': inspectorLng,
+      'p_radius_km': radiusKm,
+    });
+
+    final rows = response as List<dynamic>;
+    if (rows.isEmpty) return null;
+
+    final institute = rows.first as Map<String, dynamic>;
+    final calleeId = institute['profile_id'] as String;
+
+    return startCall(calleeId: calleeId, callType: 'inspector_to_institute');
+  }
+
   Stream<List<VideoCall>> incomingCalls() {
     final uid = _client.auth.currentUser!.id;
     return _client

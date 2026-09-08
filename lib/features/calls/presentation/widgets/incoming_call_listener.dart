@@ -7,10 +7,16 @@ import '../../../../models/video_call.dart';
 import '../../../../services/session_service.dart';
 import '../../../../services/video_call_service.dart';
 import '../video_call_screen.dart';
-import 'incoming_call_dialog.dart';
+import 'incoming_call_banner.dart';
 
-/// Wrap a shell screen's body with this to receive ringing-call popups
+/// Wrap a shell screen's body with this to receive ringing-call banners
 /// for the currently logged-in user (Inspector or Institute).
+///
+/// Uses an inline Stack banner instead of showDialog — a dialog's
+/// full-screen ModalBarrier can get stuck (invisible, blocking all taps)
+/// if two ringing rows race the async caller-name lookup and both try
+/// to open a dialog. A banner has no barrier, so that failure mode
+/// can't happen: at worst the wrong call briefly shows.
 class IncomingCallListener extends StatefulWidget {
   final Widget child;
   const IncomingCallListener({super.key, required this.child});
@@ -23,7 +29,9 @@ class _IncomingCallListenerState extends State<IncomingCallListener> {
   static const _maxRingAge = Duration(seconds: 60);
 
   StreamSubscription<List<VideoCall>>? _sub;
-  String? _dialogShownForCallId;
+  VideoCall? _activeCall;
+  String _callerName = '';
+  bool _busy = false; // prevents double-tap / concurrent accept-reject
 
   @override
   void initState() {
@@ -37,19 +45,25 @@ class _IncomingCallListenerState extends State<IncomingCallListener> {
   }
 
   Future<void> _handleCalls(List<VideoCall> calls) async {
-    if (calls.isEmpty) return;
+    if (calls.isEmpty) {
+      if (mounted && _activeCall != null) {
+        setState(() => _activeCall = null);
+      }
+      return;
+    }
+
     final call = calls.first;
 
     // Ignore/close stale rings — prevents a dead call left in the DB
-    // (e.g. app killed mid-ring) from blocking the UI on next launch.
+    // (e.g. app killed mid-ring) from resurfacing on next launch.
     final age = DateTime.now().toUtc().difference(call.createdAt.toUtc());
     if (age > _maxRingAge) {
       await VideoCallService.instance.end(call.id);
       return;
     }
 
-    if (_dialogShownForCallId == call.id) return;
-    _dialogShownForCallId = call.id;
+    // Already showing this exact call — don't refetch/rebuild.
+    if (_activeCall?.id == call.id) return;
 
     final callerProfile = await Supabase.instance.client
         .from('profiles')
@@ -59,38 +73,43 @@ class _IncomingCallListenerState extends State<IncomingCallListener> {
     final callerName = callerProfile?['full_name'] as String? ?? 'Unknown caller';
 
     if (!mounted) return;
+    setState(() {
+      _activeCall = call;
+      _callerName = callerName;
+    });
+  }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => IncomingCallDialog(
-        call: call,
-        callerName: callerName,
-        onAccept: () async {
-          Navigator.of(dialogContext).pop();
-          final hasPermissions = await _ensurePermissions();
-          if (!hasPermissions) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Camera and microphone permissions are required to join the call.'),
-                ),
-              );
-            }
-            await VideoCallService.instance.reject(call.id);
-            _dialogShownForCallId = null;
-            return;
-          }
-          await VideoCallService.instance.accept(call.id);
-          _goToCallScreen(call);
-        },
-        onReject: () async {
-          Navigator.of(dialogContext).pop();
-          await VideoCallService.instance.reject(call.id);
-          _dialogShownForCallId = null;
-        },
-      ),
-    );
+  Future<void> _accept() async {
+    final call = _activeCall;
+    if (call == null || _busy) return;
+    setState(() => _busy = true);
+
+    final hasPermissions = await _ensurePermissions();
+    if (!hasPermissions) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera and microphone permissions are required to join the call.'),
+          ),
+        );
+      }
+      await VideoCallService.instance.reject(call.id);
+      if (mounted) setState(() { _activeCall = null; _busy = false; });
+      return;
+    }
+
+    await VideoCallService.instance.accept(call.id);
+    if (!mounted) return;
+    setState(() { _activeCall = null; _busy = false; });
+    _goToCallScreen(call);
+  }
+
+  Future<void> _reject() async {
+    final call = _activeCall;
+    if (call == null || _busy) return;
+    setState(() => _busy = true);
+    await VideoCallService.instance.reject(call.id);
+    if (mounted) setState(() { _activeCall = null; _busy = false; });
   }
 
   void _goToCallScreen(VideoCall call) {
@@ -105,7 +124,6 @@ class _IncomingCallListenerState extends State<IncomingCallListener> {
           onCallEnded: () {
             VideoCallService.instance.end(call.id, startedAt: call.startedAt);
             Navigator.of(context).pop();
-            _dialogShownForCallId = null;
           },
         ),
       ),
@@ -119,5 +137,23 @@ class _IncomingCallListenerState extends State<IncomingCallListener> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        widget.child,
+        if (_activeCall != null)
+          Positioned(
+            top: 0,
+            left: 8,
+            right: 8,
+            child: IncomingCallBanner(
+              call: _activeCall!,
+              callerName: _callerName,
+              onAccept: _accept,
+              onReject: _reject,
+            ),
+          ),
+      ],
+    );
+  }
 }

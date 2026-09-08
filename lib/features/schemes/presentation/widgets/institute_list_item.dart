@@ -32,15 +32,14 @@ class InstituteListItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Institute "logo" placeholder — tapping it (like the name) opens details.
             Container(
-              width: 44,
-              height: 44,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.account_balance_outlined, color: AppColors.primary, size: 22),
+              child: const Icon(Icons.account_balance_outlined, color: AppColors.primary, size: 26),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -62,7 +61,7 @@ class InstituteListItem extends StatelessWidget {
                   Text(
                     lastInspection == null
                         ? 'No inspections yet'
-                        : 'Last inspection: ${_formatDate(lastInspection.dateTime)}',
+                        : 'Last Inspection: ${_formatDate(lastInspection.dateTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),

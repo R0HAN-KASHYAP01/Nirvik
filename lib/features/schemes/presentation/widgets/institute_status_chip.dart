@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../../../models/institute.dart';
 
 class InstituteStatusChip extends StatelessWidget {
@@ -20,18 +21,6 @@ class InstituteStatusChip extends StatelessWidget {
         color = AppColors.error;
         break;
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-      ),
-    );
+    return StatusBadge(label: status.label, color: color);
   }
 }

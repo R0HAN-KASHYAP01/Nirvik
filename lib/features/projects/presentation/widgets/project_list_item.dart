@@ -28,13 +28,13 @@ class ProjectListItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.apartment, color: AppColors.primary, size: 20),
+              child: const Icon(Icons.apartment, color: AppColors.primary, size: 26),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -54,7 +54,7 @@ class ProjectListItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Last inspection: ${_formatDate(project.lastInspectionDate)}',
+                    'Last Inspection: ${_formatDate(project.lastInspectionDate)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),

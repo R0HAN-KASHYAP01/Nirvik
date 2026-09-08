@@ -27,28 +27,29 @@ class SummaryStatCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: AppCard(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 10),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
             Text(
               count,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-              maxLines: 2,
+              style: const TextStyle(fontSize: 11.5, color: Colors.black54),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Text(
                 subtitle!,
-                style: const TextStyle(fontSize: 11, color: Colors.black38),
+                style: const TextStyle(fontSize: 10.5, color: Colors.black38),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

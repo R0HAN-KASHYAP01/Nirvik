@@ -31,15 +31,32 @@ extension AssignmentStatusLabel on AssignmentStatus {
 }
 
 class AssignmentSummary {
+  /// Supabase pmu_assignments.id
+  final String id;
+
+  /// Supabase ngo_institutes.profile_id
+  final String instituteProfileId;
+
   final String projectName;
   final String location;
+
+  /// Latitude of the assigned institute from ngo_institutes.
+  final double? instituteLatitude;
+
+  /// Longitude of the assigned institute from ngo_institutes.
+  final double? instituteLongitude;
+
   final DateTime scheduledDateTime;
   final Priority priority;
   final AssignmentStatus status;
 
   const AssignmentSummary({
+    required this.id,
+    required this.instituteProfileId,
     required this.projectName,
     required this.location,
+    required this.instituteLatitude,
+    required this.instituteLongitude,
     required this.scheduledDateTime,
     required this.priority,
     required this.status,

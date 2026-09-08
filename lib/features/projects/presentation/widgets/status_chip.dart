@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../../../models/project.dart';
 
 class StatusChip extends StatelessWidget {
@@ -11,7 +12,7 @@ class StatusChip extends StatelessWidget {
     final isActive = status == ProjectStatus.active;
     final color = isActive ? AppColors.success : AppColors.warning;
     final label = isActive ? 'Active' : 'Under Review';
-    return _Chip(color: color, label: label);
+    return StatusBadge(label: label, color: color);
   }
 }
 
@@ -37,28 +38,6 @@ class RiskChip extends StatelessWidget {
         label = 'High Risk';
         break;
     }
-    return _Chip(color: color, label: label);
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _Chip({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-      ),
-    );
+    return StatusBadge(label: label, color: color);
   }
 }

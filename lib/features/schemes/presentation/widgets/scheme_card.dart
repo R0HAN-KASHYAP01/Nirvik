@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../../../models/scheme.dart';
-
 
 class SchemeCard extends StatelessWidget {
   final Scheme scheme;
@@ -43,17 +43,9 @@ class SchemeCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(scheme.description, style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: scheme.color.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: scheme.color.withValues(alpha: 0.35)),
-                    ),
-                    child: Text(
-                      '$instituteCount institute${instituteCount == 1 ? '' : 's'}',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.color),
-                    ),
+                  StatusBadge(
+                    label: '$instituteCount institute${instituteCount == 1 ? '' : 's'}',
+                    color: scheme.color,
                   ),
                 ],
               ),

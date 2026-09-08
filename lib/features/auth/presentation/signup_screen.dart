@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
-import '../../../core/widgets/app_card.dart';
 import '../../../services/auth_service.dart';
 import '../../../models/user.dart';
 import '../../../app/routes.dart';
@@ -90,12 +89,12 @@ class _SignupScreenState extends State<SignupScreen> {
         onTap: () => setState(() => _role = value),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary.withValues(alpha: 0.06) : Colors.white,
-            borderRadius: BorderRadius.circular(8),
+            color: selected ? AppColors.primary.withValues(alpha: 0.08) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.primary : AppColors.textSecondary.withValues(alpha: 0.3),
+              color: selected ? AppColors.primary : AppColors.border,
               width: selected ? 1.4 : 1,
             ),
           ),
@@ -124,212 +123,242 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  // Rounded, borderless "pill" field style used only on this screen.
+  InputDecorationTheme get _fieldTheme => InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        floatingLabelBehavior: FloatingLabelBehavior.never,
+        labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        prefixIconColor: AppColors.textSecondary,
+        suffixIconColor: AppColors.textSecondary,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.6),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('Account Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 16),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        inputDecorationTheme: _fieldTheme,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 54),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Create Account')),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Account Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 16),
 
-                      AppTextField(
-                        label: 'Full Name',
-                        controller: _nameController,
-                        prefixIcon: const Icon(Icons.person_outline),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name.' : null,
-                      ),
-                      const SizedBox(height: 14),
-
-                      AppTextField(
-                        label: 'Email',
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: const Icon(Icons.mail_outline),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Please enter your email.';
-                          if (!v.contains('@')) return 'Please enter a valid email.';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      AppTextField(
-                        label: 'Phone Number (optional)',
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: const Icon(Icons.phone_outlined),
-                      ),
-                      const SizedBox(height: 14),
-
-                      AppTextField(
-                        label: 'Password',
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Please enter a password.';
-                          if (v.length < 6) return 'Password must be at least 6 characters.';
-                          return null;
-                        },
-                      ),
-                    ],
+                  AppTextField(
+                    label: 'Full Name',
+                    controller: _nameController,
+                    prefixIcon: const Icon(Icons.person_outline),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name.' : null,
                   ),
-                ),
+                  const SizedBox(height: 14),
 
-                const SizedBox(height: 16),
-
-                AppCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('I am a', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 12),
-
-                      Row(
-                        children: [
-                          _roleOption(value: UserRole.official, label: 'Official'),
-                          _roleOption(value: UserRole.inspector, label: 'Inspector'),
-                          _roleOption(value: UserRole.ngoInstitute, label: 'Institute'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      if (_role == UserRole.official) ...[
-                        AppTextField(
-                          label: 'Department (e.g. Dept. of Social Justice & Empowerment)',
-                          controller: _departmentController,
-                          prefixIcon: const Icon(Icons.apartment_outlined),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Department is required.' : null,
-                        ),
-                        const SizedBox(height: 14),
-                        AppTextField(
-                          label: 'Designation (e.g. Deputy Director)',
-                          controller: _designationController,
-                          prefixIcon: const Icon(Icons.badge_outlined),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Designation is required.' : null,
-                        ),
-                      ],
-
-                      if (_role == UserRole.inspector) ...[
-                        AppTextField(
-                          label: 'PMU Department / Unit (e.g. Project Monitoring Unit)',
-                          controller: _departmentController,
-                          prefixIcon: const Icon(Icons.apartment_outlined),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Department is required.' : null,
-                        ),
-                        const SizedBox(height: 14),
-                        AppTextField(
-                          label: 'Designation (optional, e.g. Program Officer)',
-                          controller: _designationController,
-                          prefixIcon: const Icon(Icons.badge_outlined),
-                        ),
-                      ],
-
-                      if (_role == UserRole.ngoInstitute) ...[
-                        AppTextField(
-                          label: 'Organization / NGO Name (e.g. Prayas Foundation)',
-                          controller: _organizationController,
-                          prefixIcon: const Icon(Icons.corporate_fare_outlined),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Organization name is required.' : null,
-                        ),
-                        const SizedBox(height: 14),
-                        AppTextField(
-                          label: 'Registration Number (optional, e.g. NGO/2019/00123)',
-                          controller: _registrationController,
-                          prefixIcon: const Icon(Icons.badge_outlined),
-                        ),
-                      ],
-                    ],
+                  AppTextField(
+                    label: 'Email',
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    prefixIcon: const Icon(Icons.mail_outline),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Please enter your email.';
+                      if (!v.contains('@')) return 'Please enter a valid email.';
+                      return null;
+                    },
                   ),
-                ),
+                  const SizedBox(height: 14),
 
-                const SizedBox(height: 16),
+                  AppTextField(
+                    label: 'Phone Number (optional)',
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                  ),
+                  const SizedBox(height: 14),
 
-                // --- Terms agreement ---
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: Checkbox(
-                        value: _agreedToTerms,
-                        activeColor: AppColors.primary,
-                        onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
-                      ),
+                  AppTextField(
+                    label: 'Password',
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: RichText(
-                          text: const TextSpan(
-                            style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-                            children: [
-                              TextSpan(text: 'I agree to the '),
-                              TextSpan(
-                                text: 'Terms & Conditions',
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-                              ),
-                              TextSpan(text: ' and '),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-                              ),
-                            ],
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Please enter a password.';
+                      if (v.length < 6) return 'Password must be at least 6 characters.';
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  const Text('I am a', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      _roleOption(value: UserRole.official, label: 'Government\nOfficial'),
+                      _roleOption(value: UserRole.inspector, label: 'PMU /\nInspector'),
+                      _roleOption(value: UserRole.ngoInstitute, label: 'NGO /\nInstitute'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  if (_role == UserRole.official) ...[
+                    AppTextField(
+                      label: 'Department (e.g. Dept. of Social Justice & Empowerment)',
+                      controller: _departmentController,
+                      prefixIcon: const Icon(Icons.apartment_outlined),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Department is required.' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    AppTextField(
+                      label: 'Designation (e.g. Deputy Director)',
+                      controller: _designationController,
+                      prefixIcon: const Icon(Icons.badge_outlined),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Designation is required.' : null,
+                    ),
+                  ],
+
+                  if (_role == UserRole.inspector) ...[
+                    AppTextField(
+                      label: 'PMU Department / Unit (e.g. Project Monitoring Unit)',
+                      controller: _departmentController,
+                      prefixIcon: const Icon(Icons.apartment_outlined),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Department is required.' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    AppTextField(
+                      label: 'Designation (optional, e.g. Program Officer)',
+                      controller: _designationController,
+                      prefixIcon: const Icon(Icons.badge_outlined),
+                    ),
+                  ],
+
+                  if (_role == UserRole.ngoInstitute) ...[
+                    AppTextField(
+                      label: 'Organization / NGO Name (e.g. Prayas Foundation)',
+                      controller: _organizationController,
+                      prefixIcon: const Icon(Icons.corporate_fare_outlined),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Organization name is required.' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    AppTextField(
+                      label: 'Registration Number (optional, e.g. NGO/2019/00123)',
+                      controller: _registrationController,
+                      prefixIcon: const Icon(Icons.badge_outlined),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // --- Terms agreement ---
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: Checkbox(
+                          value: _agreedToTerms,
+                          activeColor: AppColors.primary,
+                          onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: RichText(
+                            text: const TextSpan(
+                              style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                              children: [
+                                TextSpan(text: 'I agree to the '),
+                                TextSpan(
+                                  text: 'Terms & Conditions',
+                                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                ),
+                                TextSpan(text: ' and '),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
+                    ],
+                  ),
+
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, size: 16, color: AppColors.error),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 12)),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
 
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline, size: 16, color: AppColors.error),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 12)),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 20),
+
+                  PrimaryButton(
+                    label: _isLoading ? 'Creating account...' : 'Sign Up',
+                    onPressed: _isLoading ? () {} : _handleSignup,
                   ),
+
+                  const SizedBox(height: 12),
                 ],
-
-                const SizedBox(height: 20),
-
-                PrimaryButton(
-                  label: _isLoading ? 'Creating account...' : 'Sign Up',
-                  onPressed: _isLoading ? () {} : _handleSignup,
-                ),
-
-                const SizedBox(height: 12),
-              ],
+              ),
             ),
           ),
         ),

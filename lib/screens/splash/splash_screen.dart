@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../app/routes.dart';
 import '../../app/theme.dart';
+import '../../models/user.dart';
+import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -9,7 +12,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fade;
 
@@ -21,13 +25,53 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..forward();
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-      }
-    });
+    _fade = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeIn,
+    );
+
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final result = await AuthService.instance.restoreSession();
+
+    if (!mounted) return;
+
+    if (!result.success || result.user == null) {
+      Navigator.of(context).pushReplacementNamed(
+        AppRoutes.login,
+      );
+      return;
+    }
+
+    final user = result.user!;
+
+    SessionService.instance.setUser(user);
+
+    final destination = _getDashboardRoute(user.role);
+
+    Navigator.of(context).pushReplacementNamed(
+      destination,
+    );
+  }
+
+  String _getDashboardRoute(UserRole role) {
+    switch (role) {
+      case UserRole.official:
+        return AppRoutes.officialDashboard;
+
+      case UserRole.inspector:
+        return AppRoutes.inspectorDashboard;
+
+      case UserRole.ngoInstitute:
+        return AppRoutes.ngoDashboard;
+    }
   }
 
   @override

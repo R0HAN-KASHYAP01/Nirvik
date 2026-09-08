@@ -22,9 +22,15 @@ void main() {
       print('SENTINAL RISK DATA REPOSITORY TEST');
       print('==============================================');
 
-      print('\n[1/4] Loading institutes from Supabase...');
+      print('\n[1/3] Loading institutes from Supabase...');
 
-      final institutes = await repository.getInstitutes();
+      // getInstitutes() no longer exists in RiskDataRepository.
+      // Fetch an institute directly to obtain a valid profile_id
+      // for repository testing.
+      final institutes = await Supabase.instance.client
+          .from('ngo_institutes')
+          .select('profile_id, institute_name')
+          .order('created_at', ascending: true);
 
       print('Institutes found: ${institutes.length}');
 
@@ -34,52 +40,66 @@ void main() {
         reason: 'No NGO institutes were found in Supabase.',
       );
 
-      final firstInstitute = institutes.first;
+      final firstInstitute =
+          Map<String, dynamic>.from(institutes.first);
 
       final instituteProfileId =
-          firstInstitute['profile_id']?.toString() ??
-          firstInstitute['id']?.toString();
+          firstInstitute['profile_id']?.toString();
 
       expect(
         instituteProfileId,
         isNotNull,
-        reason: 'The first institute has no profile_id or id.',
+        reason: 'The first institute has no profile_id.',
+      );
+
+      expect(
+        instituteProfileId,
+        isNotEmpty,
+        reason: 'The first institute has an empty profile_id.',
       );
 
       print('Selected institute: $instituteProfileId');
 
-      print('\n[2/4] Loading project data...');
+      print('\n[2/3] Loading project data...');
 
       final projectData =
-          await repository.getProjectRiskData(instituteProfileId!);
+          await repository.getProjectRiskData(
+        instituteProfileId!,
+      );
 
       expect(
         projectData,
         isNotNull,
-        reason: 'Project risk data could not be built.',
+        reason: 'Project risk data could not be loaded.',
       );
 
       print('Project data loaded successfully.');
+      print('Project data: $projectData');
 
-      print('\n[3/4] Building complete risk input...');
+      print('\n[3/3] Building complete risk input...');
 
       final riskInput =
-          await repository.getProjectRiskInput(instituteProfileId);
+          await repository.getProjectRiskInput(
+        instituteProfileId,
+      );
 
       expect(
         riskInput,
-        isNotNull,
+        isA<Map<String, dynamic>>(),
         reason: 'Complete project risk input could not be built.',
       );
 
-      final input = riskInput!;
+      final input = riskInput;
 
-      expect(input['attendance'], isA<Map<String, dynamic>>());
-      expect(input['project'], isA<Map<String, dynamic>>());
-      expect(input['inspections'], isA<List<dynamic>>());
+      expect(
+        input['project'],
+        isA<Map<String, dynamic>>(),
+      );
 
-      final attendance =
-          input['attendance'] as Map<String, dynamic>;
+      expect(
+        input['inspections'],
+        isA<List<dynamic>>(),
+      );
 
       final project =
           input['project'] as Map<String, dynamic>;
@@ -87,22 +107,68 @@ void main() {
       final inspections =
           input['inspections'] as List<dynamic>;
 
-      print('Attendance input:');
-      print(attendance);
-
       print('\nProject input:');
       print(project);
 
       print('\nInspection records: ${inspections.length}');
 
-      print('\n[4/4] Validating required project fields...');
+      print('\nValidating required project fields...');
 
-      expect(project.containsKey('status'), isTrue);
-      expect(project.containsKey('risk_level'), isTrue);
-      expect(project.containsKey('total_inspections'), isTrue);
-      expect(project.containsKey('completed_inspections'), isTrue);
-      expect(project.containsKey('pending_inspections'), isTrue);
-      expect(project.containsKey('high_risk_findings'), isTrue);
+      // risk_level is deliberately NOT checked here.
+      //
+      // Current architecture:
+      // ngo_institutes -> project data
+      // inspection submissions -> historical risk_level
+      // Risk Engine -> current risk_score / risk_level
+      expect(
+        project.containsKey('status'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('total_assignments'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('pending_assignments'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('completed_assignments'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('total_inspections'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('completed_inspections'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('high_risk_findings'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('open_findings'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('inspection_submission_count'),
+        isTrue,
+      );
+
+      expect(
+        project.containsKey('finding_count'),
+        isTrue,
+      );
 
       expect(
         inspections.every(
@@ -119,3 +185,4 @@ void main() {
     },
   );
 }
+

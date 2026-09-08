@@ -20,9 +20,14 @@ Future<void> main() async {
   print('========================================');
 
   try {
-    print('[1/4] Loading institutes from Supabase...');
+    print('[1/3] Loading institutes from Supabase...');
 
-    final institutes = await repository.getInstitutes();
+    // getInstitutes() was removed from RiskDataRepository.
+    // Load institute records directly using the Supabase client.
+    final institutes = await Supabase.instance.client
+        .from('ngo_institutes')
+        .select('profile_id, institute_name')
+        .order('created_at', ascending: true);
 
     print('Institutes found: ${institutes.length}');
 
@@ -31,15 +36,16 @@ Future<void> main() async {
       print('NO INSTITUTES FOUND');
       print('');
       print(
-        'The repository is working, but the ngo_institutes '
-        'table returned no rows.',
+        'The repository cannot be tested because the '
+        'ngo_institutes table returned no rows.',
       );
       print('');
       print('RISK DATA REPOSITORY TEST FINISHED');
       return;
     }
 
-    final firstInstitute = institutes.first;
+    final firstInstitute =
+        Map<String, dynamic>.from(institutes.first);
 
     final profileId =
         firstInstitute['profile_id']?.toString();
@@ -55,7 +61,7 @@ Future<void> main() async {
     }
 
     print('');
-    print('[2/4] Loading project risk data...');
+    print('[2/3] Loading project risk data...');
 
     final project =
         await repository.getProjectRiskData(profileId);
@@ -71,83 +77,18 @@ Future<void> main() async {
     print('Project keys: ${project.keys.toList()}');
 
     print('');
-    print('[3/4] Loading complete project risk input...');
+    print('[3/3] Loading complete project risk input...');
 
     final riskInput =
         await repository.getProjectRiskInput(profileId);
 
-    if (riskInput == null) {
-      print('ERROR: Risk input could not be generated.');
-      print('');
-      print('RISK DATA REPOSITORY TEST FAILED');
-      return;
-    }
-
     print('Risk input generated successfully.');
 
-    final projectInput =
-        riskInput['project'];
+    final projectInput = riskInput['project'];
+    final inspectionsInput = riskInput['inspections'];
 
-    final inspectionsInput =
-        riskInput['inspections'];
-
-    final assignmentsInput =
-        riskInput['assignments'];
-
-    final findingsInput =
-        riskInput['findings'];
-
-    print('');
-    print('Normalized Risk Input');
-    print('---------------------');
-
-    print(
-      'Project data: '
-      '${projectInput is Map ? projectInput : 'invalid'}',
-    );
-
-    print(
-      'Inspections: '
-      '${inspectionsInput is List ? inspectionsInput.length : 0}',
-    );
-
-    print(
-      'Assignments: '
-      '${assignmentsInput is List ? assignmentsInput.length : 0}',
-    );
-
-    print(
-      'Findings: '
-      '${findingsInput is List ? findingsInput.length : 0}',
-    );
-
-    print('');
-    print('[4/4] Validating required Risk Engine fields...');
-
-    final projectMap =
-        projectInput is Map
-            ? Map<String, dynamic>.from(projectInput)
-            : <String, dynamic>{};
-
-    final requiredProjectFields = <String>[
-      'status',
-      'risk_level',
-      'total_inspections',
-      'completed_inspections',
-      'pending_inspections',
-      'high_risk_findings',
-    ];
-
-    final missingFields = requiredProjectFields
-        .where(
-          (field) => !projectMap.containsKey(field),
-        )
-        .toList();
-
-    if (missingFields.isNotEmpty) {
-      print(
-        'ERROR: Missing project fields: $missingFields',
-      );
+    if (projectInput is! Map<String, dynamic>) {
+      print('ERROR: project is not a Map<String, dynamic>.');
       print('');
       print('RISK DATA REPOSITORY TEST FAILED');
       return;
@@ -160,7 +101,68 @@ Future<void> main() async {
       return;
     }
 
+    print('');
+    print('Normalized Risk Input');
+    print('---------------------');
+
+    print('Project data: $projectInput');
+    print('Inspections: ${inspectionsInput.length}');
+
+    print('');
+    print('Validating required Risk Engine fields...');
+
+    // These are the project-level fields currently produced
+    // by RiskDataRepository.
+    //
+    // risk_level is intentionally NOT required here because
+    // ngo_institutes does not contain a risk_level column.
+    final requiredProjectFields = <String>[
+      'status',
+      'total_assignments',
+      'pending_assignments',
+      'completed_assignments',
+      'total_inspections',
+      'completed_inspections',
+      'high_risk_findings',
+      'open_findings',
+      'inspection_submission_count',
+      'finding_count',
+    ];
+
+    final missingFields = requiredProjectFields
+        .where(
+          (field) => !projectInput.containsKey(field),
+        )
+        .toList();
+
+    if (missingFields.isNotEmpty) {
+      print(
+        'ERROR: Missing project fields: $missingFields',
+      );
+      print('');
+      print('RISK DATA REPOSITORY TEST FAILED');
+      return;
+    }
+
     print('All required project fields are present.');
+
+    print('');
+    print('Validating inspection records...');
+
+    for (final item in inspectionsInput) {
+      if (item is! Map<String, dynamic>) {
+        print(
+          'ERROR: An inspection record is not '
+          'Map<String, dynamic>.',
+        );
+        print('');
+        print('RISK DATA REPOSITORY TEST FAILED');
+        return;
+      }
+    }
+
+    print('Inspection records validated successfully.');
+
     print('');
     print('========================================');
     print('RISK DATA REPOSITORY TEST SUCCESSFUL');

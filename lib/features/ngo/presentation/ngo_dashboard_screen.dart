@@ -17,7 +17,7 @@ class NgoDashboardScreen extends StatefulWidget {
 class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   int? _reportsCount;
   int? _feedsCount;
-  bool _loadingStats = true;
+  
 
   // ============================================================
   // COLORS
@@ -57,13 +57,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     final user = SessionService.instance.currentUser;
 
     if (user == null) {
-      if (mounted) {
-        setState(() {
-          _loadingStats = false;
-        });
-      }
-      return;
-    }
+  return;
+}
 
     try {
       final reports =
@@ -77,14 +72,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       setState(() {
         _reportsCount = reports.length;
         _feedsCount = feeds.length;
-        _loadingStats = false;
       });
     } catch (_) {
       if (!mounted) return;
 
-      setState(() {
-        _loadingStats = false;
-      });
+      setState(() {});
     }
   }
 

@@ -123,7 +123,7 @@ class _IncomingCallListenerState extends State<IncomingCallListener> {
           currentUserName: user.name,
           onCallEnded: () {
             VideoCallService.instance.end(call.id, startedAt: call.startedAt);
-            Navigator.of(context).pop();
+            
           },
         ),
       ),

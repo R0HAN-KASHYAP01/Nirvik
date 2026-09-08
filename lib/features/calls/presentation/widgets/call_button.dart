@@ -8,6 +8,8 @@ import '../../../../utils/call_permission.dart';
 import '../video_call_screen.dart';
 
 class CallButton extends StatelessWidget {
+  static const _ringTimeout = Duration(seconds: 30);
+
   final String calleeId;
   final String calleeName;
   final UserRole calleeRole;
@@ -49,6 +51,13 @@ class CallButton extends StatelessWidget {
           calleeId: calleeId,
           callType: callType,
         );
+
+        // Auto-mark missed if still ringing after the timeout — safe
+        // no-op if the callee already accepted/rejected by then.
+        Future.delayed(_ringTimeout, () {
+          VideoCallService.instance.markMissed(call.id);
+        });
+
         if (!context.mounted) return;
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -57,9 +66,10 @@ class CallButton extends StatelessWidget {
               channelId: call.channelId,
               currentUserId: me.id,
               currentUserName: me.name,
+              isCaller: true,
               onCallEnded: () {
                 VideoCallService.instance.end(call.id);
-                Navigator.of(context).pop();
+                
               },
             ),
           ),

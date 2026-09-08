@@ -11,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../data/mock_dashboard_data.dart';
 import 'widgets/assignment_card.dart';
 import '../../calls/presentation/widgets/random_call_button.dart';
+import '../../calls/presentation/call_history_screen.dart';
 
 class InspectorHomeScreen extends StatelessWidget {
   const InspectorHomeScreen({super.key});
@@ -41,7 +42,15 @@ class InspectorHomeScreen extends StatelessWidget {
                   tooltip: 'Institute Map',
                   onPressed: () => Navigator.of(context).pushNamed(AppRoutes.instituteMap),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.history),
+                  tooltip: 'Call History',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+                  ),
+                ),
               ],
+
             ),
             const SizedBox(height: 20),
 

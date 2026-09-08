@@ -33,11 +33,11 @@ class VideoCallService {
     final inserted = await _client
         .from('video_calls')
         .insert({
-          'caller_profile_id': uid,
-          'callee_profile_id': calleeId,
-          'call_type': callType,
-          'channel_id': channelId,
-        })
+      'caller_profile_id': uid,
+      'callee_profile_id': calleeId,
+      'call_type': callType,
+      'channel_id': channelId,
+    })
         .select()
         .single();
 
@@ -75,9 +75,9 @@ class VideoCallService {
         .stream(primaryKey: ['id'])
         .eq('callee_profile_id', uid)
         .map((rows) => rows
-            .where((r) => r['status'] == 'ringing')
-            .map((r) => VideoCall.fromJson(r))
-            .toList());
+        .where((r) => r['status'] == 'ringing')
+        .map((r) => VideoCall.fromJson(r))
+        .toList());
   }
 
   Stream<VideoCall?> watchCall(String callId) {
@@ -89,21 +89,90 @@ class VideoCallService {
   }
 
   Future<void> accept(String callId) => _client.from('video_calls').update({
-        'status': 'accepted',
-        'started_at': DateTime.now().toIso8601String(),
-      }).eq('id', callId);
+    'status': 'accepted',
+    'started_at': DateTime.now().toIso8601String(),
+  }).eq('id', callId);
 
   Future<void> reject(String callId) =>
       _client.from('video_calls').update({'status': 'rejected'}).eq('id', callId);
 
+  /// Marks a call as missed — only if it's still 'ringing'. The
+  /// `.eq('status', 'ringing')` guard prevents this from ever
+  /// overwriting a call that was already accepted/rejected/ended,
+  /// even if this fires slightly late due to a race.
+  Future<void> markMissed(String callId) => _client
+      .from('video_calls')
+      .update({
+    'status': 'missed',
+    'ended_at': DateTime.now().toIso8601String(),
+  })
+      .eq('id', callId)
+      .eq('status', 'ringing');
+
   Future<void> end(String callId, {DateTime? startedAt}) async {
     final endedAt = DateTime.now();
     final duration =
-        startedAt != null ? endedAt.difference(startedAt).inSeconds : null;
+    startedAt != null ? endedAt.difference(startedAt).inSeconds : null;
     await _client.from('video_calls').update({
       'status': 'ended',
       'ended_at': endedAt.toIso8601String(),
       if (duration != null) 'duration_seconds': duration,
     }).eq('id', callId);
   }
+
+  /// Combined call log for the current user — both calls they made
+  /// and calls they received. Returns newest first.
+  Future<List<CallHistoryEntry>> fetchCallHistory({int limit = 50}) async {
+    final uid = _client.auth.currentUser!.id;
+
+    final rows = await _client
+        .from('video_calls')
+        .select()
+        .or('caller_profile_id.eq.$uid,callee_profile_id.eq.$uid')
+        .order('created_at', ascending: false)
+        .limit(limit);
+
+    final calls = (rows as List)
+        .map((r) => VideoCall.fromJson(r as Map<String, dynamic>))
+        .toList();
+
+    final otherIds = <String>{
+      for (final c in calls)
+        c.callerProfileId == uid ? c.calleeProfileId : c.callerProfileId,
+    };
+
+    final profiles = otherIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await _client
+        .from('profiles')
+        .select('id, full_name')
+        .inFilter('id', otherIds.toList());
+
+    final nameById = {
+      for (final p in profiles)
+        p['id'] as String: (p['full_name'] as String?) ?? 'Unknown',
+    };
+
+    return calls.map((c) {
+      final isOutgoing = c.callerProfileId == uid;
+      final otherId = isOutgoing ? c.calleeProfileId : c.callerProfileId;
+      return CallHistoryEntry(
+        call: c,
+        isOutgoing: isOutgoing,
+        otherPartyName: nameById[otherId] ?? 'Unknown',
+      );
+    }).toList();
+  }
+}
+
+class CallHistoryEntry {
+  final VideoCall call;
+  final bool isOutgoing;
+  final String otherPartyName;
+
+  const CallHistoryEntry({
+    required this.call,
+    required this.isOutgoing,
+    required this.otherPartyName,
+  });
 }

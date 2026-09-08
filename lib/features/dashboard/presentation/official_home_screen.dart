@@ -8,6 +8,7 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../data/mock_dashboard_data.dart';
 import 'widgets/recent_inspection_card.dart';
+import '../../calls/presentation/call_history_screen.dart';
 
 class OfficialHomeScreen extends StatelessWidget {
   const OfficialHomeScreen({super.key});
@@ -97,9 +98,9 @@ class OfficialHomeScreen extends StatelessWidget {
               Column(
                 children: inspections
                     .map((i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: RecentInspectionCard(inspection: i),
-                        ))
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: RecentInspectionCard(inspection: i),
+                ))
                     .toList(),
               ),
 
@@ -134,6 +135,13 @@ class OfficialHomeScreen extends StatelessWidget {
                   icon: Icons.bar_chart,
                   label: 'Analytics',
                   onTap: () => Navigator.of(context).pushNamed(AppRoutes.analyticsPlaceholder),
+                ),
+                QuickActionCard(
+                  icon: Icons.history,
+                  label: 'Call History',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+                  ),
                 ),
               ],
             ),

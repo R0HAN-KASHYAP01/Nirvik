@@ -6,6 +6,7 @@ import '../../../services/session_service.dart';
 import '../../../services/ngo_reports_service.dart';
 import '../../../services/ngo_camera_service.dart';
 import '../../../app/routes.dart';
+import '../../calls/presentation/call_history_screen.dart';
 
 class NgoDashboardScreen extends StatefulWidget {
   const NgoDashboardScreen({super.key});
@@ -79,45 +80,45 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                   const SizedBox(height: 12),
                   _loadingStats
                       ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
-                        )
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
+                  )
                       : Row(
-                          children: [
-                            Expanded(
-                              child: _StatusTile(
-                                icon: Icons.groups_outlined,
-                                color: AppColors.success,
-                                label: 'Attendance',
-                                status: 'Submitted',
-                                statusIcon: Icons.check_circle,
-                                onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoAttendance),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _StatusTile(
-                                icon: Icons.description_outlined,
-                                color: AppColors.info,
-                                label: 'Reports',
-                                status: '${_reportsCount ?? 0} Submitted',
-                                statusIcon: Icons.check_circle,
-                                onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoReports),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _StatusTile(
-                                icon: Icons.videocam_outlined,
-                                color: AppColors.warning,
-                                label: 'Camera Feeds',
-                                status: '${_feedsCount ?? 0} Online',
-                                statusIcon: Icons.circle,
-                                onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoCamera),
-                              ),
-                            ),
-                          ],
+                    children: [
+                      Expanded(
+                        child: _StatusTile(
+                          icon: Icons.groups_outlined,
+                          color: AppColors.success,
+                          label: 'Attendance',
+                          status: 'Submitted',
+                          statusIcon: Icons.check_circle,
+                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoAttendance),
                         ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _StatusTile(
+                          icon: Icons.description_outlined,
+                          color: AppColors.info,
+                          label: 'Reports',
+                          status: '${_reportsCount ?? 0} Submitted',
+                          statusIcon: Icons.check_circle,
+                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoReports),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _StatusTile(
+                          icon: Icons.videocam_outlined,
+                          color: AppColors.warning,
+                          label: 'Camera Feeds',
+                          status: '${_feedsCount ?? 0} Online',
+                          statusIcon: Icons.circle,
+                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoCamera),
+                        ),
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 26),
                   const Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -153,6 +154,14 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                         label: 'Institute Profile',
                         color: AppColors.primary,
                         onTap: () => Navigator.of(context).pushNamed(AppRoutes.ngoProfile),
+                      ),
+                      _QuickActionTile(
+                        icon: Icons.history,
+                        label: 'Call History',
+                        color: AppColors.primary,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+                        ),
                       ),
                     ],
                   ),

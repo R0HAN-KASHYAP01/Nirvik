@@ -18,6 +18,8 @@ class RandomVideoCallButton extends StatefulWidget {
 }
 
 class _RandomVideoCallButtonState extends State<RandomVideoCallButton> {
+  static const _ringTimeout = Duration(seconds: 30);
+
   bool _loading = false;
 
   Future<bool> _ensureCallPermissions() async {
@@ -75,6 +77,10 @@ class _RandomVideoCallButtonState extends State<RandomVideoCallButton> {
         return;
       }
 
+      Future.delayed(_ringTimeout, () {
+        VideoCallService.instance.markMissed(call.id);
+      });
+
       if (!mounted) return;
       final me = SessionService.instance.currentUser!;
       Navigator.of(context).push(
@@ -84,9 +90,10 @@ class _RandomVideoCallButtonState extends State<RandomVideoCallButton> {
             channelId: call.channelId,
             currentUserId: me.id,
             currentUserName: me.name,
+            isCaller: true,
             onCallEnded: () {
               VideoCallService.instance.end(call.id);
-              Navigator.of(context).pop();
+              
             },
           ),
         ),
@@ -104,10 +111,10 @@ class _RandomVideoCallButtonState extends State<RandomVideoCallButton> {
       onPressed: _loading ? null : _startRandomCall,
       icon: _loading
           ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            )
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+      )
           : const Icon(Icons.shuffle),
       label: Text(_loading ? 'Finding institute...' : 'Random Video Call'),
     );

@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../models/inspection.dart';
 import '../data/mock_dashboard_data.dart';
+import '../../calls/presentation/call_history_screen.dart';
 
 class OfficialHomeScreen extends StatelessWidget {
   const OfficialHomeScreen({super.key});
@@ -141,6 +142,13 @@ class OfficialHomeScreen extends StatelessWidget {
                     icon: Icons.bar_chart,
                     label: 'Analytics',
                     onTap: () => Navigator.of(context).pushNamed(AppRoutes.analyticsPlaceholder),
+                  ),
+                ),
+                QuickActionCard(
+                  icon: Icons.history,
+                  label: 'Call History',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
                   ),
                 ),
               ],

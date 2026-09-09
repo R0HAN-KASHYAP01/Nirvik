@@ -6,6 +6,7 @@ import '../../../services/session_service.dart';
 import '../../../services/ngo_reports_service.dart';
 import '../../../services/ngo_camera_service.dart';
 import '../../../app/routes.dart';
+import '../../calls/presentation/call_history_screen.dart';
 
 class NgoDashboardScreen extends StatefulWidget {
   const NgoDashboardScreen({super.key});
@@ -716,7 +717,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   // QUICK STATUS
   // ============================================================
 
-  Widget _buildQuickStatus() {
+    Widget _buildQuickStatus() {
     return Padding(
       padding:
           const EdgeInsets.symmetric(horizontal: 18),
@@ -792,6 +793,33 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     );
                   },
                 ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickCard(
+                  icon: Icons.history,
+                  title: 'Call History',
+
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CallHistoryScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              const Expanded(
+                child: SizedBox(),
               ),
             ],
           ),

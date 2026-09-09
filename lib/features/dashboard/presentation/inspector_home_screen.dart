@@ -12,6 +12,8 @@ import '../../../services/session_service.dart';
 import '../data/assignments_repository.dart';
 import 'assignments_screen.dart';
 import 'widgets/assignment_card.dart';
+import '../../calls/presentation/widgets/random_call_button.dart';
+import '../../calls/presentation/call_history_screen.dart';
 
 class InspectorHomeScreen extends StatefulWidget {
   const InspectorHomeScreen({super.key});
@@ -104,6 +106,14 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
     );
   }
 
+  void _logout(BuildContext context) {
+    SessionService.instance.logout();
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.login,
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = SessionService.instance.currentUser;
@@ -116,7 +126,10 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              _InspectorHeader(userName: user?.name ?? 'PMU Inspector'),
+              _InspectorHeader(
+                userName: user?.name ?? 'PMU Inspector',
+                onLogoutTap: () => _logout(context),
+              ),
 
               const SizedBox(height: 20),
 
@@ -126,6 +139,13 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
                   Navigator.of(context)
                       .pushNamed(AppRoutes.inspectionWorkflowPlaceholder);
                 },
+              ),
+
+              const SizedBox(height: 12),
+
+              const SizedBox(
+                width: double.infinity,
+                child: RandomVideoCallButton(),
               ),
 
               const SizedBox(height: 24),
@@ -280,12 +300,14 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
   }
 }
 
-/// Header for this screen only — greeting, name, and the map/notification
-/// actions, with no logout button. The shared DashboardHeader (still used
+/// Header for this screen only — greeting, name, and the map/notification/
+/// call-history/logout actions. The shared DashboardHeader (still used
 /// elsewhere, e.g. NGO dashboard) is untouched.
 class _InspectorHeader extends StatelessWidget {
   final String userName;
-  const _InspectorHeader({required this.userName});
+  final VoidCallback? onLogoutTap;
+
+  const _InspectorHeader({required this.userName, this.onLogoutTap});
 
   @override
   Widget build(BuildContext context) {
@@ -316,9 +338,22 @@ class _InspectorHeader extends StatelessWidget {
           onPressed: () => Navigator.of(context).pushNamed(AppRoutes.instituteMap),
         ),
         IconButton(
+          icon: const Icon(Icons.history, color: AppColors.textPrimary),
+          tooltip: 'Call History',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+          ),
+        ),
+        IconButton(
           icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
           onPressed: () {},
         ),
+        if (onLogoutTap != null)
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppColors.textPrimary),
+            tooltip: 'Logout',
+            onPressed: onLogoutTap,
+          ),
       ],
     );
   }

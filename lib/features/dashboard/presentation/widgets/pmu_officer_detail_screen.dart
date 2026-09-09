@@ -1,16 +1,31 @@
+// lib/features/dashboard/presentation/widgets/pmu_officer_detail_screen.dart
 import 'package:flutter/material.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../../../models/assignment.dart';
 import '../../../../models/pmu_officer_summary.dart';
+import '../../../../models/user.dart';
+import '../../../../services/session_service.dart';
+import '../../../../services/video_call_service.dart';
+import '../../../../utils/call_permission.dart';
+import '../../../calls/presentation/video_call_screen.dart';
 import 'assignment_card.dart';
 import 'recent_inspection_card.dart';
 
-class PmuOfficerDetailScreen extends StatelessWidget {
+class PmuOfficerDetailScreen extends StatefulWidget {
   final PmuOfficerSummary officer;
 
   const PmuOfficerDetailScreen({super.key, required this.officer});
+
+  @override
+  State<PmuOfficerDetailScreen> createState() => _PmuOfficerDetailScreenState();
+}
+
+class _PmuOfficerDetailScreenState extends State<PmuOfficerDetailScreen> {
+  bool _callingInProgress = false;
+
+  PmuOfficerSummary get officer => widget.officer;
 
   Color _availabilityColor(OfficerAvailability a) {
     switch (a) {
@@ -31,6 +46,48 @@ class PmuOfficerDetailScreen extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
+  }
+
+    Future<void> _startCall() async {
+    final me = SessionService.instance.currentUser;
+    if (me == null) return;
+
+    final callType = CallPermission.callTypeFor(from: me.role, to: UserRole.inspector);
+    if (callType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You are not permitted to call this Inspector.')),
+      );
+      return;
+    }
+
+    setState(() => _callingInProgress = true);
+    try {
+      final call = await VideoCallService.instance.startCall(
+        calleeId: officer.id,
+        callType: callType,
+      );
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VideoCallScreen(
+            callId: call.id,
+            channelId: call.channelId,
+            currentUserId: me.id,
+            currentUserName: me.name,
+            onCallEnded: () {
+              VideoCallService.instance.end(call.id);
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not start call: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _callingInProgress = false);
+    }
   }
 
   @override
@@ -68,8 +125,6 @@ class PmuOfficerDetailScreen extends StatelessWidget {
           Text('Last activity: ${_timeAgo(officer.lastActivity)}',
               style: Theme.of(context).textTheme.bodySmall),
 
-          // Current assignment — links into the existing assignments route,
-          // the only assignment-detail entry point the app currently has.
           if (currentAssignment != null) ...[
             const SizedBox(height: 16),
             InkWell(
@@ -116,8 +171,6 @@ class PmuOfficerDetailScreen extends StatelessWidget {
             ],
           ),
 
-          // Assignments — reuses the existing AssignmentCard used on the
-          // PMU officer's own dashboard, so status/priority colors match.
           if (officer.assignments.isNotEmpty) ...[
             const SizedBox(height: 24),
             const SectionHeader(title: 'Assignments'),
@@ -130,7 +183,6 @@ class PmuOfficerDetailScreen extends StatelessWidget {
             ),
           ],
 
-          // Inspections — reuses the existing RecentInspectionCard.
           if (officer.inspections.isNotEmpty) ...[
             const SizedBox(height: 24),
             const SectionHeader(title: 'Inspections'),
@@ -145,11 +197,15 @@ class PmuOfficerDetailScreen extends StatelessWidget {
 
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: officer.rvcAvailable
-                ? () => Navigator.pushNamed(context, AppRoutes.rvcPlaceholder)
-                : null,
-            icon: const Icon(Icons.video_call_outlined),
-            label: const Text('Start RVC'),
+            onPressed: (officer.rvcAvailable && !_callingInProgress) ? _startCall : null,
+            icon: _callingInProgress
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.video_call_outlined),
+            label: Text(_callingInProgress ? 'Calling...' : 'Start RVC'),
           ),
         ],
       ),

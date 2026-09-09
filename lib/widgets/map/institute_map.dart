@@ -13,14 +13,39 @@ import '../../models/ngo_institute_profile.dart'; // needed for the NgoSchemeTyp
 import '../../services/ngo_institute_service.dart';
 import '../../utils/geo_utils.dart';
 
+/// Available base-map styles. All are free tile providers that work with
+/// flutter_map without an API key:
+/// - [standard]  OpenStreetMap street map (unchanged default)
+/// - [satellite] Esri World Imagery (aerial/satellite photography)
+/// - [hybrid]    Esri imagery + place/boundary labels overlaid on top
+/// - [terrain]   OpenTopoMap (contour lines, elevation shading — GIS style)
+enum MapViewType { standard, satellite, hybrid, terrain }
+
+extension MapViewTypeX on MapViewType {
+  String get label => switch (this) {
+        MapViewType.standard => 'Standard',
+        MapViewType.satellite => 'Satellite',
+        MapViewType.hybrid => 'Hybrid',
+        MapViewType.terrain => 'Terrain (GIS)',
+      };
+
+  IconData get icon => switch (this) {
+        MapViewType.standard => Icons.map_outlined,
+        MapViewType.satellite => Icons.satellite_alt_outlined,
+        MapViewType.hybrid => Icons.layers_outlined,
+        MapViewType.terrain => Icons.terrain_outlined,
+      };
+}
+
 /// Reusable, self-contained map of NGOs/institutes fetched from Supabase.
 ///
 /// Generic mode (no inspector coordinates): shows every institute with a
 /// saved location, centered on India — used by [InstituteMapScreen] as-is.
 ///
-/// Inspector mode: pass [inspectorLatitude]/[inspectorLongitude] to center
-/// on the inspector, draw a [radiusKm] circle, and initially filter
-/// institutes to that radius, e.g.:
+/// Inspector mode: pass [inspectorLatitude]/[inspectorLongitude] to open
+/// tightly zoomed in on the inspector's exact position, draw a [radiusKm]
+/// circle for context, and initially filter institutes to that radius.
+/// The inspector can then pan/zoom out freely to explore, e.g.:
 /// ```dart
 /// InstituteMap(
 ///   inspectorLatitude: profile.latitude,
@@ -54,6 +79,10 @@ class _InstituteMapState extends State<InstituteMap> {
   static const _defaultCenter = latlng.LatLng(22.9734, 78.6569);
   static const _defaultZoom = 4.5;
 
+  /// Initial zoom used when opening directly on the inspector's location —
+  /// close enough to read street-level detail rather than the whole radius.
+  static const _inspectorInitialZoom = 16.0;
+
   final MapController _mapController = MapController();
 
   bool _loading = true;
@@ -63,7 +92,9 @@ class _InstituteMapState extends State<InstituteMap> {
   /// Starts true (radius view) only in inspector mode; has no effect
   /// in generic mode, which always shows everything.
   bool _restrictToRadius = true;
-  bool _hasFitInitialBounds = false;
+  bool _hasCenteredOnInspector = false;
+
+  MapViewType _mapViewType = MapViewType.standard;
 
   @override
   void initState() {
@@ -76,11 +107,11 @@ class _InstituteMapState extends State<InstituteMap> {
   void didUpdateWidget(covariant InstituteMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Inspector location changed (e.g. after "Detect My Current Location")
-    // — recenter and refit the radius view.
+    // — recenter tightly on the new position.
     if (widget.inspectorLatitude != oldWidget.inspectorLatitude ||
         widget.inspectorLongitude != oldWidget.inspectorLongitude) {
-      _hasFitInitialBounds = false;
-      _fitToInitialBounds();
+      _hasCenteredOnInspector = false;
+      _centerOnInspector();
     }
   }
 
@@ -96,7 +127,7 @@ class _InstituteMapState extends State<InstituteMap> {
         _allInstitutes = institutes;
         _loading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fitToInitialBounds());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _centerOnInspector());
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -106,8 +137,28 @@ class _InstituteMapState extends State<InstituteMap> {
     }
   }
 
-  void _fitToInitialBounds() {
-    if (_hasFitInitialBounds || !widget._hasInspectorLocation) return;
+  /// Opens tightly zoomed in on the inspector's saved position. Runs once
+  /// per location value (guarded by [_hasCenteredOnInspector]) so it doesn't
+  /// fight the user if they've already panned/zoomed elsewhere.
+  void _centerOnInspector() {
+    if (_hasCenteredOnInspector || !widget._hasInspectorLocation) return;
+
+    final target = latlng.LatLng(widget.inspectorLatitude!, widget.inspectorLongitude!);
+
+    try {
+      _mapController.move(target, _inspectorInitialZoom);
+      _hasCenteredOnInspector = true;
+    } catch (_) {
+      // Map may not be mounted/ready yet — retried on the next callback.
+    }
+  }
+
+  /// Zooms out just far enough to fit the whole radius circle in view —
+  /// available on demand via the "fit radius" button, so the inspector can
+  /// still get the wide overview when they want it without it being forced
+  /// on open.
+  void _fitRadiusBounds() {
+    if (!widget._hasInspectorLocation) return;
 
     final lat = widget.inspectorLatitude!;
     final lng = widget.inspectorLongitude!;
@@ -117,9 +168,8 @@ class _InstituteMapState extends State<InstituteMap> {
       _mapController.fitCamera(
         CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(32)),
       );
-      _hasFitInitialBounds = true;
     } catch (_) {
-      // Map may not be mounted/ready yet — retried on the next callback.
+      // Ignore — best effort only.
     }
   }
 
@@ -133,10 +183,11 @@ class _InstituteMapState extends State<InstituteMap> {
   }
 
   Future<void> _goToMyLocation() async {
-    // Inspector mode: "my location" recenters on the saved inspector point.
+    // Inspector mode: "my location" always re-centers tightly on the saved
+    // inspector point, even if we already centered once before.
     if (widget._hasInspectorLocation) {
-      _hasFitInitialBounds = false;
-      _fitToInitialBounds();
+      final target = latlng.LatLng(widget.inspectorLatitude!, widget.inspectorLongitude!);
+      _mapController.move(target, _inspectorInitialZoom);
       return;
     }
     // Generic mode: fall back to the device's live GPS position.
@@ -156,7 +207,7 @@ class _InstituteMapState extends State<InstituteMap> {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
       );
-      _mapController.move(latlng.LatLng(position.latitude, position.longitude), 12);
+      _mapController.move(latlng.LatLng(position.latitude, position.longitude), 16);
     } catch (_) {
       // Best-effort only.
     }
@@ -174,6 +225,111 @@ class _InstituteMapState extends State<InstituteMap> {
         showScheme: widget.showSchemes,
       ),
     );
+  }
+
+  void _showMapTypeSelector() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Map View',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              for (final type in MapViewType.values)
+                ListTile(
+                  leading: Icon(
+                    type.icon,
+                    color: type == _mapViewType ? AppColors.primary : AppColors.textSecondary,
+                  ),
+                  title: Text(
+                    type.label,
+                    style: TextStyle(
+                      fontWeight: type == _mapViewType ? FontWeight.w700 : FontWeight.w500,
+                      color: type == _mapViewType ? AppColors.primary : AppColors.textPrimary,
+                    ),
+                  ),
+                  trailing: type == _mapViewType
+                      ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+                      : null,
+                  onTap: () {
+                    setState(() => _mapViewType = type);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Base tile layer(s) for the currently selected [_mapViewType]. Hybrid
+  /// stacks a labels/boundaries layer on top of the satellite imagery.
+  List<Widget> _buildTileLayers() {
+    switch (_mapViewType) {
+      case MapViewType.standard:
+        return [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.example.smart_monitoring_app',
+          ),
+        ];
+      case MapViewType.satellite:
+        return [
+          TileLayer(
+            urlTemplate:
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            userAgentPackageName: 'com.example.smart_monitoring_app',
+          ),
+        ];
+      case MapViewType.hybrid:
+        return [
+          TileLayer(
+            urlTemplate:
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            userAgentPackageName: 'com.example.smart_monitoring_app',
+          ),
+          TileLayer(
+            urlTemplate:
+                'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+            userAgentPackageName: 'com.example.smart_monitoring_app',
+          ),
+        ];
+      case MapViewType.terrain:
+        return [
+          TileLayer(
+            urlTemplate: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+            subdomains: const ['a', 'b', 'c'],
+            userAgentPackageName: 'com.example.smart_monitoring_app',
+          ),
+        ];
+    }
+  }
+
+  List<TextSourceAttribution> _buildAttributions() {
+    switch (_mapViewType) {
+      case MapViewType.standard:
+        return const [TextSourceAttribution('OpenStreetMap contributors')];
+      case MapViewType.satellite:
+      case MapViewType.hybrid:
+        return const [TextSourceAttribution('Esri, Maxar, Earthstar Geographics')];
+      case MapViewType.terrain:
+        return const [TextSourceAttribution('OpenTopoMap (CC-BY-SA) — data: SRTM, OpenStreetMap')];
+    }
   }
 
   @override
@@ -251,17 +407,17 @@ class _InstituteMapState extends State<InstituteMap> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            // Opens directly on the inspector's exact position at a close
+            // zoom; the radius circle stays visible for context and the
+            // inspector can zoom/pan out from here on their own.
             initialCenter: inspectorPoint ?? _defaultCenter,
-            initialZoom: inspectorPoint != null ? 8 : _defaultZoom,
+            initialZoom: inspectorPoint != null ? _inspectorInitialZoom : _defaultZoom,
             minZoom: 3,
-            maxZoom: 18,
-            onMapReady: _fitToInitialBounds,
+            maxZoom: 19,
+            onMapReady: _centerOnInspector,
           ),
           children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.example.smart_monitoring_app',
-            ),
+            ..._buildTileLayers(),
             if (inspectorPoint != null && restricting)
               CircleLayer(
                 circles: [
@@ -297,9 +453,7 @@ class _InstituteMapState extends State<InstituteMap> {
                   ),
               ],
             ),
-            const RichAttributionWidget(
-              attributions: [TextSourceAttribution('OpenStreetMap contributors')],
-            ),
+            RichAttributionWidget(attributions: _buildAttributions()),
           ],
         ),
         Positioned(
@@ -307,8 +461,14 @@ class _InstituteMapState extends State<InstituteMap> {
           right: 12,
           child: Column(
             children: [
+              _MapActionButton(icon: Icons.layers_outlined, onTap: _showMapTypeSelector),
+              const SizedBox(height: 8),
               _MapActionButton(icon: Icons.my_location, onTap: _goToMyLocation),
               const SizedBox(height: 8),
+              if (widget._hasInspectorLocation) ...[
+                _MapActionButton(icon: Icons.zoom_out_map, onTap: _fitRadiusBounds),
+                const SizedBox(height: 8),
+              ],
               _MapActionButton(icon: Icons.refresh, onTap: _loadInstitutes),
             ],
           ),

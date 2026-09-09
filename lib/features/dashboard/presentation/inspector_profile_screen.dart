@@ -7,11 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../services/inspector_service.dart';
-import '../../../widgets/map/institute_map.dart';
 
 class InspectorProfileScreen extends StatefulWidget {
   const InspectorProfileScreen({super.key});
@@ -282,74 +280,18 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
 
     final profile = _profile!;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 900;
-
-        final infoColumn = SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildProfileCard(profile),
-              const SizedBox(height: 16),
-              _buildLocationCard(profile),
-              const SizedBox(height: 16),
-              _buildAccountCard(),
-            ],
-          ),
-        );
-
-        final mapSection = Padding(
-          padding: const EdgeInsets.all(16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: profile.hasLocation
-                ? InstituteMap(
-                    inspectorLatitude: profile.latitude,
-                    inspectorLongitude: profile.longitude,
-                    radiusKm: 100,
-                  )
-                : const EmptyState(
-                    icon: Icons.location_searching,
-                    title: 'Location not detected yet',
-                    message:
-                        'Detect your current location to see nearby institutes on the map.',
-                  ),
-          ),
-        );
-
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 2,
-                child: infoColumn,
-              ),
-              Expanded(
-                flex: 3,
-                child: SizedBox(
-                  height: constraints.maxHeight,
-                  child: mapSection,
-                ),
-              ),
-            ],
-          );
-        }
-
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              infoColumn,
-              SizedBox(
-                height: 360,
-                child: mapSection,
-              ),
-            ],
-          ),
-        );
-      },
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildProfileCard(profile),
+          const SizedBox(height: 16),
+          _buildLocationCard(profile),
+          const SizedBox(height: 16),
+          _buildAccountCard(),
+        ],
+      ),
     );
   }
 

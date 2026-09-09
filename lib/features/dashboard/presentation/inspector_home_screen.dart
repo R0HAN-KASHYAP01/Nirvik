@@ -1,3 +1,4 @@
+// FILE: lib/features/dashboard/presentation/inspector_home_screen.dart
 import 'package:flutter/material.dart';
 
 import '../../../app/routes.dart';
@@ -82,15 +83,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
         .length;
   }
 
-  int get _upcomingCount {
-    final now = DateTime.now();
-
-    return _assignments.where((assignment) {
-      return assignment.scheduledDateTime.isAfter(now) &&
-          assignment.status != AssignmentStatus.completed;
-    }).length;
-  }
-
   int get _completedCount {
     return _assignments
         .where((assignment) => assignment.status == AssignmentStatus.completed)
@@ -103,14 +95,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
         builder: (_) =>
             AssignmentsScreen(initialStatus: status, initialFilter: filter),
       ),
-    );
-  }
-
-  void _logout(BuildContext context) {
-    SessionService.instance.logout();
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.login,
-      (route) => false,
     );
   }
 
@@ -128,7 +112,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
             children: [
               _InspectorHeader(
                 userName: user?.name ?? 'PMU Inspector',
-                onLogoutTap: () => _logout(context),
               ),
 
               const SizedBox(height: 20),
@@ -171,16 +154,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
                       count: _isLoading ? '—' : '$_overdueCount',
                       accentColor: Colors.red,
                       onTap: () => _openAssignments(status: AssignmentStatus.overdue),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SummaryStatCard(
-                      icon: Icons.upcoming_outlined,
-                      label: 'Upcoming',
-                      count: _isLoading ? '—' : '$_upcomingCount',
-                      accentColor: Colors.orange,
-                      onTap: () => _openAssignments(filter: 'upcoming'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -301,13 +274,12 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
 }
 
 /// Header for this screen only — greeting, name, and the map/notification/
-/// call-history/logout actions. The shared DashboardHeader (still used
-/// elsewhere, e.g. NGO dashboard) is untouched.
+/// call-history actions. The shared DashboardHeader (still used elsewhere,
+/// e.g. NGO dashboard) is untouched.
 class _InspectorHeader extends StatelessWidget {
   final String userName;
-  final VoidCallback? onLogoutTap;
 
-  const _InspectorHeader({required this.userName, this.onLogoutTap});
+  const _InspectorHeader({required this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -348,12 +320,6 @@ class _InspectorHeader extends StatelessWidget {
           icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
           onPressed: () {},
         ),
-        if (onLogoutTap != null)
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppColors.textPrimary),
-            tooltip: 'Logout',
-            onPressed: onLogoutTap,
-          ),
       ],
     );
   }

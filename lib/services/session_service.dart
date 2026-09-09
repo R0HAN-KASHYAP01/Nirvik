@@ -1,8 +1,6 @@
 // lib/services/session_service.dart
 import '../models/user.dart';
 
-/// Lightweight in-memory session state.
-/// No persistence yet — resets when the app restarts.
 class SessionService {
   SessionService._();
   static final SessionService instance = SessionService._();
@@ -33,5 +31,10 @@ class SessionService {
 
   void clear() {
     currentUser = null;
+  }
+
+  /// Alias for clear() — used by screens that call logout().
+  void logout() {
+    clear();
   }
 }

@@ -96,39 +96,23 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickVideo() async {
-    try {
-      final files =
-          await FilePicker.pickFiles(
-        type: FileType.video,
-      );
+  final files = await FilePicker.pickFiles(
+    type: FileType.video,
+  );
 
-      if (files.isEmpty) {
-        return;
-      }
+  if (files.isEmpty) return;
 
-      final file = files.first;
-      final bytes = await file.readAsBytes();
+  final file = files.first;
+  final bytes = await file.readAsBytes();
 
-      if (bytes.isEmpty || !mounted) {
-        return;
-      }
+  if (bytes.isEmpty) return;
 
-      setState(() {
-        _videoBytes = bytes;
-        _videoName = file.name;
-        _uploadError = null;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _uploadError =
-            'Could not select video. Please try again.';
-      });
-    }
-  }
+  setState(() {
+    _videoBytes = bytes;
+    _videoName = file.name;
+    _uploadError = null;
+  });
+}
 
   Future<void> _submitLiveLink() async {
     final user =

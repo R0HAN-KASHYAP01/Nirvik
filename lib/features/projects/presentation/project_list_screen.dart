@@ -10,7 +10,9 @@ import 'widgets/project_list_item.dart';
 enum _ProjectFilter { all, active, underReview, highRisk }
 
 class ProjectListScreen extends StatefulWidget {
-  const ProjectListScreen({super.key});
+  final bool initialHighRiskFilter;
+
+  const ProjectListScreen({super.key, this.initialHighRiskFilter = false});
 
   @override
   State<ProjectListScreen> createState() => _ProjectListScreenState();
@@ -23,11 +25,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   late Future<List<Project>> _projectsFuture;
 
   String _query = '';
-  _ProjectFilter _filter = _ProjectFilter.all;
+  late _ProjectFilter _filter;
 
   @override
   void initState() {
     super.initState();
+    _filter = widget.initialHighRiskFilter
+        ? _ProjectFilter.highRisk
+        : _ProjectFilter.all;
     _projectsFuture = _loadProjects();
   }
 

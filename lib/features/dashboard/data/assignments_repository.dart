@@ -49,7 +49,9 @@ class AssignmentsRepository {
         .select()
         .order('scheduled_datetime', ascending: true);
 
-    final instituteResponse = await _client.from('ngo_institutes').select();
+    final instituteResponse = await _client
+        .from('ngo_institutes')
+        .select('*, organizations(name)');
 
     var assignments = (assignmentResponse as List<dynamic>)
         .whereType<Map<String, dynamic>>()
@@ -140,7 +142,7 @@ class AssignmentsRepository {
     if (instituteProfileId != null && instituteProfileId.isNotEmpty) {
       final instituteResponse = await _client
           .from('ngo_institutes')
-          .select()
+          .select('*, organizations(name)')
           .eq('profile_id', instituteProfileId)
           .maybeSingle();
 
@@ -290,10 +292,7 @@ class AssignmentsRepository {
     final instituteProfileId = row['institute_profile_id']?.toString() ?? '';
     final institute = instituteMap[instituteProfileId];
 
-    final instituteName = _stringValue(
-      institute?['institute_name'],
-      fallback: 'Unnamed Institute',
-    );
+    final instituteName = _resolveInstituteName(institute);
 
     final fullAddress = _buildFullAddress(institute);
     final area = _buildArea(institute);
@@ -333,6 +332,32 @@ class AssignmentsRepository {
       inspectorDesignation: inspector?['designation'] as String?,
       inspectorDepartment: inspector?['department'] as String?,
     );
+  }
+
+  /// Resolve the institute's real display name.
+  ///
+  /// ngo_institutes.institute_name is currently null for most rows;
+  /// the real organization name lives in the joined organizations
+  /// table (ngo_institutes.organization_id -> organizations.id ->
+  /// organizations.name), same as NgoInstituteService.fetchOrganizationName.
+  /// This value still flows through AssignmentSummary.displayName's
+  /// existing masking — it is only unmasked once the assignment starts.
+  String _resolveInstituteName(Map<String, dynamic>? institute) {
+    if (institute == null) {
+      return 'Unnamed Institute';
+    }
+
+    final organization = institute['organizations'];
+
+    if (organization is Map<String, dynamic>) {
+      final orgName = organization['name'];
+
+      if (orgName is String && orgName.trim().isNotEmpty) {
+        return orgName.trim();
+      }
+    }
+
+    return _stringValue(institute['institute_name'], fallback: 'Unnamed Institute');
   }
 
   /// Full street address — only ever shown post-start.

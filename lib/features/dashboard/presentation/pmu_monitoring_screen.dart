@@ -247,19 +247,9 @@ class _SummaryStats extends StatelessWidget {
       (sum, o) => sum + o.assignmentsCount,
     );
 
-    final pending = officers.fold<int>(
-      0,
-      (sum, o) => sum + o.pendingInspectionsCount,
-    );
-
     final completed = officers.fold<int>(
       0,
       (sum, o) => sum + o.completedInspectionsCount,
-    );
-
-    final overdue = officers.fold<int>(
-      0,
-      (sum, o) => sum + o.overdueInspectionsCount,
     );
 
     return GridView.count(
@@ -292,24 +282,10 @@ class _SummaryStats extends StatelessWidget {
         ),
 
         _ThemeSummaryCard(
-          icon: Icons.pending_actions_outlined,
-          label: 'Pending Inspections',
-          count: '$pending',
-          accentColor: const Color(0xFFE88A18),
-        ),
-
-        _ThemeSummaryCard(
           icon: Icons.fact_check_outlined,
           label: 'Completed Inspections',
           count: '$completed',
           accentColor: const Color(0xFF168A45),
-        ),
-
-        _ThemeSummaryCard(
-          icon: Icons.error_outline,
-          label: 'Overdue Inspections',
-          count: '$overdue',
-          accentColor: const Color(0xFFD64545),
         ),
       ],
     );

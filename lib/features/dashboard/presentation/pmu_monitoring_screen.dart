@@ -29,7 +29,7 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
 
   // Government Digital India theme
   static const Color _navy = Color(0xFF123E68);
-  static const Color _background = Color(0xFFEAF2F8);
+  static const Color _background = Color(0xFFEAF1F6);
   static const Color _cardBackground = Color(0xFFE1ECF3);
   static const Color _textDark = Color(0xFF17324D);
   static const Color _textGrey = Color(0xFF667788);
@@ -122,7 +122,9 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _SummaryStats(officers: officers),
+                _SummaryStats(
+                  officers: officers,
+                ),
 
                 const SizedBox(height: 20),
 
@@ -276,35 +278,30 @@ class _SummaryStats extends StatelessWidget {
           count: '$total',
           accentColor: const Color(0xFF123E68),
         ),
-
         _ThemeSummaryCard(
           icon: Icons.check_circle_outline,
           label: 'Available Officers',
           count: '$available',
           accentColor: const Color(0xFF168A45),
         ),
-
         _ThemeSummaryCard(
           icon: Icons.assignment_outlined,
           label: 'Total Assignments',
           count: '$totalAssignments',
           accentColor: const Color(0xFF123E68),
         ),
-
         _ThemeSummaryCard(
           icon: Icons.pending_actions_outlined,
           label: 'Pending Inspections',
           count: '$pending',
           accentColor: const Color(0xFFE88A18),
         ),
-
         _ThemeSummaryCard(
           icon: Icons.fact_check_outlined,
           label: 'Completed Inspections',
           count: '$completed',
           accentColor: const Color(0xFF168A45),
         ),
-
         _ThemeSummaryCard(
           icon: Icons.error_outline,
           label: 'Overdue Inspections',

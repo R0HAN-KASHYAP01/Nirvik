@@ -1,6 +1,17 @@
 import '../../../models/assignment.dart';
 import '../../../models/pmu_officer_summary.dart';
 
+/// Helper to keep the mock data below readable: builds the pair of
+/// [AssignmentSummary.createdAt] / [AssignmentSummary.expiresAt] from a
+/// scheduled time, using the same [kAssignmentLifetime] window the real
+/// app enforces (2 days).
+({DateTime createdAt, DateTime expiresAt}) _lifetimeFor(
+  DateTime scheduledDateTime,
+) {
+  final createdAt = scheduledDateTime.subtract(const Duration(days: 1));
+  return (createdAt: createdAt, expiresAt: createdAt.add(kAssignmentLifetime));
+}
+
 final List<PmuOfficerSummary> mockPmuOfficerSummaries = [
   PmuOfficerSummary(
     id: 'mock-officer-001',
@@ -11,28 +22,43 @@ final List<PmuOfficerSummary> mockPmuOfficerSummaries = [
     availability: OfficerAvailability.assigned,
     lastActivity: DateTime(2026, 8, 31, 16, 30),
     assignments: [
-      AssignmentSummary(
-        id: 'PMU-001',
-        instituteProfileId: 'mock-institute-001',
-        projectName: 'Government Skill Development Centre',
-        location: 'Meerut, Uttar Pradesh',
-        instituteLatitude: null,
-        instituteLongitude: null,
-        scheduledDateTime: DateTime(2026, 9, 1, 10, 30),
-        priority: Priority.high,
-        status: AssignmentStatus.assigned,
-      ),
-      AssignmentSummary(
-        id: 'PMU-002',
-        instituteProfileId: 'mock-institute-002',
-        projectName: 'Women Empowerment Centre',
-        location: 'Ghaziabad, Uttar Pradesh',
-        instituteLatitude: null,
-        instituteLongitude: null,
-        scheduledDateTime: DateTime(2026, 9, 2, 11, 0),
-        priority: Priority.medium,
-        status: AssignmentStatus.inProgress,
-      ),
+      () {
+        final scheduled = DateTime(2026, 9, 1, 10, 30);
+        final lifetime = _lifetimeFor(scheduled);
+        return AssignmentSummary(
+          id: 'PMU-001',
+          instituteProfileId: 'mock-institute-001',
+          instituteName: 'Government Skill Development Centre',
+          fullAddress:
+              'Government Skill Development Centre, Meerut, Uttar Pradesh',
+          area: 'Meerut, Uttar Pradesh',
+          instituteLatitude: null,
+          instituteLongitude: null,
+          scheduledDateTime: scheduled,
+          priority: Priority.high,
+          status: AssignmentStatus.assigned,
+          createdAt: lifetime.createdAt,
+          expiresAt: lifetime.expiresAt,
+        );
+      }(),
+      () {
+        final scheduled = DateTime(2026, 9, 2, 11, 0);
+        final lifetime = _lifetimeFor(scheduled);
+        return AssignmentSummary(
+          id: 'PMU-002',
+          instituteProfileId: 'mock-institute-002',
+          instituteName: 'Women Empowerment Centre',
+          fullAddress: 'Women Empowerment Centre, Ghaziabad, Uttar Pradesh',
+          area: 'Ghaziabad, Uttar Pradesh',
+          instituteLatitude: null,
+          instituteLongitude: null,
+          scheduledDateTime: scheduled,
+          priority: Priority.medium,
+          status: AssignmentStatus.inProgress,
+          createdAt: lifetime.createdAt,
+          expiresAt: lifetime.expiresAt,
+        );
+      }(),
     ],
   ),
   PmuOfficerSummary(
@@ -44,17 +70,24 @@ final List<PmuOfficerSummary> mockPmuOfficerSummaries = [
     availability: OfficerAvailability.inInspection,
     lastActivity: DateTime(2026, 8, 30, 14, 15),
     assignments: [
-      AssignmentSummary(
-        id: 'PMU-003',
-        instituteProfileId: 'mock-institute-003',
-        projectName: 'Community Development Institute',
-        location: 'Delhi',
-        instituteLatitude: null,
-        instituteLongitude: null,
-        scheduledDateTime: DateTime(2026, 9, 3, 9, 30),
-        priority: Priority.low,
-        status: AssignmentStatus.inProgress,
-      ),
+      () {
+        final scheduled = DateTime(2026, 9, 3, 9, 30);
+        final lifetime = _lifetimeFor(scheduled);
+        return AssignmentSummary(
+          id: 'PMU-003',
+          instituteProfileId: 'mock-institute-003',
+          instituteName: 'Community Development Institute',
+          fullAddress: 'Community Development Institute, Delhi',
+          area: 'Delhi',
+          instituteLatitude: null,
+          instituteLongitude: null,
+          scheduledDateTime: scheduled,
+          priority: Priority.low,
+          status: AssignmentStatus.inProgress,
+          createdAt: lifetime.createdAt,
+          expiresAt: lifetime.expiresAt,
+        );
+      }(),
     ],
   ),
   PmuOfficerSummary(
@@ -66,89 +99,139 @@ final List<PmuOfficerSummary> mockPmuOfficerSummaries = [
     availability: OfficerAvailability.available,
     lastActivity: DateTime(2026, 8, 29, 11, 45),
     assignments: [
-      AssignmentSummary(
-        id: 'PMU-004',
-        instituteProfileId: 'mock-institute-004',
-        projectName: 'Youth Development Centre',
-        location: 'Noida, Uttar Pradesh',
-        instituteLatitude: null,
-        instituteLongitude: null,
-        scheduledDateTime: DateTime(2026, 9, 6, 10, 0),
-        priority: Priority.high,
-        status: AssignmentStatus.completed,
-      ),
+      () {
+        final scheduled = DateTime(2026, 9, 6, 10, 0);
+        final lifetime = _lifetimeFor(scheduled);
+        return AssignmentSummary(
+          id: 'PMU-004',
+          instituteProfileId: 'mock-institute-004',
+          instituteName: 'Youth Development Centre',
+          fullAddress: 'Youth Development Centre, Noida, Uttar Pradesh',
+          area: 'Noida, Uttar Pradesh',
+          instituteLatitude: null,
+          instituteLongitude: null,
+          scheduledDateTime: scheduled,
+          priority: Priority.high,
+          status: AssignmentStatus.completed,
+          createdAt: lifetime.createdAt,
+          expiresAt: lifetime.expiresAt,
+        );
+      }(),
     ],
   ),
 ];
 
 final List<AssignmentSummary> mockPmuAssignments = [
-  AssignmentSummary(
-    id: 'PMU-001',
-    instituteProfileId: 'mock-institute-001',
-    projectName: 'Government Skill Development Centre',
-    location: 'Meerut, Uttar Pradesh',
-    instituteLatitude: null,
-    instituteLongitude: null,
-    scheduledDateTime: DateTime(2026, 9, 1, 10, 30),
-    priority: Priority.high,
-    status: AssignmentStatus.assigned,
-  ),
-  AssignmentSummary(
-    id: 'PMU-002',
-    instituteProfileId: 'mock-institute-002',
-    projectName: 'Women Empowerment Centre',
-    location: 'Ghaziabad, Uttar Pradesh',
-    instituteLatitude: null,
-    instituteLongitude: null,
-    scheduledDateTime: DateTime(2026, 9, 2, 11, 0),
-    priority: Priority.medium,
-    status: AssignmentStatus.inProgress,
-  ),
-  AssignmentSummary(
-    id: 'PMU-003',
-    instituteProfileId: 'mock-institute-003',
-    projectName: 'Community Development Institute',
-    location: 'Delhi',
-    instituteLatitude: null,
-    instituteLongitude: null,
-    scheduledDateTime: DateTime(2026, 9, 3, 9, 30),
-    priority: Priority.low,
-    status: AssignmentStatus.completed,
-  ),
+  () {
+    final scheduled = DateTime(2026, 9, 1, 10, 30);
+    final lifetime = _lifetimeFor(scheduled);
+    return AssignmentSummary(
+      id: 'PMU-001',
+      instituteProfileId: 'mock-institute-001',
+      instituteName: 'Government Skill Development Centre',
+      fullAddress:
+          'Government Skill Development Centre, Meerut, Uttar Pradesh',
+      area: 'Meerut, Uttar Pradesh',
+      instituteLatitude: null,
+      instituteLongitude: null,
+      scheduledDateTime: scheduled,
+      priority: Priority.high,
+      status: AssignmentStatus.assigned,
+      createdAt: lifetime.createdAt,
+      expiresAt: lifetime.expiresAt,
+    );
+  }(),
+  () {
+    final scheduled = DateTime(2026, 9, 2, 11, 0);
+    final lifetime = _lifetimeFor(scheduled);
+    return AssignmentSummary(
+      id: 'PMU-002',
+      instituteProfileId: 'mock-institute-002',
+      instituteName: 'Women Empowerment Centre',
+      fullAddress: 'Women Empowerment Centre, Ghaziabad, Uttar Pradesh',
+      area: 'Ghaziabad, Uttar Pradesh',
+      instituteLatitude: null,
+      instituteLongitude: null,
+      scheduledDateTime: scheduled,
+      priority: Priority.medium,
+      status: AssignmentStatus.inProgress,
+      createdAt: lifetime.createdAt,
+      expiresAt: lifetime.expiresAt,
+    );
+  }(),
+  () {
+    final scheduled = DateTime(2026, 9, 3, 9, 30);
+    final lifetime = _lifetimeFor(scheduled);
+    return AssignmentSummary(
+      id: 'PMU-003',
+      instituteProfileId: 'mock-institute-003',
+      instituteName: 'Community Development Institute',
+      fullAddress: 'Community Development Institute, Delhi',
+      area: 'Delhi',
+      instituteLatitude: null,
+      instituteLongitude: null,
+      scheduledDateTime: scheduled,
+      priority: Priority.low,
+      status: AssignmentStatus.completed,
+      createdAt: lifetime.createdAt,
+      expiresAt: lifetime.expiresAt,
+    );
+  }(),
 ];
 
 final List<AssignmentSummary> mockUpcomingPmuAssignments = [
-  AssignmentSummary(
-    id: 'PMU-004',
-    instituteProfileId: 'mock-institute-004',
-    projectName: 'Youth Development Centre',
-    location: 'Noida, Uttar Pradesh',
-    instituteLatitude: null,
-    instituteLongitude: null,
-    scheduledDateTime: DateTime(2026, 9, 6, 10, 0),
-    priority: Priority.high,
-    status: AssignmentStatus.assigned,
-  ),
-  AssignmentSummary(
-    id: 'PMU-005',
-    instituteProfileId: 'mock-institute-005',
-    projectName: 'Skill Training Institute',
-    location: 'Faridabad, Haryana',
-    instituteLatitude: null,
-    instituteLongitude: null,
-    scheduledDateTime: DateTime(2026, 9, 7, 11, 30),
-    priority: Priority.medium,
-    status: AssignmentStatus.assigned,
-  ),
-  AssignmentSummary(
-    id: 'PMU-006',
-    instituteProfileId: 'mock-institute-006',
-    projectName: 'Community Support Centre',
-    location: 'Delhi',
-    instituteLatitude: null,
-    instituteLongitude: null,
-    scheduledDateTime: DateTime(2026, 9, 8, 14, 0),
-    priority: Priority.low,
-    status: AssignmentStatus.assigned,
-  ),
+  () {
+    final scheduled = DateTime(2026, 9, 6, 10, 0);
+    final lifetime = _lifetimeFor(scheduled);
+    return AssignmentSummary(
+      id: 'PMU-004',
+      instituteProfileId: 'mock-institute-004',
+      instituteName: 'Youth Development Centre',
+      fullAddress: 'Youth Development Centre, Noida, Uttar Pradesh',
+      area: 'Noida, Uttar Pradesh',
+      instituteLatitude: null,
+      instituteLongitude: null,
+      scheduledDateTime: scheduled,
+      priority: Priority.high,
+      status: AssignmentStatus.assigned,
+      createdAt: lifetime.createdAt,
+      expiresAt: lifetime.expiresAt,
+    );
+  }(),
+  () {
+    final scheduled = DateTime(2026, 9, 7, 11, 30);
+    final lifetime = _lifetimeFor(scheduled);
+    return AssignmentSummary(
+      id: 'PMU-005',
+      instituteProfileId: 'mock-institute-005',
+      instituteName: 'Skill Training Institute',
+      fullAddress: 'Skill Training Institute, Faridabad, Haryana',
+      area: 'Faridabad, Haryana',
+      instituteLatitude: null,
+      instituteLongitude: null,
+      scheduledDateTime: scheduled,
+      priority: Priority.medium,
+      status: AssignmentStatus.assigned,
+      createdAt: lifetime.createdAt,
+      expiresAt: lifetime.expiresAt,
+    );
+  }(),
+  () {
+    final scheduled = DateTime(2026, 9, 8, 14, 0);
+    final lifetime = _lifetimeFor(scheduled);
+    return AssignmentSummary(
+      id: 'PMU-006',
+      instituteProfileId: 'mock-institute-006',
+      instituteName: 'Community Support Centre',
+      fullAddress: 'Community Support Centre, Delhi',
+      area: 'Delhi',
+      instituteLatitude: null,
+      instituteLongitude: null,
+      scheduledDateTime: scheduled,
+      priority: Priority.low,
+      status: AssignmentStatus.assigned,
+      createdAt: lifetime.createdAt,
+      expiresAt: lifetime.expiresAt,
+    );
+  }(),
 ];

@@ -20,6 +20,7 @@ class NgoDashboardScreen extends StatefulWidget {
 }
 
 class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
+<<<<<<< HEAD
   // ============================================================
   // TOTAL STATUS DATA
   // ============================================================
@@ -46,6 +47,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   String? _organizationName;
 
   Timer? _autoReloadTimer;
+=======
+  int? _reportsCount;
+  int? _feedsCount;
+  
+>>>>>>> 9ed24a3a3b1f854ed95bc322563b0fae17554f2e
 
   // ============================================================
   // COLORS
@@ -97,6 +103,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     final user = SessionService.instance.currentUser;
 
     if (user == null) {
+<<<<<<< HEAD
       if (!mounted) return;
 
       setState(() {
@@ -105,6 +112,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
       return;
     }
+=======
+  return;
+}
+>>>>>>> 9ed24a3a3b1f854ed95bc322563b0fae17554f2e
 
     try {
       // ----------------------------------------------------------
@@ -224,6 +235,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       if (!mounted) return;
 
       setState(() {
+<<<<<<< HEAD
         // Total status
         _totalAttendance = totalAttendance;
         _totalReports = reports.length;
@@ -241,10 +253,15 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         _organizationName = organizationName;
 
         _loadingStats = false;
+=======
+        _reportsCount = reports.length;
+        _feedsCount = feeds.length;
+>>>>>>> 9ed24a3a3b1f854ed95bc322563b0fae17554f2e
       });
     } catch (error) {
       if (!mounted) return;
 
+<<<<<<< HEAD
       setState(() {
         _loadingStats = false;
       });
@@ -252,6 +269,9 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       debugPrint(
         'NGO dashboard refresh error: $error',
       );
+=======
+      setState(() {});
+>>>>>>> 9ed24a3a3b1f854ed95bc322563b0fae17554f2e
     }
   }
 

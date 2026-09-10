@@ -244,7 +244,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            widget.assignment.projectName,
+            widget.assignment.displayName,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -259,7 +259,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  widget.assignment.location,
+                  widget.assignment.displayLocation,
                   style: const TextStyle(fontSize: 13, color: Colors.black54),
                 ),
               ),

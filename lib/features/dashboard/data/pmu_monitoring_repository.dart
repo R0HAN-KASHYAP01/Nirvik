@@ -43,14 +43,18 @@ class PmuMonitoringRepository {
     }
   }
 
+  /// `overdue` is no longer a first-class AssignmentStatus. Any legacy
+  /// 'overdue' value still sitting in the database is treated the same
+  /// as 'expired' so old rows don't crash mapping.
   AssignmentStatus _assignmentStatusFromDb(String value) {
     switch (value) {
       case 'in_progress':
         return AssignmentStatus.inProgress;
       case 'completed':
         return AssignmentStatus.completed;
+      case 'expired':
       case 'overdue':
-        return AssignmentStatus.overdue;
+        return AssignmentStatus.expired;
       case 'assigned':
       default:
         return AssignmentStatus.assigned;
@@ -79,6 +83,17 @@ class PmuMonitoringRepository {
     }
 
     return double.tryParse(value.toString());
+  }
+
+  /// Splits a full address into a coarse, non-identifying "area" string
+  /// (e.g. "Sector 12, Dwarka" from "H.No. 4, Sector 12, Dwarka, Delhi").
+  /// There is no dedicated "area" column in ngo_institutes yet, so this
+  /// is derived. If you add a real `area` column later, read it directly
+  /// instead of calling this.
+  String _deriveArea(String fullAddress) {
+    final parts = fullAddress.split(',').map((p) => p.trim()).toList();
+    if (parts.length <= 2) return fullAddress;
+    return parts.sublist(parts.length - 2).join(', ');
   }
 
   /// Derived from current assignments rather than stored, so it can never
@@ -128,11 +143,13 @@ class PmuMonitoringRepository {
     final profilesById = {for (final p in profileRows) p['id'] as String: p};
 
     // 3) All assignments for these officers, in one bulk query.
+    // `created_at` is now required to compute each assignment's 2-day
+    // expiry window.
     final assignmentRows = await _client
         .from('pmu_assignments')
         .select(
           'id, inspector_profile_id, institute_profile_id, '
-          'scheduled_datetime, priority, status',
+          'scheduled_datetime, priority, status, created_at',
         )
         .inFilter('inspector_profile_id', officerIds)
         .order('scheduled_datetime', ascending: true);
@@ -149,8 +166,8 @@ class PmuMonitoringRepository {
 
     // 5) Institute information referenced above, in one bulk query.
     //
-    // We now fetch latitude and longitude as well because the
-    // AssignmentSummary model carries the actual institute coordinates.
+    // We now fetch latitude, longitude and address as well because the
+    // AssignmentSummary model carries the real institute location.
     final instituteIds = <String>{
       ...assignmentRows.map((r) => r['institute_profile_id'] as String),
       ...inspectionRows.map((r) => r['institute_profile_id'] as String),
@@ -161,7 +178,7 @@ class PmuMonitoringRepository {
     if (instituteIds.isNotEmpty) {
       final instituteRows = await _client
           .from('ngo_institutes')
-          .select('profile_id, institute_name, latitude, longitude')
+          .select('profile_id, institute_name, address, latitude, longitude')
           .inFilter('profile_id', instituteIds);
 
       final missingNameIds = instituteRows
@@ -191,6 +208,7 @@ class PmuMonitoringRepository {
                 (r['institute_name'] as String?) ??
                 fallbackNamesById[r['profile_id']] ??
                 'Unnamed Institute',
+            'address': (r['address'] as String?) ?? 'Address not available',
             'latitude': _parseCoordinate(r['latitude']),
             'longitude': _parseCoordinate(r['longitude']),
           },
@@ -200,6 +218,11 @@ class PmuMonitoringRepository {
     String instituteName(String id) {
       return institutesById[id]?['institute_name'] as String? ??
           'Unnamed Institute';
+    }
+
+    String instituteAddress(String id) {
+      return institutesById[id]?['address'] as String? ??
+          'Address not available';
     }
 
     double? instituteLatitude(String id) {
@@ -228,25 +251,44 @@ class PmuMonitoringRepository {
           .toList();
 
       final assignments = myAssignments
-          .map(
-            (a) => AssignmentSummary(
+          .map((a) {
+            final instituteId = a['institute_profile_id'] as String;
+            final createdAt = DateTime.parse(a['created_at'] as String);
+            final fullAddress = instituteAddress(instituteId);
+            final status = _assignmentStatusFromDb(a['status'] as String);
+
+            // TODO: pmu_assignments has no started_at column yet. Until
+            // one is added, we approximate "started" as any status past
+            // 'assigned' — good enough to unlock displayName/displayLocation
+            // for PMU staff, but not a substitute for a real timestamp.
+            final startedAt =
+                status == AssignmentStatus.inProgress ||
+                    status == AssignmentStatus.completed
+                ? createdAt
+                : null;
+
+            return AssignmentSummary(
               id: a['id'] as String,
-              instituteProfileId: a['institute_profile_id'] as String,
-              projectName: instituteName(a['institute_profile_id'] as String),
-              location: '',
-              instituteLatitude: instituteLatitude(
-                a['institute_profile_id'] as String,
-              ),
-              instituteLongitude: instituteLongitude(
-                a['institute_profile_id'] as String,
-              ),
+              instituteProfileId: instituteId,
+              instituteName: instituteName(instituteId),
+              fullAddress: fullAddress,
+              area: _deriveArea(fullAddress),
+              instituteLatitude: instituteLatitude(instituteId),
+              instituteLongitude: instituteLongitude(instituteId),
               scheduledDateTime: DateTime.parse(
                 a['scheduled_datetime'] as String,
               ),
               priority: _priorityFromDb(a['priority'] as String?),
-              status: _assignmentStatusFromDb(a['status'] as String),
-            ),
-          )
+              status: status,
+              createdAt: createdAt,
+              expiresAt: createdAt.add(kAssignmentLifetime),
+              startedAt: startedAt,
+            );
+          })
+          // Expired assignments never surface anywhere in the UI —
+          // filtered out right here so every screen that consumes
+          // PmuOfficerSummary.assignments gets them for free.
+          .where((a) => a.isActive)
           .toList();
 
       final inspections = myInspections

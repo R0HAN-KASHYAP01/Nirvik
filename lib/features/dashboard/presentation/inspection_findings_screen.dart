@@ -193,7 +193,7 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.assignment.projectName,
+            widget.assignment.displayName,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -207,7 +207,7 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  widget.assignment.location,
+                  widget.assignment.displayLocation,
                   style: const TextStyle(color: Colors.black54),
                 ),
               ),

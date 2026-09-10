@@ -34,12 +34,6 @@ class AssignmentEngine {
   final Random _random;
 
   /// Creates an assignment for the supplied institute.
-  ///
-  /// [instituteProfileId] identifies the institute/project.
-  /// [riskScore] must come from Member 1's Risk Engine.
-  /// [riskLevel] must come from Member 1's Risk Engine.
-  ///
-  /// No risk calculation is performed here.
   Future<AssignmentEngineResult> createAssignment({
     required String instituteProfileId,
     required double riskScore,
@@ -130,7 +124,6 @@ class AssignmentEngine {
     }
   }
 
-  /// Fetch the institute/project that is being assigned.
   Future<Map<String, dynamic>?> _getInstitute(
     String instituteProfileId,
   ) async {
@@ -142,20 +135,21 @@ class AssignmentEngine {
         .eq('profile_id', instituteProfileId)
         .maybeSingle();
 
-    if (response == null) {
-      return null;
-    }
-
+    if (response == null) return null;
     return Map<String, dynamic>.from(response);
   }
 
   /// Find an existing active assignment for the institute.
   ///
-  /// Completed assignments are intentionally excluded so that an institute
-  /// can be inspected again in the future.
+  /// Completed assignments are excluded so the institute can be
+  /// inspected again in future. Assignments past their 2-day
+  /// `expires_at` are also excluded — they are released back to the
+  /// pool automatically.
   Future<Map<String, dynamic>?> _getActiveAssignmentForInstitute(
     String instituteProfileId,
   ) async {
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
     final response = await _client
         .from('pmu_assignments')
         .select(
@@ -163,96 +157,65 @@ class AssignmentEngine {
           'scheduled_datetime, priority, status, created_at',
         )
         .eq('institute_profile_id', instituteProfileId)
-        .inFilter(
-          'status',
-          <String>[
-            'assigned',
-            'in_progress',
-            'overdue',
-          ],
-        )
+        .inFilter('status', <String>['assigned', 'in_progress'])
+        .gt('expires_at', nowIso)
         .order('created_at', ascending: false)
         .limit(1)
         .maybeSingle();
 
-    if (response == null) {
-      return null;
-    }
-
+    if (response == null) return null;
     return Map<String, dynamic>.from(response);
   }
 
   /// Fetch inspectors who satisfy the existing authorization
   /// and availability requirements.
-  ///
-  /// Eligibility:
-  /// - PMU inspector role
-  /// - approved profile
-  /// - currently online
-  /// - recent last_seen
-  /// - corresponding pmu_inspectors profile exists
-Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
-  final response = await _client
-      .from('profiles')
-      .select(
-        'id, full_name, role, status, is_online, last_seen',
-      )
-      .eq('role', 'pmu_inspector')
-      .eq('status', 'approved')
-      .eq('is_online', true);
+  Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
+    final response = await _client
+        .from('profiles')
+        .select(
+          'id, full_name, role, status, is_online, last_seen',
+        )
+        .eq('role', 'pmu_inspector')
+        .eq('status', 'approved')
+        .eq('is_online', true);
 
-  final rows = response as List<dynamic>;
+    final rows = response as List<dynamic>;
 
-  final now = DateTime.now().toUtc();
+    final now = DateTime.now().toUtc();
 
-  final inspectors = <_InspectorCandidate>[];
+    final inspectors = <_InspectorCandidate>[];
 
-  for (final row in rows) {
-    if (row is! Map<String, dynamic>) {
-      continue;
+    for (final row in rows) {
+      if (row is! Map<String, dynamic>) continue;
+
+      final profileId = row['id']?.toString();
+      if (profileId == null || profileId.isEmpty) continue;
+
+      final lastSeen = _parseDateTime(row['last_seen']);
+      if (lastSeen == null) continue;
+
+      final age = now.difference(lastSeen.toUtc());
+      if (age.isNegative || age > const Duration(minutes: 2)) continue;
+
+      final inspectorProfile = await _getInspectorProfile(profileId);
+      if (inspectorProfile == null) continue;
+
+      final activeAssignments = await _getActiveAssignmentCount(profileId);
+
+      inspectors.add(
+        _InspectorCandidate(
+          profileId: profileId,
+          fullName: row['full_name']?.toString() ?? 'Unnamed Inspector',
+          latitude: _parseCoordinate(inspectorProfile['latitude']),
+          longitude: _parseCoordinate(inspectorProfile['longitude']),
+          activeAssignments: activeAssignments,
+        ),
+      );
     }
 
-    final profileId = row['id']?.toString();
-
-    if (profileId == null || profileId.isEmpty) {
-      continue;
-    }
-
-    final lastSeen = _parseDateTime(row['last_seen']);
-
-    if (lastSeen == null) {
-      continue;
-    }
-
-    final age = now.difference(lastSeen.toUtc());
-
-    if (age.isNegative || age > const Duration(minutes: 2)) {
-      continue;
-    }
-
-    final inspectorProfile = await _getInspectorProfile(profileId);
-
-    if (inspectorProfile == null) {
-      continue;
-    }
-
-    final activeAssignments = await _getActiveAssignmentCount(
-      profileId,
-    );
-
-    inspectors.add(
-      _InspectorCandidate(
-        profileId: profileId,
-        fullName: row['full_name']?.toString() ?? 'Unnamed Inspector',
-        latitude: _parseCoordinate(inspectorProfile['latitude']),
-        longitude: _parseCoordinate(inspectorProfile['longitude']),
-        activeAssignments: activeAssignments,
-      ),
-    );
+    return inspectors;
   }
 
-  return inspectors;
-} /// Fetch PMU-specific inspector information.
   Future<Map<String, dynamic>?> _getInspectorProfile(
     String profileId,
   ) async {
@@ -265,58 +228,33 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
         .eq('profile_id', profileId)
         .maybeSingle();
 
-    if (response == null) {
-      return null;
-    }
-
+    if (response == null) return null;
     return Map<String, dynamic>.from(response);
   }
 
-  /// Count only active assignments.
-  ///
-  /// Completed/historical assignments do not count toward
-  /// current workload.
+  /// Count only active assignments (not completed, not expired).
   Future<int> _getActiveAssignmentCount(
     String inspectorProfileId,
   ) async {
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
     final response = await _client
         .from('pmu_assignments')
         .select('id')
         .eq('inspector_profile_id', inspectorProfileId)
-        .inFilter(
-          'status',
-          <String>[
-            'assigned',
-            'in_progress',
-            'overdue',
-          ],
-        );
+        .inFilter('status', <String>['assigned', 'in_progress'])
+        .gt('expires_at', nowIso);
 
     final rows = response as List<dynamic>;
-
     return rows.length;
   }
 
-  /// Build candidates with workload and distance information.
-  ///
-  /// Risk is deliberately not used as an inspector-selection multiplier.
-  /// Risk belongs to the project and is converted into assignment priority.
-  ///
-  /// Inspector selection is based on:
-  /// - current workload
-  /// - geographic suitability when coordinates are available
-  /// - weighted randomness
   Future<List<_InspectorCandidate>> _buildCandidates({
     required List<_InspectorCandidate> inspectors,
     required Map<String, dynamic> institute,
   }) async {
-    final instituteLatitude = _parseCoordinate(
-      institute['latitude'],
-    );
-
-    final instituteLongitude = _parseCoordinate(
-      institute['longitude'],
-    );
+    final instituteLatitude = _parseCoordinate(institute['latitude']);
+    final instituteLongitude = _parseCoordinate(institute['longitude']);
 
     final candidates = <_InspectorCandidate>[];
 
@@ -351,24 +289,13 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
     return candidates;
   }
 
-  /// Calculate inspector suitability weight.
-  ///
-  /// Lower workload gets a higher weight.
-  /// Shorter distance gets a higher weight when location data exists.
-  ///
-  /// Random selection is performed after these weights are calculated.
   double _calculateSelectionWeight({
     required int activeAssignments,
     required double? distanceKm,
   }) {
-    // Lower workload gets a higher fairness factor.
-    final workloadFactor =
-        1.0 / (1.0 + activeAssignments);
+    final workloadFactor = 1.0 / (1.0 + activeAssignments);
 
-    // Missing location does not eliminate an inspector.
-    // When available, closer inspectors receive a stronger factor.
     double distanceFactor = 1.0;
-
     if (distanceKm != null) {
       distanceFactor = 1.0 / (1.0 + distanceKm / 10.0);
     }
@@ -376,9 +303,6 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
     return workloadFactor * distanceFactor;
   }
 
-  /// Perform weighted random selection.
-  ///
-  /// Every candidate with a positive weight retains a chance of selection.
   _InspectorCandidate _selectWeightedRandom(
     List<_InspectorCandidate> candidates,
   ) {
@@ -396,44 +320,26 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
     );
 
     if (totalWeight <= 0) {
-      return positiveCandidates[
-        _random.nextInt(positiveCandidates.length)
-      ];
+      return positiveCandidates[_random.nextInt(positiveCandidates.length)];
     }
 
     var randomValue = _random.nextDouble() * totalWeight;
 
     for (final candidate in positiveCandidates) {
       randomValue -= candidate.selectionWeight;
-
-      if (randomValue <= 0) {
-        return candidate;
-      }
+      if (randomValue <= 0) return candidate;
     }
 
     return positiveCandidates.last;
   }
 
-  /// Convert continuous risk into the existing assignment priority.
-  ///
-  /// This does NOT calculate risk. It only maps the already calculated
-  /// Risk Engine result to the existing pmu_assignments priority field.
   String _priorityFromRisk({
     required double riskScore,
     required String riskLevel,
   }) {
-    if (riskLevel == 'critical') {
-      return 'high';
-    }
-
-    if (riskLevel == 'high' || riskScore >= 70) {
-      return 'high';
-    }
-
-    if (riskLevel == 'medium' || riskScore >= 40) {
-      return 'medium';
-    }
-
+    if (riskLevel == 'critical') return 'high';
+    if (riskLevel == 'high' || riskScore >= 70) return 'high';
+    if (riskLevel == 'medium' || riskScore >= 40) return 'medium';
     return 'low';
   }
 
@@ -441,46 +347,29 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
     switch (value.trim().toLowerCase()) {
       case 'low':
         return 'low';
-
       case 'medium':
         return 'medium';
-
       case 'high':
         return 'high';
-
       case 'critical':
         return 'critical';
-
       default:
         return null;
     }
   }
 
   double? _parseCoordinate(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
-    if (value is num) {
-      return value.toDouble();
-    }
-
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
   }
 
   DateTime? _parseDateTime(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
-    if (value is DateTime) {
-      return value;
-    }
-
+    if (value == null) return null;
+    if (value is DateTime) return value;
     return DateTime.tryParse(value.toString());
   }
 
-  /// Haversine distance between two latitude/longitude points.
   double _distanceKm(
     double latitude1,
     double longitude1,
@@ -491,17 +380,10 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
 
     final latitude1Radians = _toRadians(latitude1);
     final latitude2Radians = _toRadians(latitude2);
+    final deltaLatitude = _toRadians(latitude2 - latitude1);
+    final deltaLongitude = _toRadians(longitude2 - longitude1);
 
-    final deltaLatitude = _toRadians(
-      latitude2 - latitude1,
-    );
-
-    final deltaLongitude = _toRadians(
-      longitude2 - longitude1,
-    );
-
-    final a =
-        pow(sin(deltaLatitude / 2), 2) +
+    final a = pow(sin(deltaLatitude / 2), 2) +
         cos(latitude1Radians) *
             cos(latitude2Radians) *
             pow(sin(deltaLongitude / 2), 2);
@@ -511,9 +393,7 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
     return earthRadiusKm * c;
   }
 
-  double _toRadians(double degrees) {
-    return degrees * pi / 180.0;
-  }
+  double _toRadians(double degrees) => degrees * pi / 180.0;
 
   Future<Map<String, dynamic>> _insertAssignment({
     required String inspectorProfileId,
@@ -537,7 +417,6 @@ Future<List<_InspectorCandidate>> _getEligibleInspectors() async {
   }
 }
 
-/// Internal representation of an inspector candidate.
 class _InspectorCandidate {
   const _InspectorCandidate({
     required this.profileId,
@@ -568,8 +447,7 @@ class _InspectorCandidate {
       longitude: longitude,
       activeAssignments: activeAssignments,
       distanceKm: distanceKm ?? this.distanceKm,
-      selectionWeight:
-          selectionWeight ?? this.selectionWeight,
+      selectionWeight: selectionWeight ?? this.selectionWeight,
     );
   }
 }

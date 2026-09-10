@@ -45,21 +45,28 @@ class _RiskIntelligenceScreenState
   }
 
   Future<void> _loadRiskIntelligence() async {
-    final profileId = widget.project.profileId;
+    final profileId = widget.project.profileId?.trim();
 
-    if (profileId == null || profileId.trim().isEmpty) {
+    if (profileId == null || profileId.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
         _loading = false;
         _error =
             'This project does not have a valid Supabase profile ID.';
       });
+
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final riskInput =
@@ -225,9 +232,9 @@ class _RiskIntelligenceScreenState
   }
 
   Future<void> _createInspectionAssignment() async {
-    final profileId = widget.project.profileId;
+    final profileId = widget.project.profileId?.trim();
 
-    if (profileId == null || profileId.trim().isEmpty) {
+    if (profileId == null || profileId.isEmpty) {
       _showMessage(
         'This project does not have a valid Supabase profile ID.',
       );
@@ -331,7 +338,7 @@ class _RiskIntelligenceScreenState
       ),
     );
 
-    if (selectedTime == null) {
+    if (selectedTime == null || !mounted) {
       return null;
     }
 
@@ -348,6 +355,10 @@ class _RiskIntelligenceScreenState
     required String? inspectorName,
     required DateTime scheduledDateTime,
   }) {
+    if (!mounted) {
+      return;
+    }
+
     final scheduledText =
         MaterialLocalizations.of(context)
             .formatFullDate(scheduledDateTime);
@@ -355,10 +366,10 @@ class _RiskIntelligenceScreenState
     final timeText =
         MaterialLocalizations.of(context)
             .formatTimeOfDay(
-          TimeOfDay.fromDateTime(
-            scheduledDateTime,
-          ),
-        );
+      TimeOfDay.fromDateTime(
+        scheduledDateTime,
+      ),
+    );
 
     showDialog<void>(
       context: context,
@@ -620,31 +631,29 @@ class _RiskIntelligenceScreenState
   Widget _buildSummary(
     BuildContext context,
   ) {
-    // These keys match the feature names
-    // returned by the FastAPI risk engine.
     final totalTracked =
         _features['attendance_total_tracked'] ??
-        0;
+            0;
 
     final staff =
         _features['attendance_staff_count'] ??
-        0;
+            0;
 
     final beneficiaries =
         _features['attendance_beneficiary_count'] ??
-        0;
+            0;
 
     final unknown =
         _features['attendance_unknown_count'] ??
-        0;
+            0;
 
     final pending =
         _features['project_pending_inspections'] ??
-        0;
+            0;
 
     final findings =
         _features['project_high_risk_findings'] ??
-        0;
+            0;
 
     return AppCard(
       child: Column(
@@ -951,14 +960,15 @@ class _RiskIntelligenceScreenState
   Widget _buildAssignmentCard(
     BuildContext context,
   ) {
+    final profileId =
+        widget.project.profileId?.trim();
+
     final enabled =
         !_creatingAssignment &&
         !_loading &&
         _riskResult != null &&
-        widget.project.profileId != null &&
-        widget.project.profileId!
-            .trim()
-            .isNotEmpty &&
+        profileId != null &&
+        profileId.isNotEmpty &&
         _riskLevel != 'unknown';
 
     return AppCard(

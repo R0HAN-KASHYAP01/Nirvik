@@ -31,8 +31,15 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
   String? _message;
   double? _distanceKm;
 
+  /// True when the inspector can't perform verification right now
+  /// (assignment never started, or the 1-hour post-start window has
+  /// closed). Distinct from the 500 m proximity check performed below.
+  bool get _isBlocked =>
+      !widget.assignment.isStarted ||
+      widget.assignment.isVerificationWindowExpired;
+
   Future<void> _verifyArrival() async {
-    if (_isChecking || _isVerified) {
+    if (_isChecking || _isVerified || _isBlocked) {
       return;
     }
 
@@ -200,7 +207,7 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            widget.assignment.projectName,
+            widget.assignment.displayName,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -215,11 +222,39 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  widget.assignment.location,
+                  widget.assignment.displayLocation,
                   style: const TextStyle(fontSize: 13, color: Colors.black54),
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlockedNotice() {
+    final notStarted = !widget.assignment.isStarted;
+
+    return AppCard(
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Icon(
+            notStarted ? Icons.lock_outline : Icons.timer_off_outlined,
+            color: Colors.red,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              notStarted
+                  ? 'You must start this assignment (within '
+                    '${kAssignmentStartRadiusKm.toStringAsFixed(0)} km of '
+                    'the institute) before geo verification is available.'
+                  : 'The 1-hour geo verification window for this assignment '
+                    'has closed. Contact PMU staff for guidance.',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
           ),
         ],
       ),
@@ -282,6 +317,13 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
             title: 'Maximum Distance',
             description:
                 'You must be within 500 meters of the assigned institute.',
+          ),
+          const SizedBox(height: 14),
+          _buildRequirement(
+            icon: Icons.timer_outlined,
+            title: '1-Hour Window',
+            description:
+                'This must be completed within 1 hour of starting the assignment.',
           ),
           const SizedBox(height: 14),
           _buildRequirement(
@@ -363,7 +405,7 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
   Widget _buildVerifyButton() {
     return PrimaryButton(
       label: _isChecking ? 'Checking Location...' : 'Verify Arrival',
-      onPressed: _verifyArrival,
+      onPressed: _isBlocked ? () {} : _verifyArrival,
     );
   }
 
@@ -386,6 +428,10 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
           const SizedBox(height: 20),
           _buildAssignmentCard(),
           const SizedBox(height: 12),
+          if (_isBlocked) ...[
+            _buildBlockedNotice(),
+            const SizedBox(height: 12),
+          ],
           _buildVerificationStatus(),
           const SizedBox(height: 12),
           _buildVerificationInformation(),

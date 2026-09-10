@@ -247,7 +247,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            widget.assignment.projectName,
+            widget.assignment.displayName,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
@@ -261,7 +261,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  widget.assignment.location,
+                  widget.assignment.displayLocation,
                   style: const TextStyle(fontSize: 13, color: Colors.black54),
                 ),
               ),

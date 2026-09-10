@@ -257,7 +257,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
       final remarks = _remarksController.text.trim();
 
       final summary =
-          'Inspection completed for ${widget.assignment.projectName}. '
+          'Inspection completed for ${widget.assignment.displayName}. '
           'Checklist: $_yesCount Yes, $_noCount No. '
           'Evidence items: ${_evidence.length}. '
           'Findings: ${_findings.length}. '
@@ -332,7 +332,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            widget.assignment.projectName,
+            widget.assignment.displayName,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -347,7 +347,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  widget.assignment.location,
+                  widget.assignment.displayLocation,
                   style: const TextStyle(color: Colors.black54),
                 ),
               ),

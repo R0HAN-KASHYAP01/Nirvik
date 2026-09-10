@@ -23,12 +23,12 @@ class AssignmentCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (assignment.status) {
-      case AssignmentStatus.overdue:
-        return Colors.red;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
       case AssignmentStatus.completed:
         return Colors.green;
+      case AssignmentStatus.expired:
+        return Colors.grey;
       case AssignmentStatus.assigned:
         return Colors.blueGrey;
     }
@@ -62,7 +62,7 @@ class AssignmentCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    assignment.projectName,
+                    assignment.displayName,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -87,7 +87,7 @@ class AssignmentCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    assignment.location,
+                    assignment.displayLocation,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                     overflow: TextOverflow.ellipsis,
                   ),

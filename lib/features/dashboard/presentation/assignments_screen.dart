@@ -85,7 +85,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
 
       result = result.where((assignment) {
         return assignment.scheduledDateTime.isAfter(now) &&
-            assignment.status != AssignmentStatus.completed;
+            assignment.status != AssignmentStatus.completed &&
+            assignment.status != AssignmentStatus.expired;
       }).toList();
     } else if (_selectedFilter == 'pendingReview') {
       final staleThreshold = DateTime.now().subtract(const Duration(days: 3));
@@ -111,10 +112,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
         return Colors.blueGrey;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
-      case AssignmentStatus.overdue:
-        return Colors.red;
       case AssignmentStatus.completed:
         return Colors.green;
+      case AssignmentStatus.expired:
+        return Colors.grey;
     }
   }
 
@@ -139,10 +140,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   String _statusFilterLabel(AssignmentStatus? status) {
-    if (status == null) {
-      return 'All';
-    }
-
+    if (status == null) return 'All';
     return status.label;
   }
 
@@ -151,8 +149,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       null,
       AssignmentStatus.assigned,
       AssignmentStatus.inProgress,
-      AssignmentStatus.overdue,
       AssignmentStatus.completed,
+      AssignmentStatus.expired,
     ];
 
     return SingleChildScrollView(
@@ -200,7 +198,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      assignment.projectName,
+                      assignment.displayName,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -224,7 +222,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      assignment.location,
+                      assignment.displayLocation,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Colors.black54,
@@ -276,26 +274,11 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   String get _screenTitle {
-    if (_selectedFilter == 'today') {
-      return "Today's Assignments";
-    }
-
-    if (_selectedFilter == 'upcoming') {
-      return 'Upcoming Assignments';
-    }
-
-    if (_selectedFilter == 'pendingReview') {
-      return 'Pending Review';
-    }
-
-    if (_selectedStatus == AssignmentStatus.overdue) {
-      return 'Overdue Assignments';
-    }
-
-    if (_selectedStatus == AssignmentStatus.completed) {
-      return 'Completed Assignments';
-    }
-
+    if (_selectedFilter == 'today') return "Today's Assignments";
+    if (_selectedFilter == 'upcoming') return 'Upcoming Assignments';
+    if (_selectedFilter == 'pendingReview') return 'Pending Review';
+    if (_selectedStatus == AssignmentStatus.expired) return 'Expired Assignments';
+    if (_selectedStatus == AssignmentStatus.completed) return 'Completed Assignments';
     return 'Assignments';
   }
 

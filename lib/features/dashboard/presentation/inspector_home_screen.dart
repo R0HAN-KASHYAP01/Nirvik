@@ -77,9 +77,11 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
 
   int get _todayCount => _todaysAssignments.length;
 
-  int get _overdueCount {
+  int get _activeCount {
     return _assignments
-        .where((assignment) => assignment.status == AssignmentStatus.overdue)
+        .where((assignment) =>
+            assignment.status == AssignmentStatus.assigned ||
+            assignment.status == AssignmentStatus.inProgress)
         .length;
   }
 
@@ -133,9 +135,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
 
               const SizedBox(height: 24),
 
-              // Row of Expanded cards — each sizes to its own content, so it
-              // can never overflow regardless of text length or font scale
-              // (the previous fixed-aspect-ratio GridView could).
               Row(
                 children: [
                   Expanded(
@@ -149,11 +148,11 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: SummaryStatCard(
-                      icon: Icons.error_outline,
-                      label: 'Overdue',
-                      count: _isLoading ? '—' : '$_overdueCount',
-                      accentColor: Colors.red,
-                      onTap: () => _openAssignments(status: AssignmentStatus.overdue),
+                      icon: Icons.pending_actions_outlined,
+                      label: 'Active',
+                      count: _isLoading ? '—' : '$_activeCount',
+                      accentColor: Colors.indigo,
+                      onTap: () => _openAssignments(status: AssignmentStatus.assigned),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -273,9 +272,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
   }
 }
 
-/// Header for this screen only — greeting, name, and the map/notification/
-/// call-history actions. The shared DashboardHeader (still used elsewhere,
-/// e.g. NGO dashboard) is untouched.
 class _InspectorHeader extends StatelessWidget {
   final String userName;
 

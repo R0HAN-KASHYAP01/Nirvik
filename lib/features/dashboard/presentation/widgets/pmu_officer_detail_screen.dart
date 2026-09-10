@@ -94,6 +94,12 @@ class _PmuOfficerDetailScreenState extends State<PmuOfficerDetailScreen> {
   Widget build(BuildContext context) {
     final currentAssignment = officer.currentAssignment;
 
+    // Defensive filter: expired assignments should never render, even if
+    // an older/cached PmuOfficerSummary slipped through with one still
+    // attached. The repository already filters these out at the source.
+    final visibleAssignments =
+        officer.assignments.where((a) => a.isActive).toList();
+
     return Scaffold(
       appBar: AppBar(title: Text(officer.name)),
       body: ListView(
@@ -125,7 +131,7 @@ class _PmuOfficerDetailScreenState extends State<PmuOfficerDetailScreen> {
           Text('Last activity: ${_timeAgo(officer.lastActivity)}',
               style: Theme.of(context).textTheme.bodySmall),
 
-          if (currentAssignment != null) ...[
+          if (currentAssignment != null && currentAssignment.isActive) ...[
             const SizedBox(height: 16),
             InkWell(
               borderRadius: BorderRadius.circular(12),
@@ -142,7 +148,7 @@ class _PmuOfficerDetailScreenState extends State<PmuOfficerDetailScreen> {
                   children: [
                     Text('Current Assignment', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 4),
-                    Text(currentAssignment.projectName, style: Theme.of(context).textTheme.titleMedium),
+                    Text(currentAssignment.displayName, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 2),
                     Text(currentAssignment.status.label, style: Theme.of(context).textTheme.bodySmall),
                   ],
@@ -171,11 +177,11 @@ class _PmuOfficerDetailScreenState extends State<PmuOfficerDetailScreen> {
             ],
           ),
 
-          if (officer.assignments.isNotEmpty) ...[
+          if (visibleAssignments.isNotEmpty) ...[
             const SizedBox(height: 24),
             const SectionHeader(title: 'Assignments'),
             const SizedBox(height: 10),
-            ...officer.assignments.map(
+            ...visibleAssignments.map(
               (a) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: AssignmentCard(assignment: a),

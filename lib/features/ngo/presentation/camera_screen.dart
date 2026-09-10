@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:mjpeg_view/mjpeg_view.dart';
 
 import '../../../app/theme.dart';
 import '../../../services/session_service.dart';
@@ -62,13 +63,14 @@ class _CameraScreenState extends State<CameraScreen> {
       return;
     }
 
-    setState(() {
-      _loadingFeeds = true;
-    });
+    if (mounted) {
+      setState(() {
+        _loadingFeeds = true;
+      });
+    }
 
     try {
-      final feeds =
-          await NgoCameraService.instance.fetchFeeds(user.id);
+      final feeds = await NgoCameraService.instance.fetchFeeds(user.id);
 
       if (!mounted) return;
 
@@ -76,7 +78,9 @@ class _CameraScreenState extends State<CameraScreen> {
         _feeds = feeds;
         _loadingFeeds = false;
       });
-    } catch (_) {
+    } catch (error) {
+      debugPrint('NGO CAMERA PAGE LOAD ERROR: $error');
+
       if (!mounted) return;
 
       setState(() {
@@ -91,12 +95,16 @@ class _CameraScreenState extends State<CameraScreen> {
       withData: true,
     );
 
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
 
     final file = result.files.first;
     final bytes = file.bytes;
 
-    if (bytes == null || bytes.isEmpty) return;
+    if (bytes == null || bytes.isEmpty) {
+      return;
+    }
 
     setState(() {
       _videoBytes = bytes;
@@ -108,7 +116,9 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _submitLiveLink() async {
     final user = SessionService.instance.currentUser;
 
-    if (user == null) return;
+    if (user == null) {
+      return;
+    }
 
     if (!_linkFormKey.currentState!.validate()) {
       return;
@@ -133,18 +143,24 @@ class _CameraScreenState extends State<CameraScreen> {
       _linkLabelController.clear();
       _linkUrlController.clear();
 
+      Navigator.of(context).pop();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Live stream link added successfully.'),
+          content: Text(
+            'Live camera added successfully.',
+          ),
         ),
       );
 
       await _loadFeeds();
-    } catch (_) {
+    } catch (error) {
+      debugPrint('ADD LIVE CAMERA ERROR: $error');
+
       if (!mounted) return;
 
       setState(() {
-        _linkError = 'Could not add link. Please try again.';
+        _linkError = 'Could not add camera. Please try again.';
       });
     } finally {
       if (mounted) {
@@ -158,7 +174,9 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _submitUpload() async {
     final user = SessionService.instance.currentUser;
 
-    if (user == null) return;
+    if (user == null) {
+      return;
+    }
 
     if (_videoBytes == null || _videoName == null) {
       setState(() {
@@ -198,12 +216,16 @@ class _CameraScreenState extends State<CameraScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Video uploaded successfully.'),
+          content: Text(
+            'Video uploaded successfully.',
+          ),
         ),
       );
 
       await _loadFeeds();
-    } catch (_) {
+    } catch (error) {
+      debugPrint('UPLOAD VIDEO ERROR: $error');
+
       if (!mounted) return;
 
       setState(() {
@@ -218,66 +240,337 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  void _openFeed(NgoCameraFeed feed) {
-    if (feed.streamUrl == null || feed.streamUrl!.isEmpty) {
+  Future<void> _updateCamera(NgoCameraFeed feed) async {
+    final labelController = TextEditingController(
+      text: feed.label ?? '',
+    );
+
+    final urlController = TextEditingController(
+      text: feed.streamUrl ?? '',
+    );
+
+    final formKey = GlobalKey<FormState>();
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        bool saving = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                'Edit Camera',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              content: SizedBox(
+                width: 450,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: labelController,
+                        decoration: InputDecoration(
+                          labelText: 'Camera name',
+                          hintText: 'Main Hall Camera',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: urlController,
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          labelText: 'Stream URL',
+                          hintText: 'http://10.0.0.1:8080/video',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                        ),
+                        validator: (value) {
+                          final url = value?.trim() ?? '';
+
+                          if (url.isEmpty) {
+                            return 'Please enter stream URL.';
+                          }
+
+                          if (!url.startsWith('http://') &&
+                              !url.startsWith('https://') &&
+                              !url.startsWith('rtsp://')) {
+                            return 'Enter a valid http, https or rtsp URL.';
+                          }
+
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: saving
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop(false);
+                        },
+                  child: const Text('Cancel'),
+                ),
+                SizedBox(
+                  width: 90,
+                  height: 40,
+                  child: ElevatedButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) {
+                              return;
+                            }
+
+                            setDialogState(() {
+                              saving = true;
+                            });
+
+                            try {
+                              await NgoCameraService.instance
+                                  .updateLiveLink(
+                                feedId: feed.id,
+                                streamUrl: urlController.text.trim(),
+                                label: labelController.text.trim().isEmpty
+                                    ? null
+                                    : labelController.text.trim(),
+                              );
+
+                              if (!context.mounted) return;
+
+                              Navigator.of(dialogContext).pop(true);
+                            } catch (error) {
+                              debugPrint(
+                                'UPDATE CAMERA ERROR: $error',
+                              );
+
+                              if (!context.mounted) return;
+
+                              setDialogState(() {
+                                saving = false;
+                              });
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Could not update camera.',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(
+                      saving ? 'Saving...' : 'Save',
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    labelController.dispose();
+    urlController.dispose();
+
+    if (shouldSave == true) {
+      await _loadFeeds();
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No live stream URL available.'),
+          content: Text(
+            'Camera updated successfully.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteCamera(NgoCameraFeed feed) async {
+    final cameraName =
+        feed.label?.trim().isNotEmpty == true
+            ? feed.label!.trim()
+            : 'this camera';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Remove Camera?',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to remove "$cameraName" '
+            'from your camera list?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            SizedBox(
+              width: 90,
+              height: 40,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Remove'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await NgoCameraService.instance.deleteFeed(feed.id);
+
+      await _loadFeeds();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Camera removed successfully.',
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('DELETE CAMERA ERROR: $error');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not remove camera.',
+          ),
+        ),
+      );
+    }
+  }
+
+  void _openFeed(NgoCameraFeed feed) {
+    final streamUrl = feed.streamUrl;
+
+    if (streamUrl == null || streamUrl.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No live stream URL available.',
+          ),
         ),
       );
       return;
     }
 
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          title: Text(
-            feed.label ?? 'Live Feed',
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Row(
             children: [
-              Container(
-                height: 170,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF17202A),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.videocam_rounded,
-                    color: Colors.white,
-                    size: 48,
-                  ),
-                ),
+              const Icon(
+                Icons.live_tv,
+                color: Colors.red,
               ),
-              const SizedBox(height: 14),
-              const Text(
-                'Live stream link',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                feed.streamUrl!,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  feed.label?.trim().isNotEmpty == true
+                      ? feed.label!.trim()
+                      : 'Live Camera',
                 ),
               ),
             ],
           ),
+          content: SizedBox(
+            width: 600,
+            height: 360,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                color: Colors.black,
+                child: MjpegView(
+                  uri: streamUrl,
+                  width: double.infinity,
+                  height: 360,
+                  fit: BoxFit.contain,
+                  fps: 10,
+                  timeout: const Duration(seconds: 10),
+                  loadingWidget: (context) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                  errorWidget: (context) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                          'Unable to load this camera feed.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  doneWidget: (context) {
+                    return const Center(
+                      child: Text(
+                        'Camera stream ended.',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
               child: const Text('Close'),
             ),
           ],
@@ -307,29 +600,25 @@ class _CameraScreenState extends State<CameraScreen> {
         child: RefreshIndicator(
           onRefresh: _loadFeeds,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
+            padding: const EdgeInsets.fromLTRB(
+              14,
+              14,
+              14,
+              28,
+            ),
             children: [
               _buildTabs(),
               const SizedBox(height: 14),
-
               if (_selectedTab == 0)
                 _buildLiveFeeds()
               else
                 _buildUploadSection(),
-
-              const SizedBox(height: 22),
-
-              _buildOtherFeeds(),
             ],
           ),
         ),
       ),
     );
   }
-
-  // ------------------------------------------------------------
-  // TOP TABS
-  // ------------------------------------------------------------
 
   Widget _buildTabs() {
     return Container(
@@ -343,7 +632,7 @@ class _CameraScreenState extends State<CameraScreen> {
         children: [
           Expanded(
             child: _buildTabButton(
-              title: 'Live Feeds',
+              title: 'Live Cameras',
               selected: _selectedTab == 0,
               onTap: () {
                 setState(() {
@@ -398,10 +687,6 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // ------------------------------------------------------------
-  // LIVE FEEDS
-  // ------------------------------------------------------------
-
   Widget _buildLiveFeeds() {
     final liveFeeds = _feeds
         .where(
@@ -409,32 +694,79 @@ class _CameraScreenState extends State<CameraScreen> {
         )
         .toList();
 
-    if (_loadingFeeds) {
-      return Container(
-        height: 240,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: const CircularProgressIndicator(
-          strokeWidth: 2.5,
-        ),
-      );
-    }
-
-    if (liveFeeds.isEmpty) {
-      return _buildEmptyLiveState();
-    }
-
-    final mainFeed = liveFeeds.first;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildMainFeedCard(mainFeed),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Registered Cameras',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF173C61),
+                ),
+              ),
+            ),
+
+            // Explicit width prevents the infinite-width
+            // ElevatedButton layout crash inside this Row.
+            SizedBox(
+              width: 125,
+              height: 38,
+              child: ElevatedButton.icon(
+                onPressed: _showAddLiveLinkDialog,
+                icon: const Icon(
+                  Icons.add,
+                  size: 17,
+                ),
+                label: const Text(
+                  'Add Camera',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
-        _buildOpenLiveButton(mainFeed),
+        if (_loadingFeeds)
+          Container(
+            height: 220,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const CircularProgressIndicator(
+              strokeWidth: 2.5,
+            ),
+          )
+        else if (liveFeeds.isEmpty)
+          _buildEmptyLiveState()
+        else
+          ...liveFeeds.map(
+            (feed) => Padding(
+              padding: const EdgeInsets.only(
+                bottom: 12,
+              ),
+              child: _buildCameraCard(feed),
+            ),
+          ),
       ],
     );
   }
@@ -466,7 +798,7 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'No live feeds yet',
+            'No cameras registered',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -475,7 +807,7 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           const SizedBox(height: 5),
           const Text(
-            'Add a live stream link to see your camera here.',
+            'Add your first camera to provide live access for monitoring and inspections.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11.5,
@@ -484,23 +816,26 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           const SizedBox(height: 15),
           SizedBox(
+            width: 150,
             height: 40,
-            child: ElevatedButton(
-              onPressed: () {
-                _showAddLiveLinkDialog();
-              },
+            child: ElevatedButton.icon(
+              onPressed: _showAddLiveLinkDialog,
+              icon: const Icon(
+                Icons.add,
+                size: 17,
+              ),
+              label: const Text(
+                'Add Camera',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                'Add Live Feed',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -510,14 +845,25 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  Widget _buildMainFeedCard(NgoCameraFeed feed) {
+  Widget _buildCameraCard(
+    NgoCameraFeed feed,
+  ) {
+    final cameraName =
+        feed.label?.trim().isNotEmpty == true
+            ? feed.label!.trim()
+            : 'Live Camera';
+
+    final streamUrl = feed.streamUrl?.trim() ?? '';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(13),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withValues(
+              alpha: 0.06,
+            ),
             blurRadius: 7,
             offset: const Offset(0, 2),
           ),
@@ -527,187 +873,176 @@ class _CameraScreenState extends State<CameraScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              Container(
-                height: 170,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4B4E4D),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _CameraPreviewPainter(),
+          SizedBox(
+            height: 190,
+            width: double.infinity,
+            child: Container(
+              color: Colors.black,
+              child: streamUrl.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No camera URL configured.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-
-                    Positioned(
-                      left: 10,
-                      top: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          feed.label ?? 'Main Hall Camera',
-                          style: const TextStyle(
+                    )
+                  : MjpegView(
+                      uri: streamUrl,
+                      width: double.infinity,
+                      height: 190,
+                      fit: BoxFit.contain,
+                      fps: 8,
+                      timeout: const Duration(seconds: 10),
+                      loadingWidget: (context) {
+                        return const Center(
+                          child: CircularProgressIndicator(
                             color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
                           ),
-                        ),
-                      ),
-                    ),
-
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF29A96A),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 6,
-                              color: Colors.white,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'LIVE',
+                        );
+                      },
+                      errorWidget: (context) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Camera feed unavailable.',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
+                      doneWidget: (context) {
+                        return const Center(
+                          child: Text(
+                            'Camera stream ended.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-
-                    Positioned(
-                      left: 8,
-                      bottom: 8,
-                      child: Text(
-                        _currentDateTime(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-
-                    Positioned(
-                      right: 8,
-                      bottom: 8,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: const Icon(
-                          Icons.fullscreen_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(
               12,
-              10,
+              11,
               12,
-              10,
+              12,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
               children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Main Hall Camera',
-                        style: TextStyle(
-                          fontSize: 11.5,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        cameraName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF173C61),
                         ),
                       ),
-                      SizedBox(height: 4),
-                      Row(
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3F6EB),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.circle,
-                            size: 7,
+                            size: 6,
                             color: Color(0xFF27A76B),
                           ),
                           SizedBox(width: 4),
                           Text(
-                            'Online',
+                            'LIVE',
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
                               color: Color(0xFF27A76B),
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 36,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _openFeed(feed),
-                    icon: const Icon(
-                      Icons.open_in_new_rounded,
-                      size: 13,
-                    ),
-                    label: const Text(
-                      'Open Live Feed',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _openFeed(feed);
+                        },
+                        icon: const Icon(
+                          Icons.open_in_new_rounded,
+                          size: 14,
+                        ),
+                        label: const Text(
+                          'Open',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE4F1FC),
-                      foregroundColor: AppColors.primary,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _updateCamera(feed);
+                        },
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                          size: 14,
+                        ),
+                        label: const Text(
+                          'Edit',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 7),
+                    SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: IconButton(
+                        tooltip: 'Remove camera',
+                        onPressed: () {
+                          _deleteCamera(feed);
+                        },
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 21,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -717,39 +1052,6 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  Widget _buildOpenLiveButton(NgoCameraFeed feed) {
-    return SizedBox(
-      height: 42,
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => _openFeed(feed),
-        icon: const Icon(
-          Icons.videocam_rounded,
-          size: 17,
-        ),
-        label: const Text(
-          'Open Live Feed',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(9),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------
-  // UPLOAD VIDEO
-  // ------------------------------------------------------------
-
   Widget _buildUploadSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -758,7 +1060,9 @@ class _CameraScreenState extends State<CameraScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: 0.04,
+            ),
             blurRadius: 7,
             offset: const Offset(0, 2),
           ),
@@ -785,9 +1089,7 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           const Text(
             'Video label',
             style: TextStyle(
@@ -796,13 +1098,11 @@ class _CameraScreenState extends State<CameraScreen> {
               color: Color(0xFF43566B),
             ),
           ),
-
           const SizedBox(height: 6),
-
           TextField(
             controller: _uploadLabelController,
             decoration: InputDecoration(
-              hintText: 'e.g. Main Hall Camera',
+              hintText: 'e.g. Main Hall Recording',
               hintStyle: const TextStyle(
                 fontSize: 12,
                 color: Color(0xFF9BA8B5),
@@ -819,23 +1119,9 @@ class _CameraScreenState extends State<CameraScreen> {
                   color: Color(0xFFDCE5ED),
                 ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(
-                  color: Color(0xFFDCE5ED),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                ),
-              ),
             ),
           ),
-
           const SizedBox(height: 12),
-
           GestureDetector(
             onTap: _pickVideo,
             child: Container(
@@ -880,7 +1166,6 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
           ),
-
           if (_uploadError != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -891,21 +1176,19 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
           ],
-
           const SizedBox(height: 14),
-
           SizedBox(
             width: double.infinity,
             height: 42,
             child: ElevatedButton(
-              onPressed:
-                  _submittingUpload ? null : _submitUpload,
+              onPressed: _submittingUpload
+                  ? null
+                  : _submitUpload,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                disabledBackgroundColor:
-                    const Color(0xFF9BB5CC),
+                disabledBackgroundColor: const Color(0xFF9BB5CC),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
                 ),
@@ -926,508 +1209,108 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // ------------------------------------------------------------
-  // OTHER FEEDS
-  // ------------------------------------------------------------
-
-  Widget _buildOtherFeeds() {
-    final otherFeeds = _feeds
-        .where(
-          (feed) => feed.type == NgoFeedType.liveLink,
-        )
-        .skip(1)
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Other Feeds',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF173C61),
-          ),
-        ),
-        const SizedBox(height: 9),
-
-        if (otherFeeds.isEmpty)
-          Column(
-            children: [
-              _buildDemoFeed(
-                icon: Icons.campaign_rounded,
-                iconBackground: const Color(0xFFFFE9EA),
-                iconColor: const Color(0xFFE94D59),
-                title: 'Entrance Camera',
-                online: false,
-                lastActive: 'Last seen: 09:51 AM',
-              ),
-              const SizedBox(height: 7),
-              _buildDemoFeed(
-                icon: Icons.videocam_rounded,
-                iconBackground: const Color(0xFFE3F6EB),
-                iconColor: const Color(0xFF27A76B),
-                title: 'Playground Camera',
-                online: true,
-                lastActive: 'Last active: 10:40 AM',
-              ),
-            ],
-          )
-        else
-          ...otherFeeds.map(
-            (feed) => Padding(
-              padding: const EdgeInsets.only(bottom: 7),
-              child: _buildRealFeedRow(feed),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildRealFeedRow(NgoCameraFeed feed) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(
-          color: const Color(0xFFE1E9F0),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 35,
-            height: 35,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE4F2FC),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: const Icon(
-              Icons.videocam_rounded,
-              color: AppColors.primary,
-              size: 19,
-            ),
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  feed.label ?? 'Camera Feed',
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF173C61),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.circle,
-                      size: 6,
-                      color: Color(0xFF27A76B),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Online',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Color(0xFF27A76B),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: Color(0xFF647789),
-            size: 20,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDemoFeed({
-    required IconData icon,
-    required Color iconBackground,
-    required Color iconColor,
-    required String title,
-    required bool online,
-    required String lastActive,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 9,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(
-          color: const Color(0xFFE1E9F0),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 35,
-            height: 35,
-            decoration: BoxDecoration(
-              color: iconBackground,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 19,
-            ),
-          ),
-
-          const SizedBox(width: 9),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF173C61),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.circle,
-                      size: 6,
-                      color: online
-                          ? const Color(0xFF27A76B)
-                          : const Color(0xFFE94D59),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      online ? 'Online' : 'Offline',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: online
-                            ? const Color(0xFF27A76B)
-                            : const Color(0xFFE94D59),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  lastActive,
-                  style: const TextStyle(
-                    fontSize: 8.5,
-                    color: Color(0xFF8A98A6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: Color(0xFF647789),
-            size: 20,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------
-  // ADD LIVE LINK DIALOG
-  // ------------------------------------------------------------
-
   void _showAddLiveLinkDialog() {
     _linkLabelController.clear();
     _linkUrlController.clear();
     _linkError = null;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text(
-            'Add Live Feed',
+            'Add Camera',
             style: TextStyle(
               fontWeight: FontWeight.w800,
             ),
           ),
-          content: Form(
-            key: _linkFormKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _linkLabelController,
-                  decoration: InputDecoration(
-                    labelText: 'Camera name',
-                    hintText: 'Main Hall Camera',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
+          content: SizedBox(
+            width: 450,
+            child: Form(
+              key: _linkFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _linkLabelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Camera name',
+                      hintText: 'Main Hall Camera',
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _linkUrlController,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: 'Stream URL',
-                    hintText: 'https://...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _linkUrlController,
+                    keyboardType: TextInputType.url,
+                    decoration: const InputDecoration(
+                      labelText: 'Stream URL',
+                      hintText: 'http://10.0.0.1:8080/video',
+                      border: OutlineInputBorder(),
                     ),
+                    validator: (value) {
+                      final url = value?.trim() ?? '';
+
+                      if (url.isEmpty) {
+                        return 'Please enter stream URL.';
+                      }
+
+                      if (!url.startsWith('http://') &&
+                          !url.startsWith('https://') &&
+                          !url.startsWith('rtsp://')) {
+                        return 'Enter a valid http, https or rtsp URL.';
+                      }
+
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null ||
-                        value.trim().isEmpty) {
-                      return 'Please enter stream URL.';
-                    }
-
-                    if (!value.trim().startsWith('http') &&
-                        !value.trim().startsWith('rtsp')) {
-                      return 'Enter valid http/https/rtsp URL.';
-                    }
-
-                    return null;
-                  },
-                ),
-              ],
+                  if (_linkError != null) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _linkError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
               onPressed: _submittingLink
                   ? null
-                  : () async {
-                      await _submitLiveLink();
-
-                      if (mounted &&
-                          _linkError == null) {
-                        Navigator.pop(dialogContext);
-                      }
+                  : () {
+                      Navigator.of(dialogContext).pop();
                     },
-          
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(
-                _submittingLink
-                    ? 'Adding...'
-                    : 'Add Feed',
+              child: const Text('Cancel'),
+            ),
+            SizedBox(
+              width: 110,
+              height: 40,
+              child: ElevatedButton(
+                onPressed: _submittingLink
+                    ? null
+                    : _submitLiveLink,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  _submittingLink
+                      ? 'Adding...'
+                      : 'Add Camera',
+                ),
               ),
             ),
           ],
         );
       },
     );
-  }
-
-  // ------------------------------------------------------------
-  // DATE / TIME
-  // ------------------------------------------------------------
-
-  String _currentDateTime() {
-    final now = DateTime.now();
-
-    final day = now.day.toString().padLeft(2, '0');
-    final month = now.month.toString().padLeft(2, '0');
-    final year = now.year.toString();
-
-    final hour = now.hour.toString().padLeft(2, '0');
-    final minute = now.minute.toString().padLeft(2, '0');
-    final second = now.second.toString().padLeft(2, '0');
-
-    return '$day/$month/$year  $hour:$minute:$second';
-  }
-}
-
-// ------------------------------------------------------------
-// SIMPLE CAMERA PREVIEW PAINTER
-// ------------------------------------------------------------
-
-class _CameraPreviewPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    paint.color = const Color(0xFF565957);
-    canvas.drawRect(
-      Rect.fromLTWH(
-        0,
-        0,
-        size.width,
-        size.height,
-      ),
-      paint,
-    );
-
-    // Wall
-    paint.color = const Color(0xFF777975);
-    canvas.drawRect(
-      Rect.fromLTWH(
-        0,
-        0,
-        size.width,
-        size.height * 0.58,
-      ),
-      paint,
-    );
-
-    // Floor
-    paint.color = const Color(0xFF3D403F);
-    final floorPath = Path()
-      ..moveTo(0, size.height * 0.58)
-      ..lineTo(size.width, size.height * 0.58)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    canvas.drawPath(floorPath, paint);
-
-    // Window
-    paint.color = const Color(0xFFD6D8D4);
-
-    canvas.drawRect(
-      Rect.fromLTWH(
-        size.width * 0.72,
-        size.height * 0.15,
-        size.width * 0.15,
-        size.height * 0.25,
-      ),
-      paint,
-    );
-
-    paint.color = const Color(0xFF7E8581);
-
-    canvas.drawRect(
-      Rect.fromLTWH(
-        size.width * 0.79,
-        size.height * 0.15,
-        2,
-        size.height * 0.25,
-      ),
-      paint,
-    );
-
-    canvas.drawRect(
-      Rect.fromLTWH(
-        size.width * 0.72,
-        size.height * 0.27,
-        size.width * 0.15,
-        2,
-      ),
-      paint,
-    );
-
-    // Door
-    paint.color = const Color(0xFF454846);
-
-    canvas.drawRect(
-      Rect.fromLTWH(
-        size.width * 0.09,
-        size.height * 0.20,
-        size.width * 0.13,
-        size.height * 0.38,
-      ),
-      paint,
-    );
-
-    // Tables / benches
-    paint.color = const Color(0xFF292D2C);
-
-    for (int i = 0; i < 3; i++) {
-      final y = size.height * (0.60 + i * 0.10);
-
-      canvas.drawRect(
-        Rect.fromLTWH(
-          size.width * 0.28,
-          y,
-          size.width * 0.42,
-          5,
-        ),
-        paint,
-      );
-    }
-
-    // People-like silhouettes
-    paint.color = const Color(0xFF313635);
-
-    for (int i = 0; i < 4; i++) {
-      final x = size.width * (0.28 + i * 0.12);
-
-      canvas.drawCircle(
-        Offset(x, size.height * 0.48),
-        6,
-        paint,
-      );
-
-      canvas.drawRect(
-        Rect.fromLTWH(
-          x - 5,
-          size.height * 0.50,
-          10,
-          22,
-        ),
-        paint,
-      );
-    }
-
-    // Camera overlay lines
-    paint.color = Colors.white.withValues(alpha: 0.12);
-    paint.strokeWidth = 1;
-
-    for (int i = 1; i < 4; i++) {
-      final y = size.height * i / 4;
-
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        paint,
-      );
-    }
-
-    for (int i = 1; i < 4; i++) {
-      final x = size.width * i / 4;
-
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, size.height),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(
-    covariant CustomPainter oldDelegate,
-  ) {
-    return false;
   }
 }

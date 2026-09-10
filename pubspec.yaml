@@ -43,6 +43,8 @@ dependencies:
   uuid: ^4.4.0
   http: ^1.6.0
   image_picker: ^1.2.3
+  mjpeg_view: ^1.0.1
+  video_player: ^2.14.0
 
 
 dev_dependencies:

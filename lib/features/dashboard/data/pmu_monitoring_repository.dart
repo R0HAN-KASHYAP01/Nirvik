@@ -13,25 +13,6 @@ import '../../../models/pmu_officer_summary.dart';
 class PmuMonitoringRepository {
   final SupabaseClient _client = Supabase.instance.client;
 
-  InspectionStatus _inspectionStatusFromDb(String value) {
-    switch (value) {
-      case 'assigned':
-        return InspectionStatus.assigned;
-      case 'in_progress':
-        return InspectionStatus.inProgress;
-      case 'submitted':
-        return InspectionStatus.submitted;
-      case 'under_review':
-        return InspectionStatus.underReview;
-      case 'approved':
-        return InspectionStatus.approved;
-      case 'overdue':
-        return InspectionStatus.overdue;
-      default:
-        return InspectionStatus.submitted;
-    }
-  }
-
   RiskLevel _riskFromDb(String? value) {
     switch (value) {
       case 'high':
@@ -137,23 +118,12 @@ class PmuMonitoringRepository {
         .inFilter('inspector_profile_id', officerIds)
         .order('scheduled_datetime', ascending: true);
 
-    // 4) All inspections logged by these officers, in one bulk query.
-    final inspectionRows = await _client
-        .from('institute_inspections')
-        .select(
-          'inspector_profile_id, institute_profile_id, '
-          'inspection_datetime, status, risk_level',
-        )
-        .inFilter('inspector_profile_id', officerIds)
-        .order('inspection_datetime', ascending: false);
-
-    // 5) Institute information referenced above, in one bulk query.
+    // 4) Institute information referenced above, in one bulk query.
     //
     // We now fetch latitude and longitude as well because the
     // AssignmentSummary model carries the actual institute coordinates.
     final instituteIds = <String>{
       ...assignmentRows.map((r) => r['institute_profile_id'] as String),
-      ...inspectionRows.map((r) => r['institute_profile_id'] as String),
     }.toList();
 
     var institutesById = <String, Map<String, dynamic>>{};
@@ -223,8 +193,8 @@ class PmuMonitoringRepository {
           .where((a) => a['inspector_profile_id'] == id)
           .toList();
 
-      final myInspections = inspectionRows
-          .where((i) => i['inspector_profile_id'] == id)
+      final myInspections = myAssignments
+          .where((a) => a['status'] == 'completed')
           .toList();
 
       final assignments = myAssignments
@@ -251,12 +221,12 @@ class PmuMonitoringRepository {
 
       final inspections = myInspections
           .map(
-            (i) => InspectionSummary(
-              projectName: instituteName(i['institute_profile_id'] as String),
+            (a) => InspectionSummary(
+              projectName: instituteName(a['institute_profile_id'] as String),
               inspectorName: officerName,
-              dateTime: DateTime.parse(i['inspection_datetime'] as String),
-              status: _inspectionStatusFromDb(i['status'] as String),
-              risk: _riskFromDb(i['risk_level'] as String?),
+              dateTime: DateTime.parse(a['scheduled_datetime'] as String),
+              status: InspectionStatus.approved,
+              risk: _riskFromDb(null),
             ),
           )
           .toList();
@@ -266,7 +236,7 @@ class PmuMonitoringRepository {
       if (myInspections.isNotEmpty) {
         final dates =
             myInspections
-                .map((i) => DateTime.parse(i['inspection_datetime'] as String))
+                .map((a) => DateTime.parse(a['scheduled_datetime'] as String))
                 .toList()
               ..sort((a, b) => b.compareTo(a));
 

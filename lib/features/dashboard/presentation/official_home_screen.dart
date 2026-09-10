@@ -8,19 +8,149 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../models/inspection.dart';
-import '../data/mock_dashboard_data.dart';
+import '../data/assignments_repository.dart';
+import '../data/inspection_history_repository.dart';
+import '../../projects/data/projects_repository.dart';
+import '../../../models/assignment.dart';
+import '../../../models/project.dart' as project_model;
 import '../../calls/presentation/call_history_screen.dart';
 import 'assignments_screen.dart';
 import 'inspection_history_screen.dart';
 import '../../projects/presentation/project_list_screen.dart';
 
-class OfficialHomeScreen extends StatelessWidget {
+class OfficialHomeScreen extends StatefulWidget {
   const OfficialHomeScreen({super.key});
+
+  @override
+  State<OfficialHomeScreen> createState() => _OfficialHomeScreenState();
+}
+
+class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
+  final AssignmentsRepository _assignmentsRepository = AssignmentsRepository();
+  final ProjectsRepository _projectsRepository = ProjectsRepository();
+  final InspectionHistoryRepository _inspectionHistoryRepository =
+      InspectionHistoryRepository();
+
+  int? _todaysInspectionsCount;
+  int? _pendingReviewsCount;
+  int? _totalProjectsCount;
+  int? _highRiskCount;
+  List<InspectionSummary> _recentInspections = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHomeStats();
+  }
+
+  bool _isSameDay(DateTime first, DateTime second) {
+    return first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
+  }
+
+  /// Same fallback pattern already used by AssignmentsRepository/
+  /// ProjectsRepository for parsing free-form DB status strings.
+  InspectionStatus _parseInspectionStatus(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'approved':
+        return InspectionStatus.approved;
+      case 'overdue':
+        return InspectionStatus.overdue;
+      case 'under_review':
+      case 'under review':
+        return InspectionStatus.underReview;
+      case 'in_progress':
+      case 'in progress':
+        return InspectionStatus.inProgress;
+      case 'assigned':
+        return InspectionStatus.assigned;
+      case 'submitted':
+      default:
+        return InspectionStatus.submitted;
+    }
+  }
+
+  RiskLevel _parseRiskLevel(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'high':
+        return RiskLevel.high;
+      case 'medium':
+        return RiskLevel.medium;
+      case 'low':
+      default:
+        return RiskLevel.low;
+    }
+  }
+
+  /// Map the same raw rows InspectionHistoryScreen fetches into the
+  /// InspectionSummary shape this screen's tile already renders.
+  List<InspectionSummary> _mapToRecentInspections(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final topFive = rows.take(5).toList();
+
+    return List.generate(topFive.length, (index) {
+      final row = topFive[index];
+
+      final instituteId = row['institute_profile_id']?.toString() ?? '';
+      final shortInstituteId = instituteId.isEmpty
+          ? 'Unknown'
+          : instituteId.substring(0, instituteId.length < 8 ? instituteId.length : 8);
+
+      final submittedAt = DateTime.tryParse(
+        row['submitted_at']?.toString() ?? '',
+      );
+
+      return InspectionSummary(
+        projectName: 'Inspection #${index + 1}',
+        inspectorName: 'Institute ID: $shortInstituteId',
+        dateTime: submittedAt ?? DateTime.now(),
+        status: _parseInspectionStatus(row['overall_status']?.toString()),
+        risk: _parseRiskLevel(row['risk_level']?.toString()),
+      );
+    });
+  }
+
+  Future<void> _loadHomeStats() async {
+    try {
+      final assignments = await _assignmentsRepository.getAssignments();
+      final projects = await _projectsRepository.getProjects();
+      final inspectionRows =
+          await _inspectionHistoryRepository.getInspectionHistory();
+
+      final now = DateTime.now();
+      final staleThreshold = now.subtract(const Duration(days: 3));
+
+      final todaysCount = assignments
+          .where((a) => _isSameDay(a.scheduledDateTime, now))
+          .length;
+
+      final pendingReviewCount = assignments
+          .where((a) =>
+              a.status == AssignmentStatus.assigned &&
+              a.scheduledDateTime.isBefore(staleThreshold))
+          .length;
+
+      if (!mounted) return;
+
+      setState(() {
+        _todaysInspectionsCount = todaysCount;
+        _pendingReviewsCount = pendingReviewCount;
+        _totalProjectsCount = projects.length;
+        _highRiskCount =
+            projects.where((p) => p.riskLevel == project_model.RiskLevel.high).length;
+        _recentInspections = _mapToRecentInspections(inspectionRows);
+      });
+    } catch (error) {
+      debugPrint('Failed to load official homepage stats: $error');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = SessionService.instance.currentUser;
-    final inspections = MockDashboardData.recentInspections;
+    final inspections = _recentInspections;
 
     return Scaffold(
       body: SafeArea(
@@ -38,7 +168,7 @@ class OfficialHomeScreen extends StatelessWidget {
 
             // High-risk alerts get visual priority without alarming the whole screen.
             _AlertBanner(
-              count: 3,
+              count: _highRiskCount ?? 0,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const ProjectListScreen(initialHighRiskFilter: true),
@@ -54,7 +184,7 @@ class OfficialHomeScreen extends StatelessWidget {
                   child: _MiniStatCard(
                     icon: Icons.calendar_today_outlined,
                     label: "Today's\nInspections",
-                    count: '6',
+                    count: _todaysInspectionsCount?.toString() ?? '—',
                     color: AppColors.info,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -68,7 +198,7 @@ class OfficialHomeScreen extends StatelessWidget {
                   child: _MiniStatCard(
                     icon: Icons.assignment_outlined,
                     label: 'Pending\nReviews',
-                    count: '9',
+                    count: _pendingReviewsCount?.toString() ?? '—',
                     color: AppColors.warning,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -82,7 +212,7 @@ class OfficialHomeScreen extends StatelessWidget {
                   child: _MiniStatCard(
                     icon: Icons.apartment_outlined,
                     label: 'Total\nProjects',
-                    count: '42',
+                    count: _totalProjectsCount?.toString() ?? '—',
                     color: const Color(0xFF6C4FC2),
                     onTap: () => Navigator.of(context).pushNamed(AppRoutes.projectsPlaceholder),
                   ),
@@ -484,7 +614,7 @@ class _RecentInspectionTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text('Inspector: ${inspection.inspectorName}',
+                  Text(inspection.inspectorName,
                       style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   const SizedBox(height: 2),
                   Row(

@@ -10,16 +10,12 @@ import '../../../core/widgets/status_badge.dart';
 import '../../../models/inspection.dart';
 import '../data/mock_dashboard_data.dart';
 import '../../calls/presentation/call_history_screen.dart';
+import 'assignments_screen.dart';
+import 'inspection_history_screen.dart';
+import '../../projects/presentation/project_list_screen.dart';
 
 class OfficialHomeScreen extends StatelessWidget {
   const OfficialHomeScreen({super.key});
-
-  void _logout(BuildContext context) {
-    SessionService.instance.clear();
-
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +30,6 @@ class OfficialHomeScreen extends StatelessWidget {
             _HomeHeader(
               userName: user?.name ?? 'DoSJE Official',
               alertCount: 3,
-              onLogoutTap: () => _logout(context),
             ),
             const SizedBox(height: 18),
 
@@ -42,7 +37,14 @@ class OfficialHomeScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // High-risk alerts get visual priority without alarming the whole screen.
-            const _AlertBanner(count: 3),
+            _AlertBanner(
+              count: 3,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProjectListScreen(initialHighRiskFilter: true),
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
 
             Row(
@@ -54,7 +56,11 @@ class OfficialHomeScreen extends StatelessWidget {
                     label: "Today's\nInspections",
                     count: '6',
                     color: AppColors.info,
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.inspectionsPlaceholder),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AssignmentsScreen(initialFilter: 'today'),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -64,7 +70,11 @@ class OfficialHomeScreen extends StatelessWidget {
                     label: 'Pending\nReviews',
                     count: '9',
                     color: AppColors.warning,
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.inspectionsPlaceholder),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AssignmentsScreen(initialFilter: 'pendingReview'),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -84,9 +94,11 @@ class OfficialHomeScreen extends StatelessWidget {
             SectionHeader(
               title: 'Recent Inspections',
               actionLabel: 'View all',
-              onActionTap: () =>
-                  Navigator.of(context)
-                      .pushNamed(AppRoutes.inspectionsPlaceholder),
+              onActionTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const InspectionHistoryScreen(),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
 
@@ -160,17 +172,15 @@ class OfficialHomeScreen extends StatelessWidget {
   }
 }
 
-/// Header: avatar, greeting + name, notification bell with badge, logout.
+/// Header: avatar, greeting + name, notification bell with badge.
 /// Local to this screen — the shared DashboardHeader (used elsewhere) is untouched.
 class _HomeHeader extends StatelessWidget {
   final String userName;
   final int alertCount;
-  final VoidCallback onLogoutTap;
 
   const _HomeHeader({
     required this.userName,
     required this.alertCount,
-    required this.onLogoutTap,
   });
 
   String _greeting() {
@@ -227,10 +237,6 @@ class _HomeHeader extends StatelessWidget {
                 ),
               ),
           ],
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout, color: AppColors.textSecondary, size: 20),
-          onPressed: onLogoutTap,
         ),
       ],
     );
@@ -292,12 +298,16 @@ class _HeroBanner extends StatelessWidget {
 
 class _AlertBanner extends StatelessWidget {
   final int count;
+  final VoidCallback onTap;
 
-  const _AlertBanner({required this.count});
+  const _AlertBanner({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFFDEDED),
@@ -324,6 +334,7 @@ class _AlertBanner extends StatelessWidget {
           ),
           const Icon(Icons.chevron_right, color: Color(0xFFB3261E), size: 18),
         ],
+      ),
       ),
     );
   }

@@ -87,6 +87,13 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
         return assignment.scheduledDateTime.isAfter(now) &&
             assignment.status != AssignmentStatus.completed;
       }).toList();
+    } else if (_selectedFilter == 'pendingReview') {
+      final staleThreshold = DateTime.now().subtract(const Duration(days: 3));
+
+      result = result.where((assignment) {
+        return assignment.status == AssignmentStatus.assigned &&
+            assignment.scheduledDateTime.isBefore(staleThreshold);
+      }).toList();
     }
 
     if (_selectedStatus != null) {
@@ -275,6 +282,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
 
     if (_selectedFilter == 'upcoming') {
       return 'Upcoming Assignments';
+    }
+
+    if (_selectedFilter == 'pendingReview') {
+      return 'Pending Review';
     }
 
     if (_selectedStatus == AssignmentStatus.overdue) {

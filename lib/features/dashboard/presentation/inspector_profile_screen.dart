@@ -1,4 +1,3 @@
-// FILE: lib/features/dashboard/presentation/inspector_profile_screen.dart
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -15,7 +14,8 @@ class InspectorProfileScreen extends StatefulWidget {
   const InspectorProfileScreen({super.key});
 
   @override
-  State<InspectorProfileScreen> createState() => _InspectorProfileScreenState();
+  State<InspectorProfileScreen> createState() =>
+      _InspectorProfileScreenState();
 }
 
 class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
@@ -38,7 +38,8 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
     });
 
     try {
-      final profile = await InspectorService.instance.fetchCurrentProfile();
+      final profile =
+          await InspectorService.instance.fetchCurrentProfile();
 
       if (!mounted) return;
 
@@ -65,7 +66,8 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
     setState(() => _detectingLocation = true);
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled =
+          await Geolocator.isLocationServiceEnabled();
 
       if (!serviceEnabled) {
         _showError(
@@ -74,7 +76,8 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
         return;
       }
 
-      LocationPermission permission = await Geolocator.checkPermission();
+      LocationPermission permission =
+          await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -103,11 +106,14 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
 
       if (position.latitude.abs() > 90 ||
           position.longitude.abs() > 180) {
-        _showError('Received an invalid location. Please try again.');
+        _showError(
+          'Received an invalid location. Please try again.',
+        );
         return;
       }
 
-      final updatedAt = await InspectorService.instance.updateLocation(
+      final updatedAt =
+          await InspectorService.instance.updateLocation(
         latitude: position.latitude,
         longitude: position.longitude,
       );
@@ -159,11 +165,13 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () =>
+                  Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () =>
+                  Navigator.of(context).pop(true),
               child: const Text('Sign Out'),
             ),
           ],
@@ -230,6 +238,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFEAF1F6),
       appBar: AppBar(
         title: const Text('My Profile'),
       ),
@@ -300,6 +309,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
         Supabase.instance.client.auth.currentUser?.email ?? '—';
 
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -309,7 +319,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
               children: [
                 const CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: Color(0xFF123E68),
                   child: Icon(
                     Icons.badge_outlined,
                     color: Colors.white,
@@ -319,13 +329,15 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(
                         profile.fullName,
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
+                          color: Color(0xFF17324D),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -338,7 +350,10 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                 ),
               ],
             ),
-            const Divider(height: 28),
+            const Divider(
+              height: 28,
+              color: Color(0xFFD3E0E8),
+            ),
             _InfoRow(
               icon: Icons.email_outlined,
               label: 'Email',
@@ -376,6 +391,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
 
   Widget _buildLocationCard(InspectorProfileData profile) {
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -386,6 +402,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
+                color: Color(0xFF17324D),
               ),
             ),
             const SizedBox(height: 12),
@@ -400,7 +417,8 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                 _InfoRow(
                   icon: Icons.update,
                   label: 'Last updated',
-                  value: _formatDate(profile.locationUpdatedAt!),
+                  value:
+                      _formatDate(profile.locationUpdatedAt!),
                 ),
             ] else
               const Text(
@@ -414,6 +432,10 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
             ElevatedButton.icon(
               onPressed:
                   _detectingLocation ? null : _detectLocation,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF31588C),
+                foregroundColor: Colors.white,
+              ),
               icon: _detectingLocation
                   ? const SizedBox(
                       width: 16,
@@ -444,6 +466,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
         Supabase.instance.client.auth.currentUser?.email ?? '—';
 
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -454,6 +477,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
+                color: Color(0xFF17324D),
               ),
             ),
             const SizedBox(height: 12),
@@ -463,6 +487,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
               value: email,
             ),
             const SizedBox(height: 12),
+
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -473,13 +498,27 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
+                          color: AppColors.error,
                         ),
                       )
-                    : const Icon(Icons.logout),
+                    : const Icon(
+                        Icons.logout,
+                        color: AppColors.error,
+                      ),
                 label: Text(
                   _signingOut
                       ? 'Signing out...'
                       : 'Sign Out',
+                  style: const TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(
+                    color: AppColors.error,
+                  ),
                 ),
               ),
             ),
@@ -528,6 +567,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(width: 0),
           Icon(
             icon,
             size: 18,

@@ -17,12 +17,26 @@ import '../../projects/presentation/project_list_screen.dart';
 class OfficialHomeScreen extends StatelessWidget {
   const OfficialHomeScreen({super.key});
 
+  // Government Digital India style theme
+  static const Color navy = Color(0xFF123E68);
+  static const Color darkNavy = Color(0xFF0B3154);
+  static const Color primaryBlue = Color(0xFF14568A);
+  static const Color background = Color(0xFFEAF1F6);
+  static const Color cardBackground = Color(0xFFFFFFFF);
+  static const Color softBlue = Color(0xFFE4EDF3);
+  static const Color borderColor = Color(0xFFD3E0E8);
+  static const Color textDark = Color(0xFF17324D);
+  static const Color textGrey = Color(0xFF667788);
+  static const Color green = Color(0xFF168A45);
+  static const Color saffron = Color(0xFFE88A18);
+
   @override
   Widget build(BuildContext context) {
     final user = SessionService.instance.currentUser;
     final inspections = MockDashboardData.recentInspections;
 
     return Scaffold(
+      backgroundColor: background,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -31,9 +45,11 @@ class OfficialHomeScreen extends StatelessWidget {
               userName: user?.name ?? 'DoSJE Official',
               alertCount: 3,
             ),
+
             const SizedBox(height: 18),
 
             const _HeroBanner(),
+
             const SizedBox(height: 16),
 
             // High-risk alerts get visual priority without alarming the whole screen.
@@ -41,10 +57,12 @@ class OfficialHomeScreen extends StatelessWidget {
               count: 3,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const ProjectListScreen(initialHighRiskFilter: true),
+                  builder: (_) =>
+                      const ProjectListScreen(initialHighRiskFilter: true),
                 ),
               ),
             ),
+
             const SizedBox(height: 16),
 
             Row(
@@ -55,42 +73,53 @@ class OfficialHomeScreen extends StatelessWidget {
                     icon: Icons.calendar_today_outlined,
                     label: "Today's\nInspections",
                     count: '6',
-                    color: AppColors.info,
+                    color: primaryBlue,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const AssignmentsScreen(initialFilter: 'today'),
+                        builder: (_) => const AssignmentsScreen(
+                          initialFilter: 'today',
+                        ),
                       ),
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: _MiniStatCard(
                     icon: Icons.assignment_outlined,
                     label: 'Pending\nReviews',
                     count: '9',
-                    color: AppColors.warning,
+                    color: saffron,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const AssignmentsScreen(initialFilter: 'pendingReview'),
+                        builder: (_) => const AssignmentsScreen(
+                          initialFilter: 'pendingReview',
+                        ),
                       ),
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: _MiniStatCard(
                     icon: Icons.apartment_outlined,
                     label: 'Total\nProjects',
                     count: '42',
-                    color: const Color(0xFF6C4FC2),
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.projectsPlaceholder),
+                    color: green,
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRoutes.projectsPlaceholder,
+                    ),
                   ),
                 ),
               ],
             ),
 
             const SizedBox(height: 26),
+
             SectionHeader(
               title: 'Recent Inspections',
               actionLabel: 'View all',
@@ -100,6 +129,7 @@ class OfficialHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+
             const SizedBox(height: 10),
 
             if (inspections.isEmpty)
@@ -111,15 +141,19 @@ class OfficialHomeScreen extends StatelessWidget {
             else
               Column(
                 children: inspections
-                    .map((i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _RecentInspectionTile(inspection: i),
-                        ))
+                    .map(
+                      (i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _RecentInspectionTile(inspection: i),
+                      ),
+                    )
                     .toList(),
               ),
 
             const SizedBox(height: 26),
+
             const SectionHeader(title: 'Quick Actions'),
+
             const SizedBox(height: 12),
 
             Row(
@@ -129,38 +163,55 @@ class OfficialHomeScreen extends StatelessWidget {
                   child: QuickActionCard(
                     icon: Icons.apartment,
                     label: 'Projects',
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.projectsPlaceholder),
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRoutes.projectsPlaceholder,
+                    ),
                   ),
                 ),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: QuickActionCard(
                     icon: Icons.fact_check_outlined,
                     label: 'Inspections',
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.inspectionsPlaceholder),
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRoutes.inspectionsPlaceholder,
+                    ),
                   ),
                 ),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: QuickActionCard(
                     icon: Icons.videocam_outlined,
                     label: 'CCTV',
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.cctvPlaceholder),
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRoutes.cctvPlaceholder,
+                    ),
                   ),
                 ),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: QuickActionCard(
                     icon: Icons.bar_chart,
                     label: 'Analytics',
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.analyticsPlaceholder),
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRoutes.analyticsPlaceholder,
+                    ),
                   ),
                 ),
+
                 QuickActionCard(
                   icon: Icons.history,
                   label: 'Call History',
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const CallHistoryScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -173,7 +224,7 @@ class OfficialHomeScreen extends StatelessWidget {
 }
 
 /// Header: avatar, greeting + name, notification bell with badge.
-/// Local to this screen — the shared DashboardHeader (used elsewhere) is untouched.
+/// Local to this screen — shared DashboardHeader remains untouched.
 class _HomeHeader extends StatelessWidget {
   final String userName;
   final int alertCount;
@@ -185,6 +236,7 @@ class _HomeHeader extends StatelessWidget {
 
   String _greeting() {
     final hour = DateTime.now().hour;
+
     if (hour < 12) return 'Good Morning,';
     if (hour < 17) return 'Good Afternoon,';
     return 'Good Evening,';
@@ -192,105 +244,212 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-          child: const Icon(Icons.person, color: AppColors.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_greeting(), style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              Text(
-                userName,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                overflow: TextOverflow.ellipsis,
-              ),
-              const Text('Official', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: OfficialHomeScreen.navy,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: OfficialHomeScreen.navy.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
-        ),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
-              onPressed: () {},
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.white,
+            child: const Icon(
+              Icons.person,
+              color: OfficialHomeScreen.navy,
+              size: 25,
             ),
-            if (alertCount > 0)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  child: Text(
-                    '$alertCount',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _greeting(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
                   ),
                 ),
+
+                const SizedBox(height: 2),
+
+                Text(
+                  userName,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const Text(
+                  'Official',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.notifications_none,
+                  color: Colors.white,
+                ),
+                onPressed: () {},
               ),
-          ],
-        ),
-      ],
+
+              if (alertCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD83A3A),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$alertCount',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Decorative gradient hero banner with a tricolor wave accent.
+/// Government-style hero banner with subtle tricolor accent.
 class _HeroBanner extends StatelessWidget {
   const _HeroBanner();
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 96,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.secondary],
+    return Container(
+      height: 96,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: OfficialHomeScreen.borderColor,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: OfficialHomeScreen.navy.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-        ),
-        child: Stack(
-          children: [
-            // Tricolor wave accent, bottom-right.
-            Positioned(
-              right: -20,
-              bottom: -30,
-              child: Transform.rotate(
-                angle: -0.35,
-                child: Column(
-                  children: [
-                    Container(width: 160, height: 14, color: const Color(0xFFFF9933).withValues(alpha: 0.55)),
-                    Container(width: 160, height: 14, color: Colors.white.withValues(alpha: 0.35)),
-                    Container(width: 160, height: 14, color: const Color(0xFF138808).withValues(alpha: 0.55)),
-                  ],
-                ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 18,
+            ),
+            child: Text(
+              "Let's build a stronger,\nmore inclusive society",
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: OfficialHomeScreen.navy,
+                height: 1.3,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-              child: Text(
-                'Equitable Society\nStronger India',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.3,
+          ),
+
+          Positioned(
+            right: 18,
+            top: 24,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'Government',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: OfficialHomeScreen.textGrey,
+                  ),
                 ),
-              ),
+                const Text(
+                  'for a Brighter',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: OfficialHomeScreen.textGrey,
+                  ),
+                ),
+                const Text(
+                  'Tomorrow',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: OfficialHomeScreen.textGrey,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          Positioned(
+            left: 145,
+            bottom: 16,
+            child: Column(
+              children: [
+                Container(
+                  width: 88,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: OfficialHomeScreen.saffron,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Container(
+                  width: 70,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: OfficialHomeScreen.green,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -300,48 +459,69 @@ class _AlertBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
-  const _AlertBanner({required this.count, required this.onTap});
+  const _AlertBanner({
+    required this.count,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFDEDED),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFF3C6C6)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: Color(0xFFB3261E),
-            size: 22,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF6E8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: OfficialHomeScreen.saffron.withValues(alpha: 0.35),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$count high-risk alerts require attention',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFB3261E),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: OfficialHomeScreen.saffron.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: OfficialHomeScreen.saffron,
+                size: 21,
               ),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Color(0xFFB3261E), size: 18),
-        ],
-      ),
+
+            const SizedBox(width: 10),
+
+            Expanded(
+              child: Text(
+                '$count high-risk alerts require attention',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: OfficialHomeScreen.textDark,
+                ),
+              ),
+            ),
+
+            const Icon(
+              Icons.chevron_right,
+              color: OfficialHomeScreen.navy,
+              size: 18,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Stat card with a colored icon chip and a small decorative sparkline,
-/// matching the reference design. Local to this screen only.
+/// Stat card with government theme styling.
 class _MiniStatCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -365,39 +545,81 @@ class _MiniStatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: OfficialHomeScreen.cardBackground,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: OfficialHomeScreen.borderColor,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: OfficialHomeScreen.navy.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 16, color: color),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                size: 17,
+                color: color,
+              ),
             ),
+
             const SizedBox(height: 10),
-            Text(count, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+
+            Text(
+              count,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: OfficialHomeScreen.navy,
+              ),
+            ),
+
             const SizedBox(height: 2),
-            Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.2)),
+
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: OfficialHomeScreen.textGrey,
+                height: 1.2,
+              ),
+            ),
+
             const SizedBox(height: 8),
+
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(4, (i) {
-                final heights = [6.0, 10.0, 8.0, 14.0];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 3),
-                  child: Container(
-                    width: 5,
-                    height: heights[i],
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.35 + (i * 0.15)),
-                      borderRadius: BorderRadius.circular(2),
+              children: List.generate(
+                4,
+                (i) {
+                  final heights = [6.0, 10.0, 8.0, 14.0];
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Container(
+                      width: 5,
+                      height: heights[i],
+                      decoration: BoxDecoration(
+                        color: color.withValues(
+                          alpha: 0.35 + (i * 0.15),
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -406,38 +628,40 @@ class _MiniStatCard extends StatelessWidget {
   }
 }
 
-/// Recent-inspection row with a placeholder thumbnail, matching the
-/// reference design. Local to this screen — the shared RecentInspectionCard
-/// (used elsewhere) is untouched.
+/// Recent-inspection row.
+/// Functionality and data remain unchanged.
 class _RecentInspectionTile extends StatelessWidget {
   final InspectionSummary inspection;
-  const _RecentInspectionTile({required this.inspection});
+
+  const _RecentInspectionTile({
+    required this.inspection,
+  });
 
   Color get _statusColor {
     switch (inspection.status) {
       case InspectionStatus.approved:
-        return AppColors.success;
+        return OfficialHomeScreen.green;
       case InspectionStatus.overdue:
-        return AppColors.error;
+        return const Color(0xFFD83A3A);
       case InspectionStatus.underReview:
-        return AppColors.warning;
+        return OfficialHomeScreen.saffron;
       case InspectionStatus.submitted:
-        return AppColors.info;
+        return OfficialHomeScreen.primaryBlue;
       case InspectionStatus.inProgress:
-        return Colors.indigo;
+        return OfficialHomeScreen.navy;
       case InspectionStatus.assigned:
-        return Colors.blueGrey;
+        return OfficialHomeScreen.textGrey;
     }
   }
 
   Color get _riskColor {
     switch (inspection.risk) {
       case RiskLevel.high:
-        return AppColors.error;
+        return const Color(0xFFD83A3A);
       case RiskLevel.medium:
-        return AppColors.warning;
+        return OfficialHomeScreen.saffron;
       case RiskLevel.low:
-        return AppColors.success;
+        return OfficialHomeScreen.green;
     }
   }
 
@@ -445,6 +669,7 @@ class _RecentInspectionTile extends StatelessWidget {
     final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     final minute = dt.minute.toString().padLeft(2, '0');
+
     return '${dt.day} Sep ${dt.year} · $hour:$minute $period';
   }
 
@@ -456,9 +681,18 @@ class _RecentInspectionTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: OfficialHomeScreen.cardBackground,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: OfficialHomeScreen.borderColor,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: OfficialHomeScreen.navy.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,46 +701,87 @@ class _RecentInspectionTile extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: OfficialHomeScreen.softBlue,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.apartment, color: AppColors.primary, size: 26),
+              child: const Icon(
+                Icons.apartment,
+                color: OfficialHomeScreen.navy,
+                size: 26,
+              ),
             ),
+
             const SizedBox(width: 12),
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     inspection.projectName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: OfficialHomeScreen.textDark,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+
                   const SizedBox(height: 2),
-                  Text('Inspector: ${inspection.inspectorName}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+
+                  Text(
+                    'Inspector: ${inspection.inspectorName}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: OfficialHomeScreen.textGrey,
+                    ),
+                  ),
+
                   const SizedBox(height: 2),
+
                   Row(
                     children: [
-                      const Icon(Icons.access_time, size: 12, color: Colors.black38),
+                      const Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: OfficialHomeScreen.textGrey,
+                      ),
                       const SizedBox(width: 4),
-                      Text(_formatTime(inspection.dateTime),
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      Text(
+                        _formatTime(inspection.dateTime),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: OfficialHomeScreen.textGrey,
+                        ),
+                      ),
                     ],
                   ),
+
                   const SizedBox(height: 6),
+
                   Wrap(
                     spacing: 6,
                     children: [
-                      StatusBadge(label: inspection.status.label, color: _statusColor),
-                      StatusBadge(label: '${inspection.risk.label} Risk', color: _riskColor),
+                      StatusBadge(
+                        label: inspection.status.label,
+                        color: _statusColor,
+                      ),
+                      StatusBadge(
+                        label: '${inspection.risk.label} Risk',
+                        color: _riskColor,
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: Colors.black26),
+
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: OfficialHomeScreen.textGrey,
+            ),
           ],
         ),
       ),

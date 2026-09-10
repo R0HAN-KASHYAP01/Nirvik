@@ -80,10 +80,10 @@ class _OfficialTodayInstitutesScreenState
         return Colors.blueGrey;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
-      case AssignmentStatus.overdue:
-        return Colors.red;
       case AssignmentStatus.completed:
         return Colors.green;
+      case AssignmentStatus.expired:
+        return Colors.grey;
     }
   }
 
@@ -119,7 +119,7 @@ class _OfficialTodayInstitutesScreenState
                 children: [
                   Expanded(
                     child: Text(
-                      assignment.projectName,
+                      assignment.displayName,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -143,7 +143,7 @@ class _OfficialTodayInstitutesScreenState
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      assignment.location,
+                      assignment.displayLocation,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Colors.black54,

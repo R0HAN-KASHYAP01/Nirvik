@@ -18,10 +18,10 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
         return Colors.blueGrey;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
-      case AssignmentStatus.overdue:
-        return Colors.red;
       case AssignmentStatus.completed:
         return Colors.green;
+      case AssignmentStatus.expired:
+        return Colors.grey;
     }
   }
 
@@ -94,7 +94,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        assignment.projectName,
+                        assignment.displayName,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -116,7 +116,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                 _infoRow(
                   Icons.location_on_outlined,
                   'Location',
-                  assignment.location,
+                  assignment.displayLocation,
                 ),
                 _infoRow(
                   Icons.calendar_today_outlined,

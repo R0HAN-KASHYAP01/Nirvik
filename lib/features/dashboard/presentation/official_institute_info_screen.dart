@@ -18,10 +18,10 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
         return Colors.blueGrey;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
+      case AssignmentStatus.expired:
+        return Colors.red;
       case AssignmentStatus.completed:
         return Colors.green;
-      case AssignmentStatus.expired:
-        return Colors.grey;
     }
   }
 
@@ -79,6 +79,11 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasInspectorDetails = (assignment.inspectorDesignation != null &&
+            assignment.inspectorDesignation!.isNotEmpty) ||
+        (assignment.inspectorDepartment != null &&
+            assignment.inspectorDepartment!.isNotEmpty);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Institute Information')),
       body: ListView(
@@ -94,7 +99,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        assignment.displayName,
+                        assignment.instituteName,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -116,7 +121,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                 _infoRow(
                   Icons.location_on_outlined,
                   'Location',
-                  assignment.displayLocation,
+                  assignment.fullAddress,
                 ),
                 _infoRow(
                   Icons.calendar_today_outlined,
@@ -130,6 +135,34 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                     'Coordinates',
                     '${assignment.instituteLatitude!.toStringAsFixed(5)}, '
                         '${assignment.instituteLongitude!.toStringAsFixed(5)}',
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Assigned PMU Inspector',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 16),
+                _infoRow(
+                  Icons.person_outline,
+                  'Inspector Name',
+                  assignment.inspectorName ?? 'No inspector assigned',
+                ),
+                if (hasInspectorDetails)
+                  _infoRow(
+                    Icons.badge_outlined,
+                    'Designation / Department',
+                    [
+                      assignment.inspectorDesignation,
+                      assignment.inspectorDepartment,
+                    ].where((v) => v != null && v.isNotEmpty).join(' · '),
                   ),
               ],
             ),

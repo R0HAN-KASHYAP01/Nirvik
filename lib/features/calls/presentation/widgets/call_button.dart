@@ -36,7 +36,9 @@ class CallButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final me = SessionService.instance.currentUser!;
+    final me = SessionService.instance.currentUser;
+    if (me == null) return const SizedBox.shrink();
+
     final callType = CallPermission.callTypeFor(from: me.role, to: calleeRole);
     if (callType == null) return const SizedBox.shrink();
 

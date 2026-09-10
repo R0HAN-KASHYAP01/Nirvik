@@ -85,6 +85,19 @@ class AssignmentSummary {
   /// Hard expiry: 2 days after [createdAt].
   final DateTime expiresAt;
 
+  /// Supabase pmu_assignments.inspector_profile_id — the PMU Inspector
+  /// assigned to this institute. Null only if the row genuinely has no
+  /// inspector assigned yet.
+  final String? inspectorProfileId;
+
+  /// Assigned inspector's display name (from profiles.full_name).
+  final String? inspectorName;
+
+  /// Assigned inspector's designation/department (from pmu_inspectors).
+  /// Optional — not every caller populates these.
+  final String? inspectorDesignation;
+  final String? inspectorDepartment;
+
   const AssignmentSummary({
     required this.id,
     required this.instituteProfileId,
@@ -99,6 +112,10 @@ class AssignmentSummary {
     required this.createdAt,
     required this.expiresAt,
     this.startedAt,
+    this.inspectorProfileId,
+    this.inspectorName,
+    this.inspectorDesignation,
+    this.inspectorDepartment,
   });
 
   bool get isStarted => startedAt != null;

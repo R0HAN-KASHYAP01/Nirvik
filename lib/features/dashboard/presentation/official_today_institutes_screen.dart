@@ -12,6 +12,8 @@ import 'official_institute_info_screen.dart';
 ///
 /// Unlike [AssignmentsScreen] (used by PMU Inspectors), tapping an item here
 /// never opens the inspection workflow — it only opens a basic-info view.
+/// Officials always see the real institute name (never the pre-start
+/// masked "Assigned Institute" placeholder used for inspectors).
 class OfficialTodayInstitutesScreen extends StatefulWidget {
   const OfficialTodayInstitutesScreen({super.key});
 
@@ -80,10 +82,10 @@ class _OfficialTodayInstitutesScreenState
         return Colors.blueGrey;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
+      case AssignmentStatus.expired:
+        return Colors.red;
       case AssignmentStatus.completed:
         return Colors.green;
-      case AssignmentStatus.expired:
-        return Colors.grey;
     }
   }
 
@@ -119,7 +121,7 @@ class _OfficialTodayInstitutesScreenState
                 children: [
                   Expanded(
                     child: Text(
-                      assignment.displayName,
+                      assignment.instituteName,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -143,7 +145,31 @@ class _OfficialTodayInstitutesScreenState
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      assignment.displayLocation,
+                      assignment.fullAddress,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.badge_outlined,
+                    size: 16,
+                    color: Colors.black45,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      assignment.inspectorName ?? 'No inspector assigned',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Colors.black54,

@@ -70,9 +70,51 @@ class AssignmentsRepository {
       instituteMap[profileId] = row;
     }
 
+    final inspectorMap = await _fetchInspectorMap(assignments);
+
     return assignments
-        .map((row) => _mapAssignmentRow(row, instituteMap))
+        .map((row) => _mapAssignmentRow(row, instituteMap, inspectorMap))
         .toList();
+  }
+
+  /// Bulk-fetches display name + designation/department for every distinct
+  /// inspector referenced in [assignmentRows], keyed by profile_id. Two
+  /// fixed queries regardless of how many assignments/inspectors exist.
+  Future<Map<String, Map<String, dynamic>>> _fetchInspectorMap(
+    List<Map<String, dynamic>> assignmentRows,
+  ) async {
+    final inspectorIds = assignmentRows
+        .map((row) => row['inspector_profile_id']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (inspectorIds.isEmpty) return {};
+
+    final profileRows = await _client
+        .from('profiles')
+        .select('id, full_name')
+        .inFilter('id', inspectorIds);
+
+    final inspectorRows = await _client
+        .from('pmu_inspectors')
+        .select('profile_id, designation, department')
+        .inFilter('profile_id', inspectorIds);
+
+    final designationById = <String, Map<String, dynamic>>{
+      for (final row in inspectorRows)
+        row['profile_id'] as String: row,
+    };
+
+    return {
+      for (final row in profileRows)
+        row['id'] as String: {
+          'name': row['full_name'],
+          'designation': designationById[row['id']]?['designation'],
+          'department': designationById[row['id']]?['department'],
+        },
+    };
   }
 
   /// Fetch one assignment by its database ID.
@@ -105,11 +147,14 @@ class AssignmentsRepository {
       institute = instituteResponse;
     }
 
+    final inspectorMap = await _fetchInspectorMap([row]);
+
     return _mapAssignmentRow(
       row,
       institute == null
           ? <String, Map<String, dynamic>>{}
           : <String, Map<String, dynamic>>{instituteProfileId!: institute},
+      inspectorMap,
     );
   }
 
@@ -238,8 +283,9 @@ class AssignmentsRepository {
   /// Convert a Supabase assignment row into the AssignmentSummary model.
   AssignmentSummary _mapAssignmentRow(
     Map<String, dynamic> row,
-    Map<String, Map<String, dynamic>> instituteMap,
-  ) {
+    Map<String, Map<String, dynamic>> instituteMap, [
+    Map<String, Map<String, dynamic>> inspectorMap = const {},
+  ]) {
     final assignmentId = row['id']?.toString() ?? '';
     final instituteProfileId = row['institute_profile_id']?.toString() ?? '';
     final institute = instituteMap[instituteProfileId];
@@ -263,6 +309,11 @@ class AssignmentsRepository {
     final priority = _parsePriority(row['priority']);
     final status = _parseStatus(row['status']);
 
+    final inspectorProfileId = row['inspector_profile_id']?.toString();
+    final inspector = inspectorProfileId != null
+        ? inspectorMap[inspectorProfileId]
+        : null;
+
     return AssignmentSummary(
       id: assignmentId,
       instituteProfileId: instituteProfileId,
@@ -277,6 +328,10 @@ class AssignmentsRepository {
       createdAt: createdAt,
       expiresAt: expiresAt,
       startedAt: startedAt,
+      inspectorProfileId: inspectorProfileId,
+      inspectorName: inspector?['name'] as String?,
+      inspectorDesignation: inspector?['designation'] as String?,
+      inspectorDepartment: inspector?['department'] as String?,
     );
   }
 

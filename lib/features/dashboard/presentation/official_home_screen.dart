@@ -15,6 +15,7 @@ import '../../../models/assignment.dart';
 import '../../../models/project.dart' as project_model;
 import '../../calls/presentation/call_history_screen.dart';
 import 'assignments_screen.dart';
+import 'official_today_institutes_screen.dart';
 import 'inspection_history_screen.dart';
 import '../../projects/presentation/project_list_screen.dart';
 
@@ -188,7 +189,7 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                     color: AppColors.info,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const AssignmentsScreen(initialFilter: 'today'),
+                        builder: (_) => const OfficialTodayInstitutesScreen(),
                       ),
                     ),
                   ),

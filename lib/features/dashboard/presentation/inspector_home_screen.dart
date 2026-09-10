@@ -77,12 +77,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
 
   int get _todayCount => _todaysAssignments.length;
 
-  int get _overdueCount {
-    return _assignments
-        .where((assignment) => assignment.status == AssignmentStatus.overdue)
-        .length;
-  }
-
   int get _completedCount {
     return _assignments
         .where((assignment) => assignment.status == AssignmentStatus.completed)
@@ -144,16 +138,6 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
                       label: 'Today',
                       count: _isLoading ? '—' : '$_todayCount',
                       onTap: () => _openAssignments(filter: 'today'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SummaryStatCard(
-                      icon: Icons.error_outline,
-                      label: 'Overdue',
-                      count: _isLoading ? '—' : '$_overdueCount',
-                      accentColor: Colors.red,
-                      onTap: () => _openAssignments(status: AssignmentStatus.overdue),
                     ),
                   ),
                   const SizedBox(width: 8),

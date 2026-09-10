@@ -21,8 +21,40 @@ class NgoInstituteService {
     return NgoInstituteProfile.fromMap(data);
   }
 
+  /// Fetches the NGO / Institute organization name for a profile.
+  ///
+  /// Flow:
+  /// profiles.id
+  ///   -> ngo_institutes.profile_id
+  ///   -> ngo_institutes.organization_id
+  ///   -> organizations.id
+  ///   -> organizations.name
+  Future<String?> fetchOrganizationName(String profileId) async {
+    final data = await _client
+        .from('ngo_institutes')
+        .select('organization_id, organizations(name)')
+        .eq('profile_id', profileId)
+        .maybeSingle();
+
+    if (data == null) return null;
+
+    final organization = data['organizations'];
+
+    if (organization is Map<String, dynamic>) {
+      final name = organization['name'];
+
+      if (name is String && name.trim().isNotEmpty) {
+        return name.trim();
+      }
+    }
+
+    return null;
+  }
+
   /// Insert-or-update in one call (profile_id is the primary key).
-  Future<NgoInstituteProfile> upsertProfile(NgoInstituteProfile profile) async {
+  Future<NgoInstituteProfile> upsertProfile(
+    NgoInstituteProfile profile,
+  ) async {
     final data = await _client
         .from('ngo_institutes')
         .upsert(profile.toMap())
@@ -49,14 +81,17 @@ class NgoInstituteService {
         .not('longitude', 'is', null);
 
     final points = <InstituteMapPoint>[];
+
     for (final row in rows as List) {
-      final point = InstituteMapPoint.tryFromMap(row as Map<String, dynamic>);
+      final point = InstituteMapPoint.tryFromMap(
+        row as Map<String, dynamic>,
+      );
+
       if (point != null) {
         points.add(point);
       }
-      // Records with null/invalid coordinates are silently skipped —
-      // tryFromMap returns null for those rather than throwing.
     }
+
     return points;
   }
 }

@@ -1,7 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/user.dart';
 
-enum AttendanceType { beneficiary, staff }
+enum AttendanceType {
+  beneficiary,
+  staff,
+}
 
 class AttendanceRecord {
   final String id;
@@ -36,6 +40,7 @@ class AttendanceRecord {
 
 class NgoAttendanceService {
   NgoAttendanceService._();
+
   static final NgoAttendanceService instance = NgoAttendanceService._();
 
   final SupabaseClient _client = Supabase.instance.client;
@@ -48,15 +53,21 @@ class NgoAttendanceService {
     String? videoEvidencePath,
     DateTime? date,
   }) async {
-    final attendanceDate = (date ?? DateTime.now());
+    final attendanceDate = date ?? DateTime.now();
+
     final dateOnly =
-        '${attendanceDate.year.toString().padLeft(4, '0')}-${attendanceDate.month.toString().padLeft(2, '0')}-${attendanceDate.day.toString().padLeft(2, '0')}';
+        '${attendanceDate.year.toString().padLeft(4, '0')}-'
+        '${attendanceDate.month.toString().padLeft(2, '0')}-'
+        '${attendanceDate.day.toString().padLeft(2, '0')}';
 
     await _client.from('ngo_attendance').upsert(
       {
         'profile_id': user.id,
         'organization_id': user.organizationId,
-        'attendance_type': type == AttendanceType.beneficiary ? 'beneficiary' : 'staff',
+        'attendance_type':
+            type == AttendanceType.beneficiary
+                ? 'beneficiary'
+                : 'staff',
         'attendance_date': dateOnly,
         'present_count': presentCount,
         'notes': notes,
@@ -66,12 +77,86 @@ class NgoAttendanceService {
     );
   }
 
-  Future<List<AttendanceRecord>> fetchHistory(String profileId) async {
+  Future<List<AttendanceRecord>> fetchHistory(
+    String profileId,
+  ) async {
     final rows = await _client
         .from('ngo_attendance')
         .select()
         .eq('profile_id', profileId)
         .order('attendance_date', ascending: false);
-    return (rows as List).map((r) => AttendanceRecord.fromMap(r as Map<String, dynamic>)).toList();
+
+    return (rows as List)
+        .map(
+          (r) => AttendanceRecord.fromMap(
+            r as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  /// Returns only today's attendance records.
+  Future<List<AttendanceRecord>> fetchToday(
+    String profileId,
+  ) async {
+    final now = DateTime.now();
+
+    final today =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+
+    final rows = await _client
+        .from('ngo_attendance')
+        .select()
+        .eq('profile_id', profileId)
+        .eq('attendance_date', today)
+        .order('attendance_type');
+
+    return (rows as List)
+        .map(
+          (r) => AttendanceRecord.fromMap(
+            r as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  /// Returns today's beneficiary attendance count.
+  Future<int> fetchTodayBeneficiaryCount(
+    String profileId,
+  ) async {
+    final records = await fetchToday(profileId);
+
+    for (final record in records) {
+      if (record.type == AttendanceType.beneficiary) {
+        return record.presentCount;
+      }
+    }
+
+    return 0;
+  }
+
+  /// Returns today's staff attendance count.
+  Future<int> fetchTodayStaffCount(
+    String profileId,
+  ) async {
+    final records = await fetchToday(profileId);
+
+    for (final record in records) {
+      if (record.type == AttendanceType.staff) {
+        return record.presentCount;
+      }
+    }
+
+    return 0;
+  }
+
+  /// Whether attendance has been submitted today.
+  Future<bool> hasSubmittedToday(
+    String profileId,
+  ) async {
+    final records = await fetchToday(profileId);
+    return records.isNotEmpty;
   }
 }

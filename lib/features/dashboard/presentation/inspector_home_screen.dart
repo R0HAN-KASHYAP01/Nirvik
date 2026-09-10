@@ -77,30 +77,30 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
   int get _todayCount => _todaysAssignments.length;
 
   int get _activeCount {
-  return _assignments
-      .where((assignment) =>
-          assignment.status == AssignmentStatus.assigned ||
-          assignment.status == AssignmentStatus.inProgress)
-      .length;
-}
+    return _assignments
+        .where((assignment) =>
+            assignment.status == AssignmentStatus.assigned ||
+            assignment.status == AssignmentStatus.inProgress)
+        .length;
+  }
 
-int get _expiredCount {
-  return _assignments
-      .where(
-        (assignment) =>
-            assignment.status == AssignmentStatus.expired,
-      )
-      .length;
-}
+  int get _expiredCount {
+    return _assignments
+        .where(
+          (assignment) =>
+              assignment.status == AssignmentStatus.expired,
+        )
+        .length;
+  }
 
-int get _completedCount {
-  return _assignments
-      .where(
-        (assignment) =>
-            assignment.status == AssignmentStatus.completed,
-      )
-      .length;
-}
+  int get _completedCount {
+    return _assignments
+        .where(
+          (assignment) =>
+              assignment.status == AssignmentStatus.completed,
+        )
+        .length;
+  }
 
   void _openAssignments({
     AssignmentStatus? status,

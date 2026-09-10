@@ -112,10 +112,10 @@ class SchemesRepository {
     // 3) Most recent inspection per institute, in one bulk query
     //    (rows come back newest-first; we keep only the first per institute).
     final inspectionRows = await _client
-        .from('institute_inspections')
-        .select('institute_profile_id, inspector_profile_id, inspection_datetime, status, report_summary')
+        .from('pmu_inspection_submissions')
+        .select('institute_profile_id, inspector_profile_id, submitted_at, overall_status, report_summary')
         .inFilter('institute_profile_id', instituteIds)
-        .order('inspection_datetime', ascending: false);
+        .order('submitted_at', ascending: false);
 
     final latestInspectionByInstitute = <String, Map<String, dynamic>>{};
     for (final row in inspectionRows) {
@@ -150,9 +150,9 @@ class SchemesRepository {
         final inspectorId = inspectionRow['inspector_profile_id'] as String?;
         final inspectorProfile = inspectorId != null ? inspectorProfilesById[inspectorId] : null;
         lastInspection = InstituteInspection(
-          dateTime: DateTime.parse(inspectionRow['inspection_datetime'] as String),
+          dateTime: DateTime.parse(inspectionRow['submitted_at'] as String),
           inspectorName: (inspectorProfile?['full_name'] as String?) ?? 'Unknown Inspector',
-          status: (inspectionRow['status'] as String?) ?? 'Completed',
+          status: (inspectionRow['overall_status'] as String?) ?? 'Completed',
           reportSummary: (inspectionRow['report_summary'] as String?) ?? 'No summary provided.',
         );
       }

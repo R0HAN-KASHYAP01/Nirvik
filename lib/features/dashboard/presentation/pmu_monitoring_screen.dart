@@ -4,7 +4,6 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_start.dart';
 import '../../../core/widgets/loading_state.dart';
 import '../../../core/widgets/section_header.dart';
-import '../../../core/widgets/summary_stat_card.dart';
 import '../../../models/pmu_officer_summary.dart';
 import '../data/pmu_monitoring_repository.dart';
 import 'widgets/pmu_officer_card.dart';
@@ -14,20 +13,17 @@ class PmuMonitoringScreen extends StatefulWidget {
   const PmuMonitoringScreen({super.key});
 
   @override
-  State<PmuMonitoringScreen> createState() =>
-      _PmuMonitoringScreenState();
+  State<PmuMonitoringScreen> createState() => _PmuMonitoringScreenState();
 }
 
 class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
   final _repository = PmuMonitoringRepository();
+  final _searchController = TextEditingController();
 
   late Future<List<PmuOfficerSummary>> _future;
 
-  final _searchController = TextEditingController();
-
   OfficerAvailability? _statusFilter;
 
-  // Government Digital India theme
   static const Color _navy = Color(0xFF123E68);
   static const Color _background = Color(0xFFEAF2F8);
   static const Color _cardBackground = Color(0xFFE1ECF3);
@@ -35,8 +31,6 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
   static const Color _textGrey = Color(0xFF667788);
   static const Color _border = Color(0xFFD1DEE7);
   static const Color _green = Color(0xFF168A45);
-  static const Color _saffron = Color(0xFFE88A18);
-  static const Color _red = Color(0xFFD64545);
 
   @override
   void initState() {
@@ -45,7 +39,9 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
   }
 
   void _reload() {
-    setState(() => _future = _repository.fetchOfficers());
+    setState(() {
+      _future = _repository.fetchOfficers();
+    });
   }
 
   List<PmuOfficerSummary> _applyFilters(
@@ -58,8 +54,7 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
           query.isEmpty || o.name.toLowerCase().contains(query);
 
       final matchesStatus =
-          _statusFilter == null ||
-          o.availability == _statusFilter;
+          _statusFilter == null || o.availability == _statusFilter;
 
       return matchesQuery && matchesStatus;
     }).toList();
@@ -118,77 +113,31 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
 
           return RefreshIndicator(
             color: _navy,
-            onRefresh: () async => _reload(),
+            onRefresh: () async {
+              _reload();
+            },
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
                 _SummaryStats(officers: officers),
-
                 const SizedBox(height: 20),
-
                 SectionHeader(
                   title: 'Officers (${filtered.length})',
                 ),
-
                 const SizedBox(height: 10),
-
-                Container(
-                  decoration: BoxDecoration(
-                    color: _cardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _border,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (_) => setState(() {}),
-                    style: const TextStyle(
-                      color: _textDark,
-                      fontSize: 13,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search officer by name',
-                      hintStyle: const TextStyle(
-                        color: _textGrey,
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: _navy,
-                      ),
-                      isDense: true,
-                      filled: true,
-                      fillColor: _cardBackground,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: _navy,
-                          width: 1.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
+                _buildSearchField(),
                 const SizedBox(height: 10),
-
                 _StatusFilterRow(
                   selected: _statusFilter,
-                  onSelected: (s) =>
-                      setState(() => _statusFilter = s),
+                  onSelected: (status) {
+                    setState(() {
+                      _statusFilter = status;
+                    });
+                  },
                 ),
-
                 const SizedBox(height: 12),
-
                 if (filtered.isEmpty)
                   const EmptyState(
                     title: 'No matches',
@@ -198,19 +147,20 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
                 else
                   ...filtered.map(
                     (officer) => Padding(
-                      padding:
-                          const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: PmuOfficerCard(
                         officer: officer,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                PmuOfficerDetailScreen(
-                              officer: officer,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PmuOfficerDetailScreen(
+                                officer: officer,
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -218,6 +168,61 @@ class _PmuMonitoringScreenState extends State<PmuMonitoringScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _border,
+        ),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (_) {
+          setState(() {});
+        },
+        style: const TextStyle(
+          color: _textDark,
+          fontSize: 14,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Search officer by name',
+          hintStyle: const TextStyle(
+            color: _textGrey,
+            fontSize: 14,
+          ),
+          prefixIcon: const Icon(
+            Icons.search,
+            color: _navy,
+          ),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 15,
+          ),
+          filled: true,
+          fillColor: _cardBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: _navy,
+              width: 1.2,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -236,9 +241,7 @@ class _SummaryStats extends StatelessWidget {
 
     final available = officers
         .where(
-          (o) =>
-              o.availability ==
-              OfficerAvailability.available,
+          (o) => o.availability == OfficerAvailability.available,
         )
         .length;
 
@@ -252,42 +255,64 @@ class _SummaryStats extends StatelessWidget {
       (sum, o) => sum + o.completedInspectionsCount,
     );
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        _ThemeSummaryCard(
-          icon: Icons.groups_outlined,
-          label: 'Total PMU Officers',
-          count: '$total',
-          accentColor: const Color(0xFF123E68),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
 
-        _ThemeSummaryCard(
-          icon: Icons.check_circle_outline,
-          label: 'Available Officers',
-          count: '$available',
-          accentColor: const Color(0xFF168A45),
-        ),
+        const spacing = 12.0;
 
-        _ThemeSummaryCard(
-          icon: Icons.assignment_outlined,
-          label: 'Total Assignments',
-          count: '$totalAssignments',
-          accentColor: const Color(0xFF123E68),
-        ),
+        final cardWidth = (availableWidth - spacing) / 2;
 
-        _ThemeSummaryCard(
-          icon: Icons.fact_check_outlined,
-          label: 'Completed Inspections',
-          count: '$completed',
-          accentColor: const Color(0xFF168A45),
-        ),
-      ],
+        /*
+         * Calculate the card height from its real width.
+         *
+         * This avoids using a fixed childAspectRatio which can
+         * produce a card that is too short on smaller phones.
+         */
+        final calculatedHeight = cardWidth * 0.72;
+
+        final cardHeight = calculatedHeight.clamp(
+          128.0,
+          170.0,
+        );
+
+        return GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            mainAxisExtent: cardHeight,
+          ),
+          children: [
+            _ThemeSummaryCard(
+              icon: Icons.groups_outlined,
+              label: 'Total PMU Officers',
+              count: '$total',
+              accentColor: const Color(0xFF123E68),
+            ),
+            _ThemeSummaryCard(
+              icon: Icons.check_circle_outline,
+              label: 'Available Officers',
+              count: '$available',
+              accentColor: const Color(0xFF168A45),
+            ),
+            _ThemeSummaryCard(
+              icon: Icons.assignment_outlined,
+              label: 'Total Assignments',
+              count: '$totalAssignments',
+              accentColor: const Color(0xFF123E68),
+            ),
+            _ThemeSummaryCard(
+              icon: Icons.fact_check_outlined,
+              label: 'Completed Inspections',
+              count: '$completed',
+              accentColor: const Color(0xFF168A45),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -313,7 +338,7 @@ class _ThemeSummaryCard extends StatelessWidget {
     const textGrey = Color(0xFF667788);
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardBackground,
         borderRadius: BorderRadius.circular(14),
@@ -330,33 +355,36 @@ class _ThemeSummaryCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(
               icon,
-              size: 17,
+              size: 19,
               color: accentColor,
             ),
           ),
-
           const SizedBox(height: 8),
-
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w700,
-              color: textDark,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                count,
+                style: const TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w700,
+                  color: textDark,
+                ),
+              ),
             ),
           ),
-
-          const SizedBox(height: 2),
-
+          const SizedBox(height: 3),
           Text(
             label,
             maxLines: 2,
@@ -386,11 +414,16 @@ class _StatusFilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
           _chip(context, null, 'All'),
           ...OfficerAvailability.values.map(
-            (s) => _chip(context, s, s.label),
+            (status) => _chip(
+              context,
+              status,
+              status.label,
+            ),
           ),
         ],
       ),
@@ -414,6 +447,8 @@ class _StatusFilterRow extends StatelessWidget {
       child: ChoiceChip(
         label: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 12,
             fontWeight:

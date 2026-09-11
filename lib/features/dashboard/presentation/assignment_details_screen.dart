@@ -45,10 +45,10 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
     super.initState();
     _assignment = widget.assignment;
 
-    // Rebuild every 30s so the verification countdown and any expiry
-    // banners stay accurate without user interaction.
     _tickTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
 
     _loadCameraFeeds();
@@ -136,15 +136,24 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
   }
 
   String _formatRemaining(Duration remaining) {
-    if (remaining.isNegative) return '0m';
+    if (remaining.isNegative) {
+      return '0m';
+    }
+
     final minutes = remaining.inMinutes % 60;
     final hours = remaining.inHours;
-    if (hours > 0) return '${hours}h ${minutes}m';
+
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+
     return '${minutes}m';
   }
 
   Future<void> _startAssignment() async {
-    if (_isStarting) return;
+    if (_isStarting) {
+      return;
+    }
 
     setState(() {
       _isStarting = true;
@@ -165,6 +174,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       }
 
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
       if (!serviceEnabled) {
         setState(() {
           _message =
@@ -174,6 +184,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       }
 
       var permission = await Geolocator.checkPermission();
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
@@ -212,7 +223,9 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
         distanceKm: distanceKm,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       if (!result.success) {
         setState(() {
@@ -227,10 +240,14 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
             'verification at the institute.';
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
         _message = 'Unable to start this assignment. Please try again.';
       });
+
       debugPrint('Start assignment error: $error');
     } finally {
       if (mounted) {
@@ -244,7 +261,9 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
   void _continueToVerification() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ArrivalVerificationScreen(assignment: _assignment),
+        builder: (_) => ArrivalVerificationScreen(
+          assignment: _assignment,
+        ),
       ),
     );
   }
@@ -279,6 +298,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   value,
+                  softWrap: true,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -306,13 +326,14 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
             children: [
               StatusBadge(
                 label: _assignment.status.label,
                 color: _statusColor(_assignment.status),
               ),
-              const SizedBox(width: 10),
               StatusBadge(
                 label: '${_assignment.priority.label} priority',
                 color: _priorityColor(_assignment.priority),
@@ -330,7 +351,10 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lock_outline, color: Colors.indigo),
+          const Icon(
+            Icons.lock_outline,
+            color: Colors.indigo,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -338,7 +362,10 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
               children: [
                 const Text(
                   'Institute details are hidden',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -450,6 +477,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
                     SizedBox(height: 4),
                     Text(
                       'Arrival verification → Checklist → Evidence → Findings → Summary → Submission',
+                      softWrap: true,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -468,7 +496,10 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
 
   Widget _buildVerificationWindowCard() {
     final deadline = _assignment.verificationDeadline;
-    if (deadline == null) return const SizedBox.shrink();
+
+    if (deadline == null) {
+      return const SizedBox.shrink();
+    }
 
     final remaining = deadline.difference(DateTime.now());
     final expired = _assignment.isVerificationWindowExpired;
@@ -476,6 +507,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             expired ? Icons.timer_off_outlined : Icons.timer_outlined,
@@ -490,6 +522,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
                   expired
                       ? 'Geo verification window has closed'
                       : 'Time left to complete geo verification',
+                  softWrap: true,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -520,6 +553,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Icon(
                 Icons.videocam_outlined,
@@ -529,6 +563,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
               const Expanded(
                 child: Text(
                   'Camera / CCTV Feeds',
+                  softWrap: true,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -545,6 +580,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
           const SizedBox(height: 6),
           const Text(
             'Camera feeds registered by the assigned institute.',
+            softWrap: true,
             style: TextStyle(
               fontSize: 13,
               color: Colors.black54,
@@ -590,6 +626,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
             Expanded(
               child: Text(
                 _feedError!,
+                softWrap: true,
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.4,
@@ -623,6 +660,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
             Text(
               'No camera feeds are registered for this institute.',
               textAlign: TextAlign.center,
+              softWrap: true,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.black54,
@@ -648,6 +686,7 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
             : 'Uploaded Video';
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -656,61 +695,77 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
           color: Colors.grey.withValues(alpha: 0.2),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: isLive
-                  ? Colors.red.withValues(alpha: 0.08)
-                  : Colors.indigo.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              isLive ? Icons.live_tv_outlined : Icons.video_library_outlined,
-              color: isLive ? Colors.red : Colors.indigo,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 340;
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: compact ? 40 : 44,
+                height: compact ? 40 : 44,
+                decoration: BoxDecoration(
+                  color: isLive
+                      ? Colors.red.withValues(alpha: 0.08)
+                      : Colors.indigo.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  isLive ? 'Live link' : 'Uploaded video',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
+                child: Icon(
+                  isLive
+                      ? Icons.live_tv_outlined
+                      : Icons.video_library_outlined,
+                  size: compact ? 21 : 24,
+                  color: isLive ? Colors.red : Colors.indigo,
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 36,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openCameraFeed(feed),
-                    icon: Icon(
-                      isLive
-                          ? Icons.visibility_outlined
-                          : Icons.play_circle_outline,
-                      size: 17,
+              ),
+              SizedBox(width: compact ? 10 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
+                      style: TextStyle(
+                        fontSize: compact ? 13.5 : 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    label: Text(isLive ? 'Open Feed' : 'Play Video'),
-                  ),
+                    const SizedBox(height: 5),
+                    Text(
+                      isLive ? 'Live link' : 'Uploaded video',
+                      style: TextStyle(
+                        fontSize: compact ? 11.5 : 12,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 38,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openCameraFeed(feed),
+                        icon: Icon(
+                          isLive
+                              ? Icons.visibility_outlined
+                              : Icons.play_circle_outline,
+                          size: 17,
+                        ),
+                        label: Text(
+                          isLive ? 'Open Feed' : 'Play Video',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -794,7 +849,9 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
 
       Navigator.of(context).pop();
 
-      _showFeedMessage('Unable to open the uploaded video.');
+      _showFeedMessage(
+        'Unable to open the uploaded video.',
+      );
     }
   }
 
@@ -814,15 +871,36 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
     final streamUrl = feed.streamUrl;
 
     if (streamUrl == null || streamUrl.trim().isEmpty) {
-      _showFeedMessage('This camera feed does not have a stream URL.');
+      _showFeedMessage(
+        'This camera feed does not have a stream URL.',
+      );
       return;
     }
 
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
+        final screenSize = MediaQuery.sizeOf(context);
+
+        final dialogWidth = (screenSize.width - 32).clamp(
+          280.0,
+          700.0,
+        );
+
+        final videoWidth = dialogWidth.toDouble();
+
+        final videoHeight = (videoWidth * 9 / 16).clamp(
+          160.0,
+          390.0,
+        );
+
         return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           title: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Icon(
                 Icons.live_tv,
@@ -834,40 +912,53 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
                   feed.label?.trim().isNotEmpty == true
                       ? feed.label!.trim()
                       : 'Live Camera Feed',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
           content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: double.infinity,
-                    height: 300,
-                    color: Colors.black,
-                    child: MjpegView(
-                      uri: streamUrl,
+            width: videoWidth,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
                       width: double.infinity,
-                      height: 300,
-                      fit: BoxFit.contain,
-                      fps: 10,
-                      timeout: const Duration(seconds: 10),
-                      loadingWidget: (context) => const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
+                      height: videoHeight.toDouble(),
+                      color: Colors.black,
+                      child: MjpegView(
+                        uri: streamUrl,
+                        width: double.infinity,
+                        height: videoHeight.toDouble(),
+                        fit: BoxFit.contain,
+                        fps: 10,
+                        timeout: const Duration(seconds: 10),
+                        loadingWidget: (context) => const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      errorWidget: (context) => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
+                        errorWidget: (context) => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Unable to load the live camera feed.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                        doneWidget: (context) => const Center(
                           child: Text(
-                            'Unable to load the live camera feed.',
-                            textAlign: TextAlign.center,
+                            'Camera stream ended.',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 13,
@@ -875,34 +966,25 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
                           ),
                         ),
                       ),
-                      doneWidget: (context) => const Center(
-                        child: Text(
-                          'Camera stream ended.',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Stream URL',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Stream URL',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 5),
-                SelectableText(
-                  streamUrl,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  const SizedBox(height: 5),
+                  SelectableText(
+                    streamUrl,
+                    style: const TextStyle(
+                      fontSize: 13,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -917,7 +999,9 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
   }
 
   Widget _buildMessage() {
-    if (_message == null) return const SizedBox.shrink();
+    if (_message == null) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -925,7 +1009,11 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
         padding: const EdgeInsets.all(14),
         child: Text(
           _message!,
-          style: const TextStyle(fontSize: 13, height: 1.4),
+          softWrap: true,
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.4,
+          ),
         ),
       ),
     );
@@ -938,12 +1026,17 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       return const AppCard(
         padding: EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.green),
+            Icon(
+              Icons.check_circle_outline,
+              color: Colors.green,
+            ),
             SizedBox(width: 12),
             Expanded(
               child: Text(
                 'This assignment has already been completed.',
+                softWrap: true,
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -957,13 +1050,18 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       return const AppCard(
         padding: EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.event_busy_outlined, color: Colors.grey),
+            Icon(
+              Icons.event_busy_outlined,
+              color: Colors.grey,
+            ),
             SizedBox(width: 12),
             Expanded(
               child: Text(
                 'This assignment has expired. It has been released back '
                 'to the assignment pool.',
+                softWrap: true,
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -983,13 +1081,18 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       return const AppCard(
         padding: EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.timer_off_outlined, color: Colors.red),
+            Icon(
+              Icons.timer_off_outlined,
+              color: Colors.red,
+            ),
             SizedBox(width: 12),
             Expanded(
               child: Text(
                 'The 1-hour geo verification window has closed. Contact '
                 'PMU staff for guidance.',
+                softWrap: true,
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -1012,39 +1115,61 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
       appBar: AppBar(
         title: const Text('Assignment Details'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-          Text(
-            assignment.displayName,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            assignment.displayLocation,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          const SizedBox(height: 20),
-          _buildStatusSection(),
-          const SizedBox(height: 12),
-          if (!assignment.isStarted) ...[
-            _buildLockedNotice(),
-            const SizedBox(height: 12),
-          ],
-          _buildAssignmentInformation(),
-          const SizedBox(height: 12),
-          _buildCameraSection(),
-          const SizedBox(height: 12),
-          _buildInspectionWorkflowCard(),
-          const SizedBox(height: 12),
-          if (assignment.isStarted) ...[
-            _buildVerificationWindowCard(),
-            const SizedBox(height: 12),
-          ],
-          _buildMessage(),
-          const SizedBox(height: 8),
-          _buildActionArea(),
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontalPadding =
+              constraints.maxWidth < 360 ? 12.0 : 20.0;
+
+          return ListView(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              16,
+              horizontalPadding,
+              24,
+            ),
+            children: [
+              Text(
+                assignment.displayName,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                softWrap: true,
+                style: TextStyle(
+                  fontSize: constraints.maxWidth < 360 ? 20 : 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                assignment.displayLocation,
+                softWrap: true,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildStatusSection(),
+              const SizedBox(height: 12),
+              if (!assignment.isStarted) ...[
+                _buildLockedNotice(),
+                const SizedBox(height: 12),
+              ],
+              _buildAssignmentInformation(),
+              const SizedBox(height: 12),
+              _buildCameraSection(),
+              const SizedBox(height: 12),
+              _buildInspectionWorkflowCard(),
+              const SizedBox(height: 12),
+              if (assignment.isStarted) ...[
+                _buildVerificationWindowCard(),
+                const SizedBox(height: 12),
+              ],
+              _buildMessage(),
+              const SizedBox(height: 8),
+              _buildActionArea(),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1060,7 +1185,8 @@ class _UploadedVideoDialog extends StatefulWidget {
   });
 
   @override
-  State<_UploadedVideoDialog> createState() => _UploadedVideoDialogState();
+  State<_UploadedVideoDialog> createState() =>
+      _UploadedVideoDialogState();
 }
 
 class _UploadedVideoDialogState extends State<_UploadedVideoDialog> {
@@ -1096,8 +1222,22 @@ class _UploadedVideoDialogState extends State<_UploadedVideoDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+
+    final dialogWidth = (screenSize.width - 32).clamp(
+      280.0,
+      700.0,
+    );
+
+    final availableVideoWidth = dialogWidth.toDouble();
+
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 24,
+      ),
       title: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Icon(
             Icons.video_library_outlined,
@@ -1105,27 +1245,32 @@ class _UploadedVideoDialogState extends State<_UploadedVideoDialog> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(widget.title),
+            child: Text(
+              widget.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
       content: SizedBox(
-        width: 650,
+        width: availableVideoWidth,
         child: FutureBuilder<void>(
           future: _initializeFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const SizedBox(
-                height: 320,
+                height: 220,
                 child: Center(
                   child: CircularProgressIndicator(),
                 ),
               );
             }
 
-            if (snapshot.hasError || !_controller.value.isInitialized) {
+            if (snapshot.hasError ||
+                !_controller.value.isInitialized) {
               return const SizedBox(
-                height: 320,
+                height: 220,
                 child: Center(
                   child: Padding(
                     padding: EdgeInsets.all(20),
@@ -1138,66 +1283,82 @@ class _UploadedVideoDialogState extends State<_UploadedVideoDialog> {
               );
             }
 
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 320,
-                  color: Colors.black,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    clipBehavior: Clip.hardEdge,
-                    child: SizedBox(
-                      width: _controller.value.size.width,
-                      height: _controller.value.size.height,
-                      child: VideoPlayer(_controller),
+            final videoSize = _controller.value.size;
+
+            final aspectRatio =
+                videoSize.width > 0 && videoSize.height > 0
+                    ? videoSize.width / videoSize.height
+                    : 16 / 9;
+
+            final videoHeight = (availableVideoWidth / aspectRatio)
+                .clamp(160.0, 390.0)
+                .toDouble();
+
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: videoHeight,
+                    color: Colors.black,
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      clipBehavior: Clip.hardEdge,
+                      child: SizedBox(
+                        width: videoSize.width,
+                        height: videoSize.height,
+                        child: VideoPlayer(_controller),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                VideoProgressIndicator(
-                  _controller,
-                  allowScrubbing: true,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      tooltip:
-                          _controller.value.isPlaying ? 'Pause' : 'Play',
-                      icon: Icon(
-                        _controller.value.isPlaying
-                            ? Icons.pause_circle
-                            : Icons.play_circle,
-                        size: 38,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          if (_controller.value.isPlaying) {
-                            _controller.pause();
-                          } else {
-                            _controller.play();
-                          }
-                        });
-                      },
+                  const SizedBox(height: 12),
+                  VideoProgressIndicator(
+                    _controller,
+                    allowScrubbing: true,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
                     ),
-                    IconButton(
-                      tooltip: 'Restart',
-                      icon: const Icon(
-                        Icons.replay,
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      IconButton(
+                        tooltip: _controller.value.isPlaying
+                            ? 'Pause'
+                            : 'Play',
+                        icon: Icon(
+                          _controller.value.isPlaying
+                              ? Icons.pause_circle
+                              : Icons.play_circle,
+                          size: 38,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (_controller.value.isPlaying) {
+                              _controller.pause();
+                            } else {
+                              _controller.play();
+                            }
+                          });
+                        },
                       ),
-                      onPressed: () {
-                        _controller.seekTo(Duration.zero);
-                        _controller.play();
-                        setState(() {});
-                      },
-                    ),
-                  ],
-                ),
-              ],
+                      IconButton(
+                        tooltip: 'Restart',
+                        icon: const Icon(
+                          Icons.replay,
+                        ),
+                        onPressed: () {
+                          _controller.seekTo(Duration.zero);
+                          _controller.play();
+                          setState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         ),

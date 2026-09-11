@@ -19,6 +19,7 @@ import '../features/map/presentation/institute_map_screen.dart';
 import '../core/widgets/module_placeholder_screen.dart';
 import '../features/projects/presentation/project_list_screen.dart';
 import '../features/schemes/presentation/schemes_screen.dart';
+import '../features/dashboard/presentation/official_cctv_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -55,58 +56,113 @@ class AppRoutes {
   static const String rvcPlaceholder = '/rvc';
 
   static Map<String, WidgetBuilder> get routes => {
-    splash: (context) => const SplashScreen(),
-    login: (context) => const LoginScreen(),
-    signup: (context) => const SignupScreen(),
-    roleSelection: (context) => const RoleSelectionScreen(),
+        splash: (context) => const SplashScreen(),
+        login: (context) => const LoginScreen(),
+        signup: (context) => const SignupScreen(),
+        roleSelection: (context) => const RoleSelectionScreen(),
 
-    officialDashboard: (context) => const OfficialShellScreen(),
+        // ------------------------------------------------------------
+        // OFFICIAL
+        // ------------------------------------------------------------
 
-    inspectorDashboard: (context) => const InspectorShellScreen(),
-    inspectorProfile: (context) => const InspectorProfileScreen(),
-    officialProfile: (context) => const OfficialProfileScreen(),
+        officialDashboard: (context) => const OfficialShellScreen(),
 
-    ngoDashboard: (context) => const NgoShellScreen(),
-    ngoProfile: (context) => const NgoProfileScreen(),
-    ngoAttendance: (context) => const AttendanceScreen(),
-    ngoReports: (context) => const ReportsScreen(),
-    ngoCamera: (context) => const CameraScreen(),
+        officialProfile: (context) => const OfficialProfileScreen(),
 
-    instituteMap: (context) => const InstituteMapScreen(),
+        // Official CCTV now opens the real read-only CCTV monitoring page.
+        cctvPlaceholder: (context) => const OfficialCctvScreen(),
 
-    projectsPlaceholder: (context) => const ProjectListScreen(),
+        // ------------------------------------------------------------
+        // INSPECTOR
+        // ------------------------------------------------------------
 
-    inspectionsPlaceholder: (context) => const ModulePlaceholderScreen(
-      title: 'Inspections',
-      message: 'Inspections module will be implemented in a later phase.',
-    ),
+        inspectorDashboard: (context) => const InspectorShellScreen(),
 
-    cctvPlaceholder: (context) => const ModulePlaceholderScreen(
-      title: 'CCTV',
-      message: 'CCTV module will be implemented in a later phase.',
-    ),
+        inspectorProfile: (context) => const InspectorProfileScreen(),
 
-    analyticsPlaceholder: (context) => const ModulePlaceholderScreen(
-      title: 'Analytics',
-      message: 'Analytics module will be implemented in a later phase.',
-    ),
+        // ------------------------------------------------------------
+        // NGO / INSTITUTE
+        // ------------------------------------------------------------
 
-    // REAL ASSIGNMENTS SCREEN
-    assignmentsPlaceholder: (context) => const AssignmentsScreen(),
+        ngoDashboard: (context) => const NgoShellScreen(),
 
-    inspectionWorkflowPlaceholder: (context) => const ModulePlaceholderScreen(
-      title: 'Inspection Workflow',
-      message: 'Inspection Workflow — coming in the next phase.',
-    ),
+        ngoProfile: (context) => const NgoProfileScreen(),
 
-    schemes: (context) => const SchemesScreen(),
+        ngoAttendance: (context) => const AttendanceScreen(),
 
-    pmuMonitoring: (context) => const PmuMonitoringScreen(),
+        ngoReports: (context) => const ReportsScreen(),
 
-    rvcPlaceholder: (context) => const ModulePlaceholderScreen(
-      title: 'RVC',
-      message:
-          'Remote Video Conferencing will be implemented in a later phase.',
-    ),
-  };
+        ngoCamera: (context) => const CameraScreen(),
+
+        // ------------------------------------------------------------
+        // MAP
+        // ------------------------------------------------------------
+
+        instituteMap: (context) => const InstituteMapScreen(),
+
+        // ------------------------------------------------------------
+        // PROJECTS
+        // ------------------------------------------------------------
+
+        projectsPlaceholder: (context) => const ProjectListScreen(),
+
+        // ------------------------------------------------------------
+        // INSPECTIONS
+        // ------------------------------------------------------------
+
+        inspectionsPlaceholder: (context) => const ModulePlaceholderScreen(
+              title: 'Inspections',
+              message:
+                  'Inspections module will be implemented in a later phase.',
+            ),
+
+        // ------------------------------------------------------------
+        // ANALYTICS
+        // ------------------------------------------------------------
+
+        analyticsPlaceholder: (context) => const ModulePlaceholderScreen(
+              title: 'Analytics',
+              message:
+                  'Analytics module will be implemented in a later phase.',
+            ),
+
+        // ------------------------------------------------------------
+        // ASSIGNMENTS
+        // ------------------------------------------------------------
+
+        assignmentsPlaceholder: (context) => const AssignmentsScreen(),
+
+        // ------------------------------------------------------------
+        // INSPECTION WORKFLOW
+        // ------------------------------------------------------------
+
+        inspectionWorkflowPlaceholder: (context) =>
+            const ModulePlaceholderScreen(
+              title: 'Inspection Workflow',
+              message:
+                  'Inspection Workflow — coming in the next phase.',
+            ),
+
+        // ------------------------------------------------------------
+        // SCHEMES
+        // ------------------------------------------------------------
+
+        schemes: (context) => const SchemesScreen(),
+
+        // ------------------------------------------------------------
+        // PMU MONITORING
+        // ------------------------------------------------------------
+
+        pmuMonitoring: (context) => const PmuMonitoringScreen(),
+
+        // ------------------------------------------------------------
+        // RVC
+        // ------------------------------------------------------------
+
+        rvcPlaceholder: (context) => const ModulePlaceholderScreen(
+              title: 'RVC',
+              message:
+                  'Remote Video Conferencing will be implemented in a later phase.',
+            ),
+      };
 }

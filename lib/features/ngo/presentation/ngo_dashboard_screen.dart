@@ -143,16 +143,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         organizationFuture,
       ]);
 
-      final attendance =
-          results[0] as List<AttendanceRecord>;
+      final attendance = results[0] as List<AttendanceRecord>;
 
-      final reports =
-          results[1] as List<NgoReport>;
+      final reports = results[1] as List<NgoReport>;
 
       final feeds = results[2] as List;
 
-      final organizationName =
-          results[3] as String?;
+      final organizationName = results[3] as String?;
 
       // ==========================================================
       // CALCULATE TOTAL ATTENDANCE
@@ -233,8 +230,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         _todayStaff = todayStaff;
         _todayReports = todayReports;
 
-        _attendanceSubmittedToday =
-            attendanceSubmittedToday;
+        _attendanceSubmittedToday = attendanceSubmittedToday;
 
         // NGO name
         _organizationName = organizationName;
@@ -292,13 +288,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   // NOTICES
   // ============================================================
 
- void _openNotices() {
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => const NgoNotificationsScreen(),
-    ),
-  );
-}
+  void _openNotices() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NgoNotificationsScreen(),
+      ),
+    );
+  }
 
   // ============================================================
   // GREETING
@@ -371,8 +367,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           color: darkBlue,
           backgroundColor: Colors.white,
           child: ListView(
-            physics:
-                const AlwaysScrollableScrollPhysics(),
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             children: [
               _buildTopHeader(),
@@ -427,8 +422,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         ),
       ),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 55,
@@ -448,8 +442,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _getGreeting(),
@@ -495,8 +488,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   Widget _buildGovernmentBanner() {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Container(
         height: 82,
         padding: const EdgeInsets.symmetric(
@@ -511,8 +503,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color:
-                  Colors.black.withValues(alpha: 0.035),
+              color: Colors.black.withValues(alpha: 0.035),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -523,10 +514,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             const Expanded(
               flex: 6,
               child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     "Let's build a stronger,",
@@ -560,10 +549,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     child: Container(
                       height: 4,
                       decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(10),
-                        color:
-                            const Color(0xFFFFC66D),
+                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFFFFC66D),
                       ),
                     ),
                   ),
@@ -574,10 +561,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     child: Container(
                       height: 4,
                       decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(10),
-                        color:
-                            const Color(0xFF54B96B),
+                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFF54B96B),
                       ),
                     ),
                   ),
@@ -588,8 +573,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             const Expanded(
               flex: 4,
               child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Government',
@@ -633,63 +617,64 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   Widget _buildTotalStatus() {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle('Total Status'),
 
           const SizedBox(height: 12),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatusCard(
-                  icon: Icons.groups_rounded,
-                  iconColor: green,
-                  title: 'Attendance',
-                  bottomText:
-                      '$_totalAttendance Submitted',
-                  bottomColor: green,
-                  showCheck:
-                      _totalAttendance > 0,
-                  onTap: _openAttendance,
+          // Explicit height prevents the Row from receiving
+          // infinite vertical constraints inside the ListView.
+          SizedBox(
+            height: 108,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildStatusCard(
+                    icon: Icons.groups_rounded,
+                    iconColor: green,
+                    title: 'Attendance',
+                    bottomText:
+                        '$_totalAttendance Submitted',
+                    bottomColor: green,
+                    showCheck: _totalAttendance > 0,
+                    onTap: _openAttendance,
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 9),
+                const SizedBox(width: 9),
 
-              Expanded(
-                child: _buildStatusCard(
-                  icon: Icons.description_rounded,
-                  iconColor: darkBlue,
-                  title: 'Reports',
-                  bottomText:
-                      '$_totalReports Submitted',
-                  bottomColor: green,
-                  showCheck:
-                      _totalReports > 0,
-                  onTap: _openReports,
+                Expanded(
+                  child: _buildStatusCard(
+                    icon: Icons.description_rounded,
+                    iconColor: darkBlue,
+                    title: 'Reports',
+                    bottomText:
+                        '$_totalReports Submitted',
+                    bottomColor: green,
+                    showCheck: _totalReports > 0,
+                    onTap: _openReports,
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 9),
+                const SizedBox(width: 9),
 
-              Expanded(
-                child: _buildStatusCard(
-                  icon:
-                      Icons.notifications_active_rounded,
-                  iconColor: orange,
-                  title: 'Notices',
-                  bottomText: 'View',
-                  bottomColor: darkBlue,
-                  showCheck: false,
-                  onTap: _openNotices,
+                Expanded(
+                  child: _buildStatusCard(
+                    icon: Icons.notifications_active_rounded,
+                    iconColor: orange,
+                    title: 'Notices',
+                    bottomText: 'View',
+                    bottomColor: darkBlue,
+                    showCheck: false,
+                    onTap: _openNotices,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -729,24 +714,21 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color:
-                    Colors.black.withValues(alpha: 0.025),
+                color: Colors.black.withValues(alpha: 0.025),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 width: 39,
                 height: 39,
                 decoration: BoxDecoration(
                   color: softBlueGrey,
-                  borderRadius:
-                      BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(11),
                 ),
                 child: Icon(
                   icon,
@@ -761,8 +743,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 title,
                 textAlign: TextAlign.center,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: navy,
                   fontSize: 10,
@@ -773,8 +754,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
               const SizedBox(height: 5),
 
               Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (showCheck) ...[
                     Icon(
@@ -789,13 +769,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                       bottomText,
                       textAlign: TextAlign.center,
                       maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: bottomColor,
                         fontSize: 9,
-                        fontWeight:
-                            FontWeight.w700,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -814,11 +792,9 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   Widget _buildTodayOverview() {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle(
             'Today’s Overview',
@@ -847,42 +823,45 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(height: 12),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildOverviewCard(
-                  icon: Icons.groups_rounded,
-                  iconColor: green,
-                  number:
-                      '$_todayBeneficiaries',
-                  label:
-                      'Beneficiaries\npresent',
+          // Explicit height prevents infinite-height Row
+          // constraints on Flutter Web.
+          SizedBox(
+            height: 105,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.groups_rounded,
+                    iconColor: green,
+                    number: '$_todayBeneficiaries',
+                    label: 'Beneficiaries\npresent',
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 9),
+                const SizedBox(width: 9),
 
-              Expanded(
-                child: _buildOverviewCard(
-                  icon: Icons.badge_rounded,
-                  iconColor: darkBlue,
-                  number: '$_todayStaff',
-                  label: 'Staff present',
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.badge_rounded,
+                    iconColor: darkBlue,
+                    number: '$_todayStaff',
+                    label: 'Staff present',
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 9),
+                const SizedBox(width: 9),
 
-              Expanded(
-                child: _buildOverviewCard(
-                  icon: Icons.description_rounded,
-                  iconColor: darkBlue,
-                  number: '$_todayReports',
-                  label:
-                      'Reports\nsubmitted',
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.description_rounded,
+                    iconColor: darkBlue,
+                    number: '$_todayReports',
+                    label: 'Reports\nsubmitted',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -915,16 +894,14 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color:
-                Colors.black.withValues(alpha: 0.025),
+            color: Colors.black.withValues(alpha: 0.025),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             icon,
@@ -965,63 +942,71 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   Widget _buildQuickStatus() {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle('Quick Status'),
 
           const SizedBox(height: 12),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickCard(
-                  icon: Icons.groups_rounded,
-                  title: 'Daily Attendance',
-                  onTap: _openAttendance,
+          // Explicit height for the first Quick Status row.
+          SizedBox(
+            height: 86,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildQuickCard(
+                    icon: Icons.groups_rounded,
+                    title: 'Daily Attendance',
+                    onTap: _openAttendance,
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
 
-              Expanded(
-                child: _buildQuickCard(
-                  icon: Icons.description_rounded,
-                  title: 'Reports',
-                  onTap: _openReports,
+                Expanded(
+                  child: _buildQuickCard(
+                    icon: Icons.description_rounded,
+                    title: 'Reports',
+                    onTap: _openReports,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           const SizedBox(height: 10),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickCard(
-                  icon: Icons.history_rounded,
-                  title: 'Call History',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const CallHistoryScreen(),
-                      ),
-                    );
-                  },
+          // Explicit height for the second Quick Status row.
+          SizedBox(
+            height: 86,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildQuickCard(
+                    icon: Icons.history_rounded,
+                    title: 'Call History',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const CallHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
 
-              const Expanded(
-                child: SizedBox(),
-              ),
-            ],
+                const Expanded(
+                  child: SizedBox(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1053,16 +1038,14 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color:
-                    Colors.black.withValues(alpha: 0.025),
+                color: Colors.black.withValues(alpha: 0.025),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,

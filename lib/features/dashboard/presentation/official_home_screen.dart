@@ -18,6 +18,7 @@ import 'assignments_screen.dart';
 import 'official_today_institutes_screen.dart';
 import 'inspection_history_screen.dart';
 import '../../projects/presentation/project_list_screen.dart';
+import 'official_cctv_screen.dart';
 
 class OfficialHomeScreen extends StatefulWidget {
   const OfficialHomeScreen({super.key});
@@ -40,8 +41,11 @@ class OfficialHomeScreen extends StatefulWidget {
 }
 
 class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
-  final AssignmentsRepository _assignmentsRepository = AssignmentsRepository();
+  final AssignmentsRepository _assignmentsRepository =
+      AssignmentsRepository();
+
   final ProjectsRepository _projectsRepository = ProjectsRepository();
+
   final InspectionHistoryRepository _inspectionHistoryRepository =
       InspectionHistoryRepository();
 
@@ -49,6 +53,7 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   int? _pendingReviewsCount;
   int? _totalProjectsCount;
   int? _highRiskCount;
+
   List<InspectionSummary> _recentInspections = [];
 
   @override
@@ -69,16 +74,21 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     switch (value?.toLowerCase()) {
       case 'approved':
         return InspectionStatus.approved;
+
       case 'overdue':
         return InspectionStatus.overdue;
+
       case 'under_review':
       case 'under review':
         return InspectionStatus.underReview;
+
       case 'in_progress':
       case 'in progress':
         return InspectionStatus.inProgress;
+
       case 'assigned':
         return InspectionStatus.assigned;
+
       case 'submitted':
       default:
         return InspectionStatus.submitted;
@@ -89,8 +99,10 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     switch (value?.toLowerCase()) {
       case 'high':
         return RiskLevel.high;
+
       case 'medium':
         return RiskLevel.medium;
+
       case 'low':
       default:
         return RiskLevel.low;
@@ -107,10 +119,15 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     return List.generate(topFive.length, (index) {
       final row = topFive[index];
 
-      final instituteId = row['institute_profile_id']?.toString() ?? '';
+      final instituteId =
+          row['institute_profile_id']?.toString() ?? '';
+
       final shortInstituteId = instituteId.isEmpty
           ? 'Unknown'
-          : instituteId.substring(0, instituteId.length < 8 ? instituteId.length : 8);
+          : instituteId.substring(
+              0,
+              instituteId.length < 8 ? instituteId.length : 8,
+            );
 
       final submittedAt = DateTime.tryParse(
         row['submitted_at']?.toString() ?? '',
@@ -120,57 +137,94 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
         projectName: 'Inspection #${index + 1}',
         inspectorName: 'Institute ID: $shortInstituteId',
         dateTime: submittedAt ?? DateTime.now(),
-        status: _parseInspectionStatus(row['overall_status']?.toString()),
-        risk: _parseRiskLevel(row['risk_level']?.toString()),
+        status: _parseInspectionStatus(
+          row['overall_status']?.toString(),
+        ),
+        risk: _parseRiskLevel(
+          row['risk_level']?.toString(),
+        ),
       );
     });
   }
 
   Future<void> _loadHomeStats() async {
     try {
-      final assignments = await _assignmentsRepository.getAssignments();
-      final projects = await _projectsRepository.getProjects();
+      final assignments =
+          await _assignmentsRepository.getAssignments();
+
+      final projects =
+          await _projectsRepository.getProjects();
+
       final inspectionRows =
           await _inspectionHistoryRepository.getInspectionHistory();
 
       final now = DateTime.now();
-      final staleThreshold = now.subtract(const Duration(days: 3));
+
+      final staleThreshold =
+          now.subtract(const Duration(days: 3));
 
       final todaysCount = assignments
-          .where((a) => _isSameDay(a.scheduledDateTime, now))
+          .where(
+            (a) => _isSameDay(
+              a.scheduledDateTime,
+              now,
+            ),
+          )
           .length;
 
       final pendingReviewCount = assignments
-          .where((a) =>
-              a.status == AssignmentStatus.assigned &&
-              a.scheduledDateTime.isBefore(staleThreshold))
+          .where(
+            (a) =>
+                a.status == AssignmentStatus.assigned &&
+                a.scheduledDateTime.isBefore(
+                  staleThreshold,
+                ),
+          )
           .length;
 
       if (!mounted) return;
 
       setState(() {
         _todaysInspectionsCount = todaysCount;
+
         _pendingReviewsCount = pendingReviewCount;
+
         _totalProjectsCount = projects.length;
-        _highRiskCount =
-            projects.where((p) => p.riskLevel == project_model.RiskLevel.high).length;
-        _recentInspections = _mapToRecentInspections(inspectionRows);
+
+        _highRiskCount = projects
+            .where(
+              (p) =>
+                  p.riskLevel ==
+                  project_model.RiskLevel.high,
+            )
+            .length;
+
+        _recentInspections =
+            _mapToRecentInspections(inspectionRows);
       });
     } catch (error) {
-      debugPrint('Failed to load official homepage stats: $error');
+      debugPrint(
+        'Failed to load official homepage stats: $error',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = SessionService.instance.currentUser;
+
     final inspections = _recentInspections;
 
     return Scaffold(
       backgroundColor: OfficialHomeScreen.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            24,
+          ),
           children: [
             _HomeHeader(
               userName: user?.name ?? 'DoSJE Official',
@@ -183,13 +237,16 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
             const SizedBox(height: 16),
 
-            // High-risk alerts get visual priority without alarming the whole screen.
+            // High-risk alerts get visual priority without
+            // alarming the whole screen.
             _AlertBanner(
               count: _highRiskCount ?? 0,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) =>
-                      const ProjectListScreen(initialHighRiskFilter: true),
+                      const ProjectListScreen(
+                    initialHighRiskFilter: true,
+                  ),
                 ),
               ),
             ),
@@ -197,17 +254,24 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
             const SizedBox(height: 16),
 
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _MiniStatCard(
-                    icon: Icons.calendar_today_outlined,
+                    icon:
+                        Icons.calendar_today_outlined,
                     label: "Today's\nInspections",
-                    count: _todaysInspectionsCount?.toString() ?? '—',
-                    color: OfficialHomeScreen.primaryBlue,
-                    onTap: () => Navigator.of(context).push(
+                    count:
+                        _todaysInspectionsCount?.toString() ??
+                            '—',
+                    color:
+                        OfficialHomeScreen.primaryBlue,
+                    onTap: () =>
+                        Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const OfficialTodayInstitutesScreen(),
+                        builder: (_) =>
+                            const OfficialTodayInstitutesScreen(),
                       ),
                     ),
                   ),
@@ -217,14 +281,21 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
                 Expanded(
                   child: _MiniStatCard(
-                    icon: Icons.assignment_outlined,
+                    icon:
+                        Icons.assignment_outlined,
                     label: 'Pending\nReviews',
-                    count: _pendingReviewsCount?.toString() ?? '—',
-                    color: OfficialHomeScreen.saffron,
-                    onTap: () => Navigator.of(context).push(
+                    count:
+                        _pendingReviewsCount?.toString() ??
+                            '—',
+                    color:
+                        OfficialHomeScreen.saffron,
+                    onTap: () =>
+                        Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const AssignmentsScreen(
-                          initialFilter: 'pendingReview',
+                        builder: (_) =>
+                            const AssignmentsScreen(
+                          initialFilter:
+                              'pendingReview',
                         ),
                       ),
                     ),
@@ -235,11 +306,16 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
                 Expanded(
                   child: _MiniStatCard(
-                    icon: Icons.apartment_outlined,
+                    icon:
+                        Icons.apartment_outlined,
                     label: 'Total\nProjects',
-                    count: _totalProjectsCount?.toString() ?? '—',
-                    color: OfficialHomeScreen.green,
-                    onTap: () => Navigator.of(context).pushNamed(
+                    count:
+                        _totalProjectsCount?.toString() ??
+                            '—',
+                    color:
+                        OfficialHomeScreen.green,
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(
                       AppRoutes.projectsPlaceholder,
                     ),
                   ),
@@ -252,9 +328,11 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
             SectionHeader(
               title: 'Recent Inspections',
               actionLabel: 'View all',
-              onActionTap: () => Navigator.of(context).push(
+              onActionTap: () =>
+                  Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const InspectionHistoryScreen(),
+                  builder: (_) =>
+                      const InspectionHistoryScreen(),
                 ),
               ),
             ),
@@ -263,17 +341,26 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
             if (inspections.isEmpty)
               const EmptyState(
-                icon: Icons.fact_check_outlined,
-                title: 'No recent inspections',
-                message: 'Inspections will appear here once submitted.',
+                icon:
+                    Icons.fact_check_outlined,
+                title:
+                    'No recent inspections',
+                message:
+                    'Inspections will appear here once submitted.',
               )
             else
               Column(
                 children: inspections
                     .map(
                       (i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _RecentInspectionTile(inspection: i),
+                        padding:
+                            const EdgeInsets.only(
+                          bottom: 10,
+                        ),
+                        child:
+                            _RecentInspectionTile(
+                          inspection: i,
+                        ),
                       ),
                     )
                     .toList(),
@@ -281,18 +368,23 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
             const SizedBox(height: 26),
 
-            const SectionHeader(title: 'Quick Actions'),
+            const SectionHeader(
+              title: 'Quick Actions',
+            ),
 
             const SizedBox(height: 12),
 
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: QuickActionCard(
                     icon: Icons.apartment,
                     label: 'Projects',
-                    onTap: () => Navigator.of(context).pushNamed(
+                    onTap: () =>
+                        Navigator.of(context)
+                            .pushNamed(
                       AppRoutes.projectsPlaceholder,
                     ),
                   ),
@@ -302,9 +394,12 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
                 Expanded(
                   child: QuickActionCard(
-                    icon: Icons.fact_check_outlined,
+                    icon:
+                        Icons.fact_check_outlined,
                     label: 'Inspections',
-                    onTap: () => Navigator.of(context).pushNamed(
+                    onTap: () =>
+                        Navigator.of(context)
+                            .pushNamed(
                       AppRoutes.inspectionsPlaceholder,
                     ),
                   ),
@@ -314,10 +409,15 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
                 Expanded(
                   child: QuickActionCard(
-                    icon: Icons.videocam_outlined,
+                    icon:
+                        Icons.videocam_outlined,
                     label: 'CCTV',
-                    onTap: () => Navigator.of(context).pushNamed(
-                      AppRoutes.cctvPlaceholder,
+                    onTap: () =>
+                        Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const OfficialCctvScreen(),
+                      ),
                     ),
                   ),
                 ),
@@ -328,7 +428,9 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                   child: QuickActionCard(
                     icon: Icons.bar_chart,
                     label: 'Analytics',
-                    onTap: () => Navigator.of(context).pushNamed(
+                    onTap: () =>
+                        Navigator.of(context)
+                            .pushNamed(
                       AppRoutes.analyticsPlaceholder,
                     ),
                   ),
@@ -337,9 +439,11 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                 QuickActionCard(
                   icon: Icons.history,
                   label: 'Call History',
-                  onTap: () => Navigator.of(context).push(
+                  onTap: () =>
+                      Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const CallHistoryScreen(),
+                      builder: (_) =>
+                          const CallHistoryScreen(),
                     ),
                   ),
                 ),
@@ -366,8 +470,14 @@ class _HomeHeader extends StatelessWidget {
   String _greeting() {
     final hour = DateTime.now().hour;
 
-    if (hour < 12) return 'Good Morning,';
-    if (hour < 17) return 'Good Afternoon,';
+    if (hour < 12) {
+      return 'Good Morning,';
+    }
+
+    if (hour < 17) {
+      return 'Good Afternoon,';
+    }
+
     return 'Good Evening,';
   }
 
@@ -383,7 +493,10 @@ class _HomeHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: OfficialHomeScreen.navy.withValues(alpha: 0.12),
+            color:
+                OfficialHomeScreen.navy.withValues(
+              alpha: 0.12,
+            ),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -391,10 +504,10 @@ class _HomeHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: Colors.white,
-            child: const Icon(
+            child: Icon(
               Icons.person,
               color: OfficialHomeScreen.navy,
               size: 25,
@@ -405,7 +518,8 @@ class _HomeHeader extends StatelessWidget {
 
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   _greeting(),
@@ -424,7 +538,8 @@ class _HomeHeader extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                      TextOverflow.ellipsis,
                 ),
 
                 const Text(
@@ -454,22 +569,28 @@ class _HomeHeader extends StatelessWidget {
                   right: 6,
                   top: 6,
                   child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
+                    padding:
+                        const EdgeInsets.all(3),
+                    decoration:
+                        const BoxDecoration(
                       color: Color(0xFFD83A3A),
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(
+                    constraints:
+                        const BoxConstraints(
                       minWidth: 16,
                       minHeight: 16,
                     ),
                     child: Text(
                       '$alertCount',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      textAlign:
+                          TextAlign.center,
+                      style:
+                          const TextStyle(
                         fontSize: 9,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
                   ),
@@ -492,13 +613,17 @@ class _HeroBanner extends StatelessWidget {
       height: 96,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+            BorderRadius.circular(16),
         border: Border.all(
-          color: OfficialHomeScreen.borderColor,
+          color:
+              OfficialHomeScreen.borderColor,
         ),
         boxShadow: [
           BoxShadow(
-            color: OfficialHomeScreen.navy.withValues(alpha: 0.06),
+            color:
+                OfficialHomeScreen.navy
+                    .withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -507,16 +632,19 @@ class _HeroBanner extends StatelessWidget {
       child: Stack(
         children: [
           const Padding(
-            padding: EdgeInsets.symmetric(
+            padding:
+                EdgeInsets.symmetric(
               horizontal: 18,
               vertical: 18,
             ),
             child: Text(
-              "Let's build a stronger,\nmore inclusive society",
+              "Let's build a stronger,\n"
+              "more inclusive society",
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: OfficialHomeScreen.navy,
+                color:
+                    OfficialHomeScreen.navy,
                 height: 1.3,
               ),
             ),
@@ -526,27 +654,31 @@ class _HeroBanner extends StatelessWidget {
             right: 18,
             top: 24,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
+              crossAxisAlignment:
+                  CrossAxisAlignment.end,
+              children: const [
+                Text(
                   'Government',
                   style: TextStyle(
                     fontSize: 9,
-                    color: OfficialHomeScreen.textGrey,
+                    color:
+                        OfficialHomeScreen.textGrey,
                   ),
                 ),
-                const Text(
+                Text(
                   'for a Brighter',
                   style: TextStyle(
                     fontSize: 9,
-                    color: OfficialHomeScreen.textGrey,
+                    color:
+                        OfficialHomeScreen.textGrey,
                   ),
                 ),
-                const Text(
+                Text(
                   'Tomorrow',
                   style: TextStyle(
                     fontSize: 9,
-                    color: OfficialHomeScreen.textGrey,
+                    color:
+                        OfficialHomeScreen.textGrey,
                   ),
                 ),
               ],
@@ -561,18 +693,28 @@ class _HeroBanner extends StatelessWidget {
                 Container(
                   width: 88,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: OfficialHomeScreen.saffron,
-                    borderRadius: BorderRadius.circular(10),
+                  decoration:
+                      BoxDecoration(
+                    color:
+                        OfficialHomeScreen.saffron,
+                    borderRadius:
+                        BorderRadius.circular(
+                      10,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 3),
                 Container(
                   width: 70,
                   height: 3,
-                  decoration: BoxDecoration(
-                    color: OfficialHomeScreen.green,
-                    borderRadius: BorderRadius.circular(10),
+                  decoration:
+                      BoxDecoration(
+                    color:
+                        OfficialHomeScreen.green,
+                    borderRadius:
+                        BorderRadius.circular(
+                      10,
+                    ),
                   ),
                 ),
               ],
@@ -597,30 +739,40 @@ class _AlertBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius:
+          BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(
+        padding:
+            const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,
         ),
         decoration: BoxDecoration(
           color: const Color(0xFFFFF6E8),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius:
+              BorderRadius.circular(12),
           border: Border.all(
-            color: OfficialHomeScreen.saffron.withValues(alpha: 0.35),
+            color:
+                OfficialHomeScreen.saffron
+                    .withValues(alpha: 0.35),
           ),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(7),
+              padding:
+                  const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: OfficialHomeScreen.saffron.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                color:
+                    OfficialHomeScreen.saffron
+                        .withValues(alpha: 0.12),
+                borderRadius:
+                    BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.warning_amber_rounded,
-                color: OfficialHomeScreen.saffron,
+                color:
+                    OfficialHomeScreen.saffron,
                 size: 21,
               ),
             ),
@@ -630,17 +782,21 @@ class _AlertBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 '$count high-risk alerts require attention',
-                style: const TextStyle(
+                style:
+                    const TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: OfficialHomeScreen.textDark,
+                  fontWeight:
+                      FontWeight.w600,
+                  color:
+                      OfficialHomeScreen.textDark,
                 ),
               ),
             ),
 
             const Icon(
               Icons.chevron_right,
-              color: OfficialHomeScreen.navy,
+              color:
+                  OfficialHomeScreen.navy,
               size: 18,
             ),
           ],
@@ -670,31 +826,45 @@ class _MiniStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius:
+          BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding:
+            const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: OfficialHomeScreen.cardBackground,
-          borderRadius: BorderRadius.circular(14),
+          color:
+              OfficialHomeScreen
+                  .cardBackground,
+          borderRadius:
+              BorderRadius.circular(14),
           border: Border.all(
-            color: OfficialHomeScreen.borderColor,
+            color:
+                OfficialHomeScreen
+                    .borderColor,
           ),
           boxShadow: [
             BoxShadow(
-              color: OfficialHomeScreen.navy.withValues(alpha: 0.04),
+              color:
+                  OfficialHomeScreen.navy
+                      .withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(7),
+              padding:
+                  const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
+                color: color.withValues(
+                  alpha: 0.10,
+                ),
+                borderRadius:
+                    BorderRadius.circular(8),
               ),
               child: Icon(
                 icon,
@@ -707,10 +877,13 @@ class _MiniStatCard extends StatelessWidget {
 
             Text(
               count,
-              style: const TextStyle(
+              style:
+                  const TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: OfficialHomeScreen.navy,
+                fontWeight:
+                    FontWeight.bold,
+                color:
+                    OfficialHomeScreen.navy,
               ),
             ),
 
@@ -718,9 +891,11 @@ class _MiniStatCard extends StatelessWidget {
 
             Text(
               label,
-              style: const TextStyle(
+              style:
+                  const TextStyle(
                 fontSize: 11,
-                color: OfficialHomeScreen.textGrey,
+                color:
+                    OfficialHomeScreen.textGrey,
                 height: 1.2,
               ),
             ),
@@ -728,22 +903,37 @@ class _MiniStatCard extends StatelessWidget {
             const SizedBox(height: 8),
 
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment:
+                  CrossAxisAlignment.end,
               children: List.generate(
                 4,
                 (i) {
-                  final heights = [6.0, 10.0, 8.0, 14.0];
+                  final heights = [
+                    6.0,
+                    10.0,
+                    8.0,
+                    14.0,
+                  ];
 
                   return Padding(
-                    padding: const EdgeInsets.only(right: 3),
+                    padding:
+                        const EdgeInsets.only(
+                      right: 3,
+                    ),
                     child: Container(
                       width: 5,
                       height: heights[i],
-                      decoration: BoxDecoration(
+                      decoration:
+                          BoxDecoration(
                         color: color.withValues(
-                          alpha: 0.35 + (i * 0.15),
+                          alpha:
+                              0.35 +
+                                  (i * 0.15),
                         ),
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius:
+                            BorderRadius.circular(
+                          2,
+                        ),
                       ),
                     ),
                   );
@@ -759,7 +949,8 @@ class _MiniStatCard extends StatelessWidget {
 
 /// Recent-inspection row.
 /// Functionality and data remain unchanged.
-class _RecentInspectionTile extends StatelessWidget {
+class _RecentInspectionTile
+    extends StatelessWidget {
   final InspectionSummary inspection;
 
   const _RecentInspectionTile({
@@ -770,14 +961,19 @@ class _RecentInspectionTile extends StatelessWidget {
     switch (inspection.status) {
       case InspectionStatus.approved:
         return OfficialHomeScreen.green;
+
       case InspectionStatus.overdue:
         return const Color(0xFFD83A3A);
+
       case InspectionStatus.underReview:
         return OfficialHomeScreen.saffron;
+
       case InspectionStatus.submitted:
         return OfficialHomeScreen.primaryBlue;
+
       case InspectionStatus.inProgress:
         return OfficialHomeScreen.navy;
+
       case InspectionStatus.assigned:
         return OfficialHomeScreen.textGrey;
     }
@@ -787,55 +983,84 @@ class _RecentInspectionTile extends StatelessWidget {
     switch (inspection.risk) {
       case RiskLevel.high:
         return const Color(0xFFD83A3A);
+
       case RiskLevel.medium:
         return OfficialHomeScreen.saffron;
+
       case RiskLevel.low:
         return OfficialHomeScreen.green;
     }
   }
 
   String _formatTime(DateTime dt) {
-    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final period = dt.hour >= 12 ? 'PM' : 'AM';
-    final minute = dt.minute.toString().padLeft(2, '0');
+    final hour =
+        dt.hour % 12 == 0
+            ? 12
+            : dt.hour % 12;
 
-    return '${dt.day} Sep ${dt.year} · $hour:$minute $period';
+    final period =
+        dt.hour >= 12 ? 'PM' : 'AM';
+
+    final minute =
+        dt.minute.toString().padLeft(
+              2,
+              '0',
+            );
+
+    return '${dt.day} Sep ${dt.year} · '
+        '$hour:$minute $period';
   }
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {},
-      borderRadius: BorderRadius.circular(14),
+      borderRadius:
+          BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding:
+            const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: OfficialHomeScreen.cardBackground,
-          borderRadius: BorderRadius.circular(14),
+          color:
+              OfficialHomeScreen
+                  .cardBackground,
+          borderRadius:
+              BorderRadius.circular(14),
           border: Border.all(
-            color: OfficialHomeScreen.borderColor,
+            color:
+                OfficialHomeScreen
+                    .borderColor,
           ),
           boxShadow: [
             BoxShadow(
-              color: OfficialHomeScreen.navy.withValues(alpha: 0.04),
+              color:
+                  OfficialHomeScreen.navy
+                      .withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Container(
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: OfficialHomeScreen.softBlue,
-                borderRadius: BorderRadius.circular(10),
+                color:
+                    OfficialHomeScreen
+                        .softBlue,
+                borderRadius:
+                    BorderRadius.circular(
+                  10,
+                ),
               ),
               child: const Icon(
                 Icons.apartment,
-                color: OfficialHomeScreen.navy,
+                color:
+                    OfficialHomeScreen.navy,
                 size: 26,
               ),
             ),
@@ -844,26 +1069,35 @@ class _RecentInspectionTile extends StatelessWidget {
 
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     inspection.projectName,
-                    style: const TextStyle(
+                    style:
+                        const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: OfficialHomeScreen.textDark,
+                      fontWeight:
+                          FontWeight.w600,
+                      color:
+                          OfficialHomeScreen
+                              .textDark,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    overflow:
+                        TextOverflow.ellipsis,
                   ),
 
                   const SizedBox(height: 2),
 
                   Text(
                     'Inspector: ${inspection.inspectorName}',
-                    style: const TextStyle(
+                    style:
+                        const TextStyle(
                       fontSize: 12,
-                      color: OfficialHomeScreen.textGrey,
+                      color:
+                          OfficialHomeScreen
+                              .textGrey,
                     ),
                   ),
 
@@ -874,14 +1108,21 @@ class _RecentInspectionTile extends StatelessWidget {
                       const Icon(
                         Icons.access_time,
                         size: 12,
-                        color: OfficialHomeScreen.textGrey,
+                        color:
+                            OfficialHomeScreen
+                                .textGrey,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _formatTime(inspection.dateTime),
-                        style: const TextStyle(
+                        _formatTime(
+                          inspection.dateTime,
+                        ),
+                        style:
+                            const TextStyle(
                           fontSize: 11,
-                          color: OfficialHomeScreen.textGrey,
+                          color:
+                              OfficialHomeScreen
+                                  .textGrey,
                         ),
                       ),
                     ],
@@ -893,12 +1134,16 @@ class _RecentInspectionTile extends StatelessWidget {
                     spacing: 6,
                     children: [
                       StatusBadge(
-                        label: inspection.status.label,
-                        color: _statusColor,
+                        label:
+                            inspection.status.label,
+                        color:
+                            _statusColor,
                       ),
                       StatusBadge(
-                        label: '${inspection.risk.label} Risk',
-                        color: _riskColor,
+                        label:
+                            '${inspection.risk.label} Risk',
+                        color:
+                            _riskColor,
                       ),
                     ],
                   ),
@@ -909,7 +1154,9 @@ class _RecentInspectionTile extends StatelessWidget {
             const Icon(
               Icons.chevron_right,
               size: 18,
-              color: OfficialHomeScreen.textGrey,
+              color:
+                  OfficialHomeScreen
+                      .textGrey,
             ),
           ],
         ),

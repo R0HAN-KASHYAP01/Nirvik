@@ -158,23 +158,50 @@ class _PmuOfficerDetailScreenState extends State<PmuOfficerDetailScreen> {
           ],
 
           const SizedBox(height: 20),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.2,
-            children: [
-              _StatTile(label: 'Assignments', value: '${officer.assignmentsCount}'),
-              _StatTile(label: 'Completed Inspections', value: '${officer.completedInspectionsCount}'),
-              _StatTile(label: 'Pending Inspections', value: '${officer.pendingInspectionsCount}'),
-              _StatTile(
-                label: 'Overdue Inspections',
-                value: '${officer.overdueInspectionsCount}',
-                valueColor: officer.overdueInspectionsCount > 0 ? Colors.redAccent : null,
-              ),
-            ],
+
+          // Responsive stat grid.
+          //
+          // The previous implementation used GridView.count with a fixed
+          // childAspectRatio, which derives cell HEIGHT purely from the
+          // grid's WIDTH. That works fine at one specific width/font-scale
+          // combination but overflows (or wastes space) at others -- which
+          // is exactly why this rendered fine on some devices/emulators but
+          // overflowed by a few pixels on a real phone with a different
+          // screen width or system font scale.
+          //
+          // Fix: compute the cell height from the real available width via
+          // LayoutBuilder (so it adapts to any screen), clamp it to a
+          // sensible range, and let the tile's internal content shrink
+          // gracefully (FittedBox / maxLines+ellipsis) instead of
+          // overflowing if it's ever tight.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 12.0;
+              final cardWidth = (constraints.maxWidth - spacing) / 2;
+
+              final cardHeight = (cardWidth * 0.62).clamp(84.0, 120.0);
+
+              return GridView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  mainAxisExtent: cardHeight,
+                ),
+                children: [
+                  _StatTile(label: 'Assignments', value: '${officer.assignmentsCount}'),
+                  _StatTile(label: 'Completed Inspections', value: '${officer.completedInspectionsCount}'),
+                  _StatTile(label: 'Pending Inspections', value: '${officer.pendingInspectionsCount}'),
+                  _StatTile(
+                    label: 'Overdue Inspections',
+                    value: '${officer.overdueInspectionsCount}',
+                    valueColor: officer.overdueInspectionsCount > 0 ? Colors.redAccent : null,
+                  ),
+                ],
+              );
+            },
           ),
 
           if (visibleAssignments.isNotEmpty) ...[
@@ -238,10 +265,27 @@ class _StatTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min, // never demand more height than needed
         children: [
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: valueColor)),
+          // FittedBox lets the number shrink instead of overflowing if the
+          // cell is short or the system font scale is large.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: valueColor),
+              ),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

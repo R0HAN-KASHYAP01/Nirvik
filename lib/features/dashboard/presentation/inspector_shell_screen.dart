@@ -13,10 +13,17 @@ class InspectorShellScreen extends StatefulWidget {
   const InspectorShellScreen({super.key});
 
   @override
-  State<InspectorShellScreen> createState() => _InspectorShellScreenState();
+  State<InspectorShellScreen> createState() =>
+      _InspectorShellScreenState();
 }
 
-class _InspectorShellScreenState extends State<InspectorShellScreen> {
+class _InspectorShellScreenState
+    extends State<InspectorShellScreen> {
+  static const Color _navy = Color(0xFF123E68);
+  static const Color _background = Color(0xFFEAF2F8);
+  static const Color _border = Color(0xFFD1DEE7);
+  static const Color _unselected = Color(0xFF667788);
+
   int _index = 0;
 
   Timer? _presenceTimer;
@@ -53,15 +60,13 @@ class _InspectorShellScreenState extends State<InspectorShellScreen> {
     debugPrint('[Presence] Updating user: ${user.id}');
 
     try {
-      final timestamp = DateTime.now().toUtc().toIso8601String();
+      final timestamp =
+          DateTime.now().toUtc().toIso8601String();
 
-      await _client
-          .from('profiles')
-          .update({
-            'is_online': true,
-            'last_seen': timestamp,
-          })
-          .eq('id', user.id);
+      await _client.from('profiles').update({
+        'is_online': true,
+        'last_seen': timestamp,
+      }).eq('id', user.id);
 
       debugPrint(
         '[Presence] SUCCESS: is_online=true, last_seen=$timestamp',
@@ -85,15 +90,13 @@ class _InspectorShellScreenState extends State<InspectorShellScreen> {
     }
 
     try {
-      final timestamp = DateTime.now().toUtc().toIso8601String();
+      final timestamp =
+          DateTime.now().toUtc().toIso8601String();
 
-      await _client
-          .from('profiles')
-          .update({
-            'is_online': false,
-            'last_seen': timestamp,
-          })
-          .eq('id', user.id);
+      await _client.from('profiles').update({
+        'is_online': false,
+        'last_seen': timestamp,
+      }).eq('id', user.id);
 
       debugPrint(
         '[Presence] OFFLINE: is_online=false, last_seen=$timestamp',
@@ -112,9 +115,7 @@ class _InspectorShellScreenState extends State<InspectorShellScreen> {
   @override
   void dispose() {
     _presenceTimer?.cancel();
-
     _markOffline();
-
     super.dispose();
   }
 
@@ -122,39 +123,127 @@ class _InspectorShellScreenState extends State<InspectorShellScreen> {
   Widget build(BuildContext context) {
     return IncomingCallListener(
       child: Scaffold(
+        backgroundColor: _background,
+
         body: IndexedStack(
           index: _index,
           children: _screens,
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (index) {
-            setState(() {
-              _index = index;
-            });
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
+
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: _background,
+              border: Border(
+                top: BorderSide(
+                  color: _border,
+                  width: 1,
+                ),
+              ),
             ),
-            NavigationDestination(
-              icon: Icon(Icons.assignment_outlined),
-              selectedIcon: Icon(Icons.assignment),
-              label: 'Assignments',
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                backgroundColor: _background,
+                elevation: 0,
+                height: 72,
+
+                indicatorColor:
+                    _navy.withValues(alpha: 0.12),
+
+                labelTextStyle:
+                    WidgetStateProperty.resolveWith<TextStyle>(
+                  (states) {
+                    final selected =
+                        states.contains(
+                      WidgetState.selected,
+                    );
+
+                    return TextStyle(
+                      fontSize: 12,
+                      fontWeight: selected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: selected
+                          ? _navy
+                          : _unselected,
+                    );
+                  },
+                ),
+
+                iconTheme:
+                    WidgetStateProperty.resolveWith<IconThemeData>(
+                  (states) {
+                    final selected =
+                        states.contains(
+                      WidgetState.selected,
+                    );
+
+                    return IconThemeData(
+                      size: 23,
+                      color: selected
+                          ? _navy
+                          : _unselected,
+                    );
+                  },
+                ),
+              ),
+
+              child: NavigationBar(
+                selectedIndex: _index,
+
+                onDestinationSelected: (index) {
+                  if (!mounted) return;
+
+                  setState(() {
+                    _index = index;
+                  });
+                },
+
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.home_outlined,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.home,
+                    ),
+                    label: 'Home',
+                  ),
+
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.assignment_outlined,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.assignment,
+                    ),
+                    label: 'Assignments',
+                  ),
+
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.fact_check_outlined,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.fact_check,
+                    ),
+                    label: 'Inspections',
+                  ),
+
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.person_outline,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.person,
+                    ),
+                    label: 'Profile',
+                  ),
+                ],
+              ),
             ),
-            NavigationDestination(
-              icon: Icon(Icons.fact_check_outlined),
-              selectedIcon: Icon(Icons.fact_check),
-              label: 'Inspections',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
+          ),
         ),
       ),
     );

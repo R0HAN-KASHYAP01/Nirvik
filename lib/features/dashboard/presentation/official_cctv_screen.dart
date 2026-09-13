@@ -17,6 +17,15 @@ class OfficialCctvScreen extends StatefulWidget {
 }
 
 class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
+  static const Color _navy = Color(0xFF123E68);
+  static const Color _background = Color(0xFFEAF2F8);
+  static const Color _cardBackground = Color(0xFFE1ECF3);
+  static const Color _softBlue = Color(0xFFD7E5EE);
+  static const Color _textDark = Color(0xFF17324D);
+  static const Color _textGrey = Color(0xFF667788);
+  static const Color _border = Color(0xFFD1DEE7);
+  static const Color _green = Color(0xFF168A45);
+
   final AssignmentsRepository _assignmentsRepository =
       AssignmentsRepository();
 
@@ -103,7 +112,8 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
     });
 
     try {
-      final feeds = await NgoCameraService.instance.fetchFeeds(profileId);
+      final feeds =
+          await NgoCameraService.instance.fetchFeeds(profileId);
 
       if (!mounted) return;
 
@@ -147,7 +157,8 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
     return Column(
       children: _assignments.map((assignment) {
         final isSelected =
-            assignment.instituteProfileId == _selectedInstituteProfileId;
+            assignment.instituteProfileId ==
+                _selectedInstituteProfileId;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -159,53 +170,61 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       width: 46,
                       height: 46,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEAF1F6),
+                        color: _softBlue,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
                         Icons.apartment_outlined,
-                        color: Color(0xFF123E68),
+                        color: _navy,
                       ),
                     ),
                     const SizedBox(width: 12),
+
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           Text(
                             assignment.displayName,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF17324D),
+                              color: _textDark,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             assignment.displayLocation,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Colors.black54,
+                              color: _textGrey,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+
+                    const SizedBox(width: 6),
+
                     Icon(
                       isSelected
                           ? Icons.visibility
                           : Icons.chevron_right,
-                      color: const Color(0xFF123E68),
+                      color: _navy,
+                      size: 22,
                     ),
                   ],
                 ),
@@ -223,16 +242,21 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
     if (streamUrl == null || streamUrl.isEmpty) {
       return Container(
         height: 220,
+        width: double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFFF2F5F7),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
-          child: Text(
-            'Live camera URL is not available.',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Live camera URL is not available.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: _textGrey,
+              ),
             ),
           ),
         ),
@@ -263,16 +287,21 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
     if (videoPath == null || videoPath.isEmpty) {
       return Container(
         height: 220,
+        width: double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFFF2F5F7),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
-          child: Text(
-            'Uploaded video path is not available.',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Uploaded video path is not available.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: _textGrey,
+              ),
             ),
           ),
         ),
@@ -295,63 +324,82 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF1F6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    feed.type == NgoFeedType.liveLink
-                        ? Icons.videocam_outlined
-                        : Icons.video_library_outlined,
-                    color: const Color(0xFF123E68),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    label == null || label.isEmpty
-                        ? 'Camera'
-                        : label,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF17324D),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _softBlue,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        feed.type == NgoFeedType.liveLink
+                            ? Icons.videocam_outlined
+                            : Icons.video_library_outlined,
+                        color: _navy,
+                        size: 20,
+                      ),
                     ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: feed.type == NgoFeedType.liveLink
-                        ? const Color(0xFFE8F6EE)
-                        : const Color(0xFFF1F3F5),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    feed.type == NgoFeedType.liveLink
-                        ? 'LIVE'
-                        : 'VIDEO',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: feed.type == NgoFeedType.liveLink
-                          ? const Color(0xFF168A45)
-                          : Colors.black54,
+
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth > 360
+                            ? constraints.maxWidth - 110
+                            : constraints.maxWidth - 20,
+                      ),
+                      child: Text(
+                        label == null || label.isEmpty
+                            ? 'Camera'
+                            : label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _textDark,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: feed.type == NgoFeedType.liveLink
+                            ? const Color(0xFFE8F6EE)
+                            : const Color(0xFFF1F3F5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        feed.type == NgoFeedType.liveLink
+                            ? 'LIVE'
+                            : 'VIDEO',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: feed.type == NgoFeedType.liveLink
+                              ? _green
+                              : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
+
             const SizedBox(height: 12),
+
             _buildCameraViewer(feed),
+
             if (feed.type == NgoFeedType.liveLink &&
                 feed.streamUrl != null) ...[
               const SizedBox(height: 8),
@@ -359,6 +407,7 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
                 feed.streamUrl!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: const TextStyle(
                   fontSize: 10,
                   color: Colors.black45,
@@ -380,47 +429,58 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 22),
+
         Row(
           children: [
             IconButton(
               onPressed: _clearSelection,
               icon: const Icon(Icons.arrow_back),
               tooltip: 'Back to institutes',
+              color: _navy,
             ),
             const SizedBox(width: 2),
+
             Expanded(
               child: Text(
                 _selectedInstituteName ?? 'Institute Cameras',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF123E68),
+                  color: _navy,
                 ),
               ),
             ),
           ],
         ),
+
         const SizedBox(height: 8),
+
         const Text(
           'Registered cameras',
           style: TextStyle(
             fontSize: 13,
-            color: Colors.black54,
+            color: _textGrey,
           ),
         ),
+
         const SizedBox(height: 12),
+
         if (_isLoadingCameras)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 35),
             child: Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(
+                color: _navy,
+              ),
             ),
           )
         else if (_cameraError != null)
           AppCard(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
                   Icons.cloud_off_outlined,
@@ -428,18 +488,23 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
                   color: Colors.black45,
                 ),
                 const SizedBox(height: 10),
+
                 Text(
                   _cameraError!,
                   textAlign: TextAlign.center,
+                  softWrap: true,
                   style: const TextStyle(
                     fontSize: 13,
-                    color: Colors.black54,
+                    color: _textGrey,
                   ),
                 ),
+
                 const SizedBox(height: 12),
+
                 OutlinedButton.icon(
                   onPressed: () {
-                    final matchingAssignments = _assignments.where(
+                    final matchingAssignments =
+                        _assignments.where(
                       (item) =>
                           item.instituteProfileId ==
                           _selectedInstituteProfileId,
@@ -451,6 +516,12 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _navy,
+                    side: const BorderSide(
+                      color: _border,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -464,7 +535,9 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
           )
         else
           Column(
-            children: _cameraFeeds.map(_buildCameraCard).toList(),
+            children: _cameraFeeds
+                .map(_buildCameraCard)
+                .toList(),
           ),
       ],
     );
@@ -473,14 +546,16 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(
+          color: _navy,
+        ),
       );
     }
 
     if (_errorMessage != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: AppCard(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -491,19 +566,29 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
                   color: Colors.black45,
                 ),
                 const SizedBox(height: 12),
+
                 Text(
                   _errorMessage!,
                   textAlign: TextAlign.center,
+                  softWrap: true,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Colors.black54,
+                    color: _textGrey,
                   ),
                 ),
+
                 const SizedBox(height: 14),
+
                 OutlinedButton.icon(
                   onPressed: _loadInstitutes,
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _navy,
+                    side: const BorderSide(
+                      color: _border,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -513,46 +598,62 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
     }
 
     return RefreshIndicator(
+      color: _navy,
       onRefresh: _loadInstitutes,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+        padding: const EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          30,
+        ),
         children: [
           AppCard(
             padding: const EdgeInsets.all(16),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE4EDF3),
+                    color: _softBlue,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.videocam_outlined,
-                    color: Color(0xFF123E68),
+                    color: _navy,
                     size: 26,
                   ),
                 ),
+
                 const SizedBox(width: 12),
+
                 const Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Official CCTV Monitoring',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF123E68),
+                          color: _navy,
                         ),
                       ),
                       SizedBox(height: 4),
                       Text(
                         'View cameras registered by NGOs and institutes.',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.black54,
+                          color: _textGrey,
                         ),
                       ),
                     ],
@@ -561,27 +662,37 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
               ],
             ),
           ),
+
           const SizedBox(height: 18),
+
           if (_selectedInstituteProfileId == null) ...[
             const Text(
               'Select Institute',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF17324D),
+                color: _textDark,
               ),
             ),
+
             const SizedBox(height: 4),
+
             const Text(
               'Choose an institute to view its registered camera feeds.',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              softWrap: true,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.black54,
+                color: _textGrey,
               ),
             ),
+
             const SizedBox(height: 12),
+
             _buildInstituteList(),
           ],
+
           _buildSelectedCameras(),
         ],
       ),
@@ -591,8 +702,17 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('Official CCTV'),
+        backgroundColor: _background,
+        foregroundColor: _navy,
+        elevation: 0,
+        title: const Text(
+          'Official CCTV',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
       body: _buildBody(),
     );
@@ -600,10 +720,6 @@ class _OfficialCctvScreenState extends State<OfficialCctvScreen> {
 }
 
 /// Plays a video uploaded by an NGO from the private Supabase bucket.
-///
-/// The database stores only the storage path. This widget generates a
-/// temporary signed URL through the existing NgoStorageService and then
-/// uses Flutter's video_player package to play the video.
 class OfficialUploadedVideoPlayer extends StatefulWidget {
   final String videoPath;
 
@@ -620,7 +736,6 @@ class OfficialUploadedVideoPlayer extends StatefulWidget {
 class _OfficialUploadedVideoPlayerState
     extends State<OfficialUploadedVideoPlayer> {
   VideoPlayerController? _controller;
-
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -632,19 +747,23 @@ class _OfficialUploadedVideoPlayerState
 
   Future<void> _initializeVideo() async {
     try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _errorMessage = null;
+        });
+      }
 
-      final signedUrl = await NgoStorageService.instance.getSignedUrl(
+      final signedUrl =
+          await NgoStorageService.instance.getSignedUrl(
         widget.videoPath,
         expiresInSeconds: 3600,
       );
 
       if (!mounted) return;
 
-      final controller = VideoPlayerController.networkUrl(
+      final controller =
+          VideoPlayerController.networkUrl(
         Uri.parse(signedUrl),
       );
 
@@ -664,19 +783,22 @@ class _OfficialUploadedVideoPlayerState
       debugPrint(
         'Failed to initialize official uploaded video: $error',
       );
+
       debugPrint('$stackTrace');
 
       if (!mounted) return;
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Unable to play this uploaded video.';
+        _errorMessage =
+            'Unable to play this uploaded video.';
       });
     }
   }
 
   Future<void> _retry() async {
     final oldController = _controller;
+
     _controller = null;
 
     if (oldController != null) {
@@ -696,6 +818,7 @@ class _OfficialUploadedVideoPlayerState
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Container(
+        width: double.infinity,
         height: 220,
         decoration: BoxDecoration(
           color: Colors.black,
@@ -709,36 +832,46 @@ class _OfficialUploadedVideoPlayerState
 
     if (_errorMessage != null || _controller == null) {
       return Container(
+        width: double.infinity,
         height: 220,
         decoration: BoxDecoration(
           color: const Color(0xFFF2F5F7),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.video_library_outlined,
-                size: 42,
-                color: Colors.black38,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage ?? 'Unable to load video.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.black54,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.video_library_outlined,
+                  size: 42,
+                  color: Colors.black38,
                 ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _retry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
+
+                const SizedBox(height: 8),
+
+                Text(
+                  _errorMessage ??
+                      'Unable to load video.',
+                  textAlign: TextAlign.center,
+                  softWrap: true,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                OutlinedButton.icon(
+                  onPressed: _retry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -748,6 +881,7 @@ class _OfficialUploadedVideoPlayerState
 
     if (!controller.value.isInitialized) {
       return Container(
+        width: double.infinity,
         height: 220,
         decoration: BoxDecoration(
           color: Colors.black,
@@ -772,6 +906,7 @@ class _OfficialUploadedVideoPlayerState
             alignment: Alignment.center,
             children: [
               VideoPlayer(controller),
+
               if (!controller.value.isPlaying)
                 Material(
                   color: Colors.transparent,
@@ -785,7 +920,9 @@ class _OfficialUploadedVideoPlayerState
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
+                        color: Colors.black.withValues(
+                          alpha: 0.65,
+                        ),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -796,6 +933,7 @@ class _OfficialUploadedVideoPlayerState
                     ),
                   ),
                 ),
+
               Positioned(
                 left: 8,
                 right: 8,
@@ -803,9 +941,12 @@ class _OfficialUploadedVideoPlayerState
                 child: VideoProgressIndicator(
                   controller,
                   allowScrubbing: true,
-                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 5,
+                  ),
                 ),
               ),
+
               Positioned(
                 right: 8,
                 top: 8,

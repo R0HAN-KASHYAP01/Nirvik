@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../models/assignment.dart';
@@ -36,11 +35,9 @@ class _OfficialTodayInstitutesScreenState
   static const Color _navy = Color(0xFF123E68);
   static const Color _darkNavy = Color(0xFF0B3154);
   static const Color _primaryBlue = Color(0xFF14568A);
-
   static const Color _background = Color(0xFFEAF2F8);
   static const Color _cardBackground = Color(0xFFE1ECF3);
   static const Color _borderColor = Color(0xFFD1DEE7);
-
   static const Color _textDark = Color(0xFF17324D);
   static const Color _textGrey = Color(0xFF667788);
 
@@ -123,10 +120,10 @@ class _OfficialTodayInstitutesScreenState
   Widget _detailRow({
     required IconData icon,
     required String text,
-    int maxLines = 1,
+    int maxLines = 2,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           icon,
@@ -139,10 +136,12 @@ class _OfficialTodayInstitutesScreenState
             text,
             maxLines: maxLines,
             overflow: TextOverflow.ellipsis,
+            softWrap: true,
             style: const TextStyle(
               fontSize: 13,
               color: _textGrey,
               fontWeight: FontWeight.w500,
+              height: 1.3,
             ),
           ),
         ),
@@ -172,6 +171,7 @@ class _OfficialTodayInstitutesScreenState
             );
           },
           child: Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
@@ -181,10 +181,12 @@ class _OfficialTodayInstitutesScreenState
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // -------------------------------------------------------------
                 // Institute name + status
                 // -------------------------------------------------------------
+
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isSmall = constraints.maxWidth < 340;
@@ -192,11 +194,13 @@ class _OfficialTodayInstitutesScreenState
                     if (isSmall) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             assignment.instituteName,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: const TextStyle(
                               fontSize: 15,
                               height: 1.25,
@@ -205,12 +209,9 @@ class _OfficialTodayInstitutesScreenState
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: StatusBadge(
-                              label: assignment.status.label,
-                              color: _statusColor(assignment.status),
-                            ),
+                          StatusBadge(
+                            label: assignment.status.label,
+                            color: _statusColor(assignment.status),
                           ),
                         ],
                       );
@@ -224,6 +225,7 @@ class _OfficialTodayInstitutesScreenState
                             assignment.instituteName,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: const TextStyle(
                               fontSize: 15,
                               height: 1.25,
@@ -252,21 +254,26 @@ class _OfficialTodayInstitutesScreenState
                 // -------------------------------------------------------------
                 // Address
                 // -------------------------------------------------------------
+
                 _detailRow(
                   icon: Icons.location_on_outlined,
                   text: assignment.fullAddress,
+                  maxLines: 3,
                 ),
 
-                const SizedBox(height: 9),
+                const SizedBox(height: 10),
 
                 // -------------------------------------------------------------
-                // Inspector
+                // Assignment / Area
+                //
+                // AssignmentSummary does not contain inspectorName.
+                // Use the available area field instead.
                 // -------------------------------------------------------------
+
                 _detailRow(
-                  icon: Icons.badge_outlined,
-                  text:
-                      assignment.inspectorName ??
-                      'No inspector assigned',
+                  icon: Icons.location_city_outlined,
+                  text: assignment.area,
+                  maxLines: 2,
                 ),
 
                 const SizedBox(height: 10),
@@ -274,6 +281,7 @@ class _OfficialTodayInstitutesScreenState
                 // -------------------------------------------------------------
                 // Date + Arrow
                 // -------------------------------------------------------------
+
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -288,12 +296,14 @@ class _OfficialTodayInstitutesScreenState
                         _formatDateTime(
                           assignment.scheduledDateTime,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                         style: const TextStyle(
                           fontSize: 13,
                           color: _textGrey,
                           fontWeight: FontWeight.w500,
+                          height: 1.25,
                         ),
                       ),
                     ),
@@ -328,7 +338,7 @@ class _OfficialTodayInstitutesScreenState
 
     if (_errorMessage != null) {
       return Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Container(
             width: double.infinity,
@@ -400,9 +410,7 @@ class _OfficialTodayInstitutesScreenState
           16,
           24,
         ),
-        children: institutes
-            .map(_buildInstituteCard)
-            .toList(),
+        children: institutes.map(_buildInstituteCard).toList(),
       ),
     );
   }

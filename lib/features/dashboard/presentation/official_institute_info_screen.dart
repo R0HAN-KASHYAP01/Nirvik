@@ -22,11 +22,9 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
 
   static const Color _navy = Color(0xFF123E68);
   static const Color _primaryBlue = Color(0xFF14568A);
-
   static const Color _background = Color(0xFFEAF2F8);
   static const Color _cardBackground = Color(0xFFE1ECF3);
   static const Color _borderColor = Color(0xFFD1DEE7);
-
   static const Color _textDark = Color(0xFF17324D);
   static const Color _textGrey = Color(0xFF667788);
 
@@ -148,6 +146,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                 assignment.instituteName,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: const TextStyle(
                   fontSize: 18,
                   height: 1.25,
@@ -172,6 +171,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                 assignment.instituteName,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: const TextStyle(
                   fontSize: 18,
                   height: 1.25,
@@ -202,23 +202,13 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasInspectorDetails =
-        (assignment.inspectorDesignation != null &&
-                assignment.inspectorDesignation!.isNotEmpty) ||
-            (assignment.inspectorDepartment != null &&
-                assignment.inspectorDepartment!.isNotEmpty);
-
-    final inspectorDetails = [
-      assignment.inspectorDesignation,
-      assignment.inspectorDepartment,
-    ].where((value) => value != null && value.isNotEmpty).join(' · ');
-
     return Scaffold(
       backgroundColor: _background,
 
       // -----------------------------------------------------------------------
       // App Bar
       // -----------------------------------------------------------------------
+
       appBar: AppBar(
         backgroundColor: _navy,
         foregroundColor: Colors.white,
@@ -236,6 +226,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
       // -----------------------------------------------------------------------
       // Body
       // -----------------------------------------------------------------------
+
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -248,6 +239,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
             // =================================================================
             // Institute Information Card
             // =================================================================
+
             AppCard(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -275,6 +267,13 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                     assignment.fullAddress,
                   ),
 
+                  // Area
+                  _infoRow(
+                    Icons.location_city_outlined,
+                    'Area',
+                    assignment.area,
+                  ),
+
                   // Scheduled date
                   _infoRow(
                     Icons.calendar_today_outlined,
@@ -300,14 +299,16 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // =================================================================
-            // Inspector Information Card
+            // Assignment Information Card
             // =================================================================
+
             AppCard(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
                         width: 36,
@@ -320,7 +321,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                           ),
                         ),
                         child: const Icon(
-                          Icons.person_outline,
+                          Icons.assignment_outlined,
                           size: 19,
                           color: _primaryBlue,
                         ),
@@ -328,7 +329,7 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
-                          'Assigned PMU Inspector',
+                          'Inspection Assignment',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -344,30 +345,57 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
 
                   const SizedBox(height: 18),
 
-                  // Inspector name
+                  // Assignment ID
                   _infoRow(
-                    Icons.person_outline,
-                    'Inspector Name',
-                    assignment.inspectorName ??
-                        'No inspector assigned',
+                    Icons.tag_outlined,
+                    'Assignment ID',
+                    assignment.id,
                   ),
 
-                  // Inspector designation / department
-                  if (hasInspectorDetails)
-                    _infoRow(
-                      Icons.badge_outlined,
-                      'Designation / Department',
-                      inspectorDetails,
+                  // Institute profile ID
+                  _infoRow(
+                    Icons.business_outlined,
+                    'Institute Profile ID',
+                    assignment.instituteProfileId,
+                  ),
+
+                  // Created date
+                  _infoRow(
+                    Icons.schedule_outlined,
+                    'Assignment Created',
+                    _formatDateTime(
+                      assignment.createdAt,
                     ),
+                  ),
+
+                  // Started date
+                  if (assignment.startedAt != null)
+                    _infoRow(
+                      Icons.play_circle_outline,
+                      'Inspection Started',
+                      _formatDateTime(
+                        assignment.startedAt!,
+                      ),
+                    ),
+
+                  // Expiry date
+                  _infoRow(
+                    Icons.event_busy_outlined,
+                    'Assignment Expires',
+                    _formatDateTime(
+                      assignment.expiresAt,
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 16),
 
             // =================================================================
             // Read-only information note
             // =================================================================
+
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -386,12 +414,12 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                     color: _primaryBlue,
                   ),
                   const SizedBox(width: 9),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       'This is a read-only institute information view for '
-                      'Officials.',
+                      'Officials. Inspection actions are not available here.',
                       softWrap: true,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         height: 1.4,
                         color: _textGrey,

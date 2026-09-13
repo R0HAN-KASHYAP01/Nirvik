@@ -378,39 +378,41 @@ class _RiskIntelligenceScreenState
           title: const Text(
             'Inspection Assignment Created',
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.check_circle_outline,
-                color: AppColors.success,
-                size: 48,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'The project has been assigned successfully.',
-                style: Theme.of(dialogContext)
-                    .textTheme
-                    .bodyLarge,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Inspector Profile: '
-                '${inspectorName ?? 'Assigned inspector'}',
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Scheduled: '
-                '$scheduledText at $timeText',
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Priority: '
-                '${_assignmentPriorityFromRisk()}',
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.success,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'The project has been assigned successfully.',
+                  style: Theme.of(dialogContext)
+                      .textTheme
+                      .bodyLarge,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Inspector Profile: '
+                  '${inspectorName ?? 'Assigned inspector'}',
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Scheduled: '
+                  '$scheduledText at $timeText',
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Priority: '
+                  '${_assignmentPriorityFromRisk()}',
+                ),
+              ],
+            ),
           ),
           actions: [
             FilledButton(
@@ -464,6 +466,7 @@ class _RiskIntelligenceScreenState
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 64,
@@ -492,40 +495,49 @@ class _RiskIntelligenceScreenState
                           .bodyMedium,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${_riskScore.toStringAsFixed(1)} / 100',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(
-                            fontWeight:
-                                FontWeight.bold,
-                            color: color,
-                          ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${_riskScore.toStringAsFixed(1)} / 100',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight:
+                                  FontWeight.bold,
+                              color: color,
+                            ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      color.withValues(alpha: 0.10),
-                  borderRadius:
-                      BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _formatRiskLevel(
-                    _riskLevel,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  style: TextStyle(
-                    color: color,
-                    fontWeight:
-                        FontWeight.w700,
+                  decoration: BoxDecoration(
+                    color:
+                        color.withValues(alpha: 0.10),
+                    borderRadius:
+                        BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _formatRiskLevel(
+                      _riskLevel,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight:
+                          FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -671,41 +683,59 @@ class _RiskIntelligenceScreenState
                 ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _summaryItem(
-                context,
-                'Tracked',
-                totalTracked,
-              ),
-              _summaryItem(
-                context,
-                'Staff',
-                staff,
-              ),
-              _summaryItem(
-                context,
-                'Beneficiaries',
-                beneficiaries,
-              ),
-              _summaryItem(
-                context,
-                'Unknown',
-                unknown,
-              ),
-              _summaryItem(
-                context,
-                'Pending',
-                pending,
-              ),
-              _summaryItem(
-                context,
-                'High-Risk Findings',
-                findings,
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth =
+                  constraints.maxWidth;
+
+              final itemWidth =
+                  availableWidth < 360
+                      ? (availableWidth - 12) / 2
+                      : 145.0;
+
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _summaryItem(
+                    context,
+                    'Tracked',
+                    totalTracked,
+                    width: itemWidth,
+                  ),
+                  _summaryItem(
+                    context,
+                    'Staff',
+                    staff,
+                    width: itemWidth,
+                  ),
+                  _summaryItem(
+                    context,
+                    'Beneficiaries',
+                    beneficiaries,
+                    width: itemWidth,
+                  ),
+                  _summaryItem(
+                    context,
+                    'Unknown',
+                    unknown,
+                    width: itemWidth,
+                  ),
+                  _summaryItem(
+                    context,
+                    'Pending',
+                    pending,
+                    width: itemWidth,
+                  ),
+                  _summaryItem(
+                    context,
+                    'High-Risk Findings',
+                    findings,
+                    width: itemWidth,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -715,10 +745,14 @@ class _RiskIntelligenceScreenState
   Widget _summaryItem(
     BuildContext context,
     String label,
-    dynamic value,
-  ) {
+    dynamic value, {
+    required double width,
+  }) {
     return Container(
-      width: 145,
+      width: width,
+      constraints: const BoxConstraints(
+        minHeight: 70,
+      ),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius:
@@ -742,6 +776,8 @@ class _RiskIntelligenceScreenState
           const SizedBox(height: 4),
           Text(
             label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context)
                 .textTheme
                 .bodySmall,
@@ -834,6 +870,7 @@ class _RiskIntelligenceScreenState
                       ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '$_anomalyCount',
                 style: Theme.of(context)
@@ -887,6 +924,7 @@ class _RiskIntelligenceScreenState
                   bottom: 10,
                 ),
                 child: Container(
+                  width: double.infinity,
                   padding:
                       const EdgeInsets.all(12),
                   decoration:
@@ -912,6 +950,9 @@ class _RiskIntelligenceScreenState
                           Expanded(
                             child: Text(
                               signal,
+                              maxLines: 2,
+                              overflow:
+                                  TextOverflow.ellipsis,
                               style:
                                   Theme.of(
                                 context,
@@ -925,17 +966,25 @@ class _RiskIntelligenceScreenState
                                       ),
                             ),
                           ),
-                          Text(
-                            _formatRiskLevel(
-                              severity,
-                            ),
-                            style: TextStyle(
-                              color:
-                                  _riskColor(
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              _formatRiskLevel(
                                 severity,
                               ),
-                              fontWeight:
-                                  FontWeight.w700,
+                              maxLines: 1,
+                              overflow:
+                                  TextOverflow.ellipsis,
+                              textAlign:
+                                  TextAlign.end,
+                              style: TextStyle(
+                                color:
+                                    _riskColor(
+                                  severity,
+                                ),
+                                fontWeight:
+                                    FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
@@ -1002,6 +1051,8 @@ class _RiskIntelligenceScreenState
               Expanded(
                 child: Text(
                   'Inspection Assignment',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
@@ -1046,6 +1097,8 @@ class _RiskIntelligenceScreenState
                 _creatingAssignment
                     ? 'Creating Assignment...'
                     : 'Create Inspection Assignment',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -1054,26 +1107,46 @@ class _RiskIntelligenceScreenState
     );
   }
 
+  Widget _buildAppBarTitle(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Risk Intelligence',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          tooltip: 'Refresh risk',
+          onPressed:
+              _loading ||
+                      _creatingAssignment
+                  ? null
+                  : _loadRiskIntelligence,
+          icon: const Icon(
+            Icons.refresh,
+          ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 40,
+            minHeight: 40,
+          ),
+          visualDensity:
+              VisualDensity.compact,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Risk Intelligence',
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh risk',
-            onPressed:
-                _loading ||
-                        _creatingAssignment
-                    ? null
-                    : _loadRiskIntelligence,
-            icon: const Icon(
-              Icons.refresh,
-            ),
-          ),
-        ],
+        automaticallyImplyLeading: true,
+        titleSpacing: 0,
+        title: _buildAppBarTitle(context),
       ),
       body: SafeArea(
         child: _loading
@@ -1089,76 +1162,89 @@ class _RiskIntelligenceScreenState
                     ? _buildEmptyState(
                         context,
                       )
-                    : ListView(
-                        padding:
-                            const EdgeInsets
-                                .fromLTRB(
-                          20,
-                          16,
-                          20,
-                          24,
-                        ),
-                        children: [
-                          Text(
-                            widget.project.name,
-                            style: Theme.of(
-                              context,
-                            )
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(
-                            height: 4,
-                          ),
-                          Text(
-                            'AI-powered project risk assessment',
-                            style: Theme.of(
-                              context,
-                            )
-                                .textTheme
-                                .bodyMedium,
-                          ),
-                          const SizedBox(
-                            height: 20,
-                          ),
-                          _buildRiskHeader(
-                            context,
-                          ),
-                          const SizedBox(
-                            height: 16,
-                          ),
-                          _buildComponentScores(
-                            context,
-                          ),
-                          const SizedBox(
-                            height: 16,
-                          ),
-                          _buildSummary(
-                            context,
-                          ),
-                          const SizedBox(
-                            height: 16,
-                          ),
-                          _buildReasons(
-                            context,
-                          ),
-                          const SizedBox(
-                            height: 16,
-                          ),
-                          _buildAnomalies(
-                            context,
-                          ),
-                          const SizedBox(
-                            height: 16,
-                          ),
-                          _buildAssignmentCard(
-                            context,
-                          ),
-                        ],
+                    : LayoutBuilder(
+                        builder:
+                            (context, constraints) {
+                          final horizontalPadding =
+                              constraints.maxWidth <
+                                      360
+                                  ? 12.0
+                                  : 20.0;
+
+                          return ListView(
+                            padding:
+                                EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              16,
+                              horizontalPadding,
+                              24,
+                            ),
+                            children: [
+                              Text(
+                                widget.project.name,
+                                maxLines: 3,
+                                overflow:
+                                    TextOverflow.ellipsis,
+                                style: Theme.of(
+                                  context,
+                                )
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
+                                      fontWeight:
+                                          FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(
+                                height: 4,
+                              ),
+                              Text(
+                                'AI-powered project risk assessment',
+                                style: Theme.of(
+                                  context,
+                                )
+                                    .textTheme
+                                    .bodyMedium,
+                              ),
+                              const SizedBox(
+                                height: 20,
+                              ),
+                              _buildRiskHeader(
+                                context,
+                              ),
+                              const SizedBox(
+                                height: 16,
+                              ),
+                              _buildComponentScores(
+                                context,
+                              ),
+                              const SizedBox(
+                                height: 16,
+                              ),
+                              _buildSummary(
+                                context,
+                              ),
+                              const SizedBox(
+                                height: 16,
+                              ),
+                              _buildReasons(
+                                context,
+                              ),
+                              const SizedBox(
+                                height: 16,
+                              ),
+                              _buildAnomalies(
+                                context,
+                              ),
+                              const SizedBox(
+                                height: 16,
+                              ),
+                              _buildAssignmentCard(
+                                context,
+                              ),
+                            ],
+                          );
+                        },
                       ),
       ),
     );
@@ -1168,7 +1254,7 @@ class _RiskIntelligenceScreenState
     BuildContext context,
   ) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding:
             const EdgeInsets.all(24),
         child: Column(
@@ -1205,7 +1291,9 @@ class _RiskIntelligenceScreenState
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed:
-                  _loadRiskIntelligence,
+                  _loading
+                      ? null
+                      : _loadRiskIntelligence,
               icon: const Icon(
                 Icons.refresh,
               ),
@@ -1223,7 +1311,7 @@ class _RiskIntelligenceScreenState
     BuildContext context,
   ) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding:
             const EdgeInsets.all(24),
         child: Column(
@@ -1239,6 +1327,8 @@ class _RiskIntelligenceScreenState
             const SizedBox(height: 12),
             Text(
               'No risk result available.',
+              textAlign:
+                  TextAlign.center,
               style: Theme.of(context)
                   .textTheme
                   .titleMedium,

@@ -54,26 +54,54 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
           index: _index,
           children: _screens,
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: _onNavigationSelected,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
+        // ==========================================================
+        // BOTTOM NAVIGATION
+        //
+        // NavigationBar lays its label out inside a fixed internal
+        // height. That's chrome the user can't scroll, so it never
+        // gets a chance to "grow into" extra space the way a normal
+        // Column in a ListView can — which makes it exactly the kind
+        // of fixed-size container this pattern overflows on: it's
+        // fine on an emulator's default 1.0x font scale, but on a
+        // real device with a larger accessibility text size (or a
+        // narrow 3-tab layout), a label like "Camera/Video" can wrap
+        // to two lines and throw a bottom RenderFlex overflow.
+        //
+        // NavigationDestination.label only accepts a String, so we
+        // can't hang a maxLines/FittedBox directly off it. Instead
+        // the fix clamps (not disables) the text scale used just for
+        // this bar: labels still grow a bit for accessibility, but
+        // can't outgrow the space the bar reserves for them. The
+        // rest of the app keeps the user's real system font scale.
+        // ==========================================================
+        bottomNavigationBar: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.textScalerOf(context).clamp(
+              minScaleFactor: 1.0,
+              maxScaleFactor: 1.3,
             ),
-            NavigationDestination(
-              icon: Icon(Icons.videocam_outlined),
-              selectedIcon: Icon(Icons.videocam),
-              label: 'Camera/Video',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: _onNavigationSelected,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.videocam_outlined),
+                selectedIcon: Icon(Icons.videocam),
+                label: 'Camera/Video',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
       ),
     );

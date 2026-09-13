@@ -67,7 +67,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
     try {
       final profile =
-          await NgoInstituteService.instance.fetchProfile(user.id);
+      await NgoInstituteService.instance.fetchProfile(user.id);
 
       if (!mounted) return;
 
@@ -101,7 +101,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
     try {
       final serviceEnabled =
-          await Geolocator.isLocationServiceEnabled();
+      await Geolocator.isLocationServiceEnabled();
 
       if (!serviceEnabled) {
         throw Exception(
@@ -110,7 +110,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
       }
 
       LocationPermission permission =
-          await Geolocator.checkPermission();
+      await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -123,7 +123,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
       if (permission == LocationPermission.deniedForever) {
         throw Exception(
           'Location permission permanently denied. '
-          'Enable it from app settings.',
+              'Enable it from app settings.',
         );
       }
 
@@ -167,7 +167,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           ]
               .where(
                 (e) => e != null && e.trim().isNotEmpty,
-              )
+          )
               .join(', ');
 
           if (parts.isNotEmpty) {
@@ -222,14 +222,14 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
       final profile = NgoInstituteProfile(
         profileId: user.id,
         registrationNumber:
-            _registrationController.text.trim().isEmpty
-                ? null
-                : _registrationController.text.trim(),
+        _registrationController.text.trim().isEmpty
+            ? null
+            : _registrationController.text.trim(),
         schemeType: _selectedScheme,
         address:
-            _addressController.text.trim().isEmpty
-                ? null
-                : _addressController.text.trim(),
+        _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
         latitude: _latitude,
         longitude: _longitude,
       );
@@ -240,7 +240,11 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Profile saved successfully.'),
+          content: Text(
+            'Profile saved successfully.',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -249,7 +253,11 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not save profile: $e'),
+          content: Text(
+            'Could not save profile: $e',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -278,7 +286,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.login,
-      (route) => false,
+          (route) => false,
     );
   }
 
@@ -289,7 +297,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
   void _goBackToHome() {
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.ngoDashboard,
-      (route) => false,
+          (route) => false,
     );
   }
 
@@ -345,6 +353,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
         title: const Text(
           'Institute Profile',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -354,80 +364,80 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
       body: _loadingProfile
           ? const Center(
-              child: CircularProgressIndicator(
-                color: primaryBlue,
-              ),
-            )
+        child: CircularProgressIndicator(
+          color: primaryBlue,
+        ),
+      )
           : SafeArea(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    16,
-                    16,
-                    32,
-                  ),
-                  children: [
-                    _buildInstituteCard(),
-
-                    const SizedBox(height: 22),
-
-                    _buildSectionTitle(
-                      'Institute Details',
-                      'Manage your registered institute information',
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    _buildRegistrationField(),
-
-                    const SizedBox(height: 18),
-
-                    _buildSectionTitle(
-                      'Address',
-                      'Registered office / operating location',
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    _buildAddressField(),
-
-                    const SizedBox(height: 10),
-
-                    _buildLocationButton(),
-
-                    if (_locationError != null) ...[
-                      const SizedBox(height: 10),
-                      _buildLocationError(),
-                    ],
-
-                    const SizedBox(height: 8),
-
-                    _buildCoordinatesCard(),
-
-                    const SizedBox(height: 22),
-
-                    _buildSectionTitle(
-                      'Scheme',
-                      'Select the scheme applicable to your institute',
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    _buildSchemeDropdown(),
-
-                    const SizedBox(height: 26),
-
-                    _buildSaveButton(),
-
-                    const SizedBox(height: 12),
-
-                    _buildLogoutButton(),
-                  ],
-                ),
-              ),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              32,
             ),
+            children: [
+              _buildInstituteCard(),
+
+              const SizedBox(height: 22),
+
+              _buildSectionTitle(
+                'Institute Details',
+                'Manage your registered institute information',
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildRegistrationField(),
+
+              const SizedBox(height: 18),
+
+              _buildSectionTitle(
+                'Address',
+                'Registered office / operating location',
+              ),
+
+              const SizedBox(height: 10),
+
+              _buildAddressField(),
+
+              const SizedBox(height: 10),
+
+              _buildLocationButton(),
+
+              if (_locationError != null) ...[
+                const SizedBox(height: 10),
+                _buildLocationError(),
+              ],
+
+              const SizedBox(height: 8),
+
+              _buildCoordinatesCard(),
+
+              const SizedBox(height: 22),
+
+              _buildSectionTitle(
+                'Scheme',
+                'Select the scheme applicable to your institute',
+              ),
+
+              const SizedBox(height: 10),
+
+              _buildSchemeDropdown(),
+
+              const SizedBox(height: 26),
+
+              _buildSaveButton(),
+
+              const SizedBox(height: 12),
+
+              _buildLogoutButton(),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -436,14 +446,17 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
   // ============================================================
 
   Widget _buildSectionTitle(
-    String title,
-    String subtitle,
-  ) {
+      String title,
+      String subtitle,
+      ) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
@@ -453,6 +466,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
         const SizedBox(height: 3),
         Text(
           subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             fontSize: 11.5,
             color: textGrey,
@@ -488,6 +503,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 58,
@@ -510,9 +526,11 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
@@ -549,6 +567,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                           SizedBox(width: 4),
                           Text(
                             'Active',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
@@ -565,6 +585,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
                 const Text(
                   'Registered Institute',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11.5,
                     color: Colors.white70,
@@ -574,6 +596,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                 const SizedBox(height: 8),
 
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(
                       Icons.badge_outlined,
@@ -585,6 +608,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
                     const Text(
                       'Registration:',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 10.5,
                         color: Colors.white70,
@@ -596,6 +621,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                     Expanded(
                       child: Text(
                         _registrationText(),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
@@ -664,6 +690,14 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
   // ============================================================
   // ADDRESS FIELD
+  //
+  // NOTE: the prefix icon uses a fixed `Padding(bottom: 35)` to sit
+  // near the top of the multi-line field. That's a cosmetic
+  // alignment offset (not an overflow risk, since the field itself
+  // has no fixed height — minLines/maxLines let it grow), but it
+  // will drift out of alignment if the field grows taller under a
+  // large system font scale. A more robust version pins the icon to
+  // the top instead of guessing a pixel offset.
   // ============================================================
 
   Widget _buildAddressField() {
@@ -685,12 +719,16 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           fontWeight: FontWeight.w500,
         ),
         decoration: const InputDecoration(
-          prefixIcon: Padding(
-            padding: EdgeInsets.only(bottom: 35),
-            child: Icon(
-              Icons.location_on_outlined,
-              color: primaryBlue,
-              size: 21,
+          prefixIcon: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: 1,
+            child: Padding(
+              padding: EdgeInsets.only(top: 14),
+              child: Icon(
+                Icons.location_on_outlined,
+                color: primaryBlue,
+                size: 21,
+              ),
             ),
           ),
           hintText: 'Registered office / operating address',
@@ -710,45 +748,63 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
   // ============================================================
   // LOCATION BUTTON
+  //
+  // Was `SizedBox(height: 44)` around a button whose label text
+  // ("Detecting location..." / "Detect My Location") can need more
+  // vertical space at larger system font scales. A tight SizedBox
+  // forces exactly 44px regardless of that content, so on a device
+  // with a bigger font scale the button's internal Row could exceed
+  // 44px and throw a RenderFlex overflow. Swapped to a minHeight
+  // constraint so the button can grow if it truly needs to, and
+  // capped the label to one line with ellipsis so it never tries to
+  // wrap in the first place.
   // ============================================================
 
   Widget _buildLocationButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 44,
-      child: OutlinedButton.icon(
-        onPressed:
-            _detectingLocation ? null : _detectLocation,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: lightBlue,
-          foregroundColor: primaryBlue,
-          side: const BorderSide(
-            color: Color(0xFFC7DCEA),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed:
+          _detectingLocation ? null : _detectLocation,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: lightBlue,
+            foregroundColor: primaryBlue,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            side: const BorderSide(
+              color: Color(0xFFC7DCEA),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+          icon: _detectingLocation
+              ? const SizedBox(
+            width: 17,
+            height: 17,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: primaryBlue,
+            ),
+          )
+              : const Icon(
+            Icons.my_location_rounded,
+            size: 19,
           ),
-        ),
-        icon: _detectingLocation
-            ? const SizedBox(
-                width: 17,
-                height: 17,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: primaryBlue,
-                ),
-              )
-            : const Icon(
-                Icons.my_location_rounded,
-                size: 19,
-              ),
-        label: Text(
-          _detectingLocation
-              ? 'Detecting location...'
-              : 'Detect My Location',
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
+          label: Text(
+            _detectingLocation
+                ? 'Detecting location...'
+                : 'Detect My Location',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),
@@ -783,6 +839,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           Expanded(
             child: Text(
               _locationError!,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 11.5,
                 color: Colors.red.shade700,
@@ -817,6 +875,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 34,
@@ -842,13 +901,16 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              CrossAxisAlignment.start,
               children: [
                 Text(
                   hasLocation
                       ? 'Location Coordinates'
                       : 'Location',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -860,6 +922,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
                 Text(
                   _coordinatesText(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.5,
                     color: textGrey,
@@ -870,7 +934,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             ),
           ),
 
-          if (hasLocation)
+          if (hasLocation) ...[
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 8,
@@ -882,6 +947,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
               ),
               child: const Text(
                 'Updated',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,
@@ -889,6 +956,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -932,11 +1000,13 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
           ),
         ),
         items: NgoSchemeType.values.map(
-          (scheme) {
+              (scheme) {
             return DropdownMenuItem<NgoSchemeType>(
               value: scheme,
               child: Text(
                 scheme.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -964,51 +1034,69 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
   // ============================================================
   // SAVE PROFILE BUTTON
+  //
+  // Same fixed-height risk as the location button: `SizedBox(height:
+  // 50)` was forcing an exact height around a Row(icon, text) whose
+  // text can need more vertical room at larger font scales. Swapped
+  // to a minHeight constraint, and the label is now wrapped in
+  // Flexible + capped to one line so it shrinks/ellipsizes instead
+  // of forcing the Row wider or taller than the button allows.
   // ============================================================
 
   Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: _saving ? null : _saveProfile,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              primaryBlue.withValues(alpha: 0.60),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(11),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 50),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _saving ? null : _saveProfile,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryBlue,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor:
+            primaryBlue.withValues(alpha: 0.60),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11),
+            ),
+          ),
+          child: _saving
+              ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: Colors.white,
+            ),
+          )
+              : const Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment:
+            MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.save_rounded,
+                size: 19,
+              ),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Save Profile',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        child: _saving
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: Colors.white,
-                ),
-              )
-            : const Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.save_rounded,
-                    size: 19,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Save Profile',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
   }
@@ -1018,31 +1106,39 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
   // ============================================================
 
   Widget _buildLogoutButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 46,
-      child: OutlinedButton.icon(
-        onPressed: _handleLogout,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFFD64545),
-          side: const BorderSide(
-            color: Color(0xFFE3B8B8),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 46),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _handleLogout,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFFD64545),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            side: const BorderSide(
+              color: Color(0xFFE3B8B8),
+            ),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11),
+            ),
           ),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(11),
+          icon: const Icon(
+            Icons.logout_rounded,
+            size: 19,
           ),
-        ),
-        icon: const Icon(
-          Icons.logout_rounded,
-          size: 19,
-        ),
-        label: const Text(
-          'Logout',
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
+          label: const Text(
+            'Logout',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ),

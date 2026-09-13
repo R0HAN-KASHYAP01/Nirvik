@@ -106,7 +106,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     try {
       final reports =
-          await NgoReportsService.instance.fetchReports(user.id);
+      await NgoReportsService.instance.fetchReports(user.id);
 
       if (!mounted) return;
 
@@ -232,8 +232,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // ============================================================
 
   Future<void> _pickReportDate(
-    StateSetter setSheetState,
-  ) async {
+      StateSetter setSheetState,
+      ) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _reportDate,
@@ -322,7 +322,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (_attachmentBytes != null &&
           _attachmentName != null) {
         attachmentPath =
-            await NgoStorageService.instance.uploadFile(
+        await NgoStorageService.instance.uploadFile(
           folder: 'reports',
           fileName: _attachmentName!,
           bytes: _attachmentBytes!,
@@ -330,7 +330,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
 
       final detailedDescription =
-          _buildDetailedDescription();
+      _buildDetailedDescription();
 
       await NgoReportsService.instance.submitReport(
         user: user,
@@ -355,7 +355,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       setState(() {
         _error =
-            'Could not submit report. Please try again.';
+        'Could not submit report. Please try again.';
       });
     } finally {
       if (mounted) {
@@ -382,21 +382,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
 
     final location =
-        _locationController.text.trim();
+    _locationController.text.trim();
 
     if (location.isNotEmpty) {
       parts.add('Location / Project: $location');
     }
 
     final description =
-        _descriptionController.text.trim();
+    _descriptionController.text.trim();
 
     if (description.isNotEmpty) {
       parts.add('Description: $description');
     }
 
     final observations =
-        _observationsController.text.trim();
+    _observationsController.text.trim();
 
     if (observations.isNotEmpty) {
       parts.add(
@@ -405,14 +405,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     final findings =
-        _findingsController.text.trim();
+    _findingsController.text.trim();
 
     if (findings.isNotEmpty) {
       parts.add('Issues / Findings: $findings');
     }
 
     final action =
-        _actionController.text.trim();
+    _actionController.text.trim();
 
     if (action.isNotEmpty) {
       parts.add(
@@ -459,6 +459,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Expanded(
                 child: Text(
                   message,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                   ),
@@ -478,7 +480,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(
+            message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -508,6 +514,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
         title: const Text(
           'Reports',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
@@ -521,7 +529,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           backgroundColor: Colors.white,
           child: ListView(
             physics:
-                const AlwaysScrollableScrollPhysics(),
+            const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(
               14,
               10,
@@ -573,22 +581,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
         suffixIcon: _searchQuery.isNotEmpty
             ? IconButton(
-                onPressed: () {
-                  setState(() {
-                    _searchQuery = '';
-                  });
-                },
-                icon: const Icon(
-                  Icons.close_rounded,
-                  size: 18,
-                  color: greyText,
-                ),
-              )
+          onPressed: () {
+            setState(() {
+              _searchQuery = '';
+            });
+          },
+          icon: const Icon(
+            Icons.close_rounded,
+            size: 18,
+            color: greyText,
+          ),
+        )
             : null,
         filled: true,
         fillColor: Colors.white,
         contentPadding:
-            const EdgeInsets.symmetric(
+        const EdgeInsets.symmetric(
           vertical: 12,
           horizontal: 12,
         ),
@@ -620,28 +628,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // ============================================================
 
   Widget _buildFilterRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildFilterButton(
-            icon: Icons.calendar_month_rounded,
-            label: _dateFilter == 'Selected date'
-                ? _formatDate(_selectedDate!)
-                : _dateFilter,
-            onTap: _showDateFilterMenu,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _buildFilterButton(
+              icon: Icons.calendar_month_rounded,
+              label: _dateFilter == 'Selected date'
+                  ? _formatDate(_selectedDate!)
+                  : _dateFilter,
+              onTap: _showDateFilterMenu,
+            ),
           ),
-        ),
 
-        const SizedBox(width: 8),
+          const SizedBox(width: 8),
 
-        Expanded(
-          child: _buildFilterButton(
-            icon: Icons.swap_vert_rounded,
-            label: _sortOrder,
-            onTap: _showSortMenu,
+          Expanded(
+            child: _buildFilterButton(
+              icon: Icons.swap_vert_rounded,
+              label: _sortOrder,
+              onTap: _showSortMenu,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -657,9 +668,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          height: 38,
+          // minHeight instead of a locked height: keeps the usual
+          // 38px pill in the common case but lets it grow if a
+          // larger system font scale needs more room for the label.
+          constraints: const BoxConstraints(minHeight: 38),
           padding: const EdgeInsets.symmetric(
             horizontal: 10,
+            vertical: 6,
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
@@ -790,7 +805,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               decoration: BoxDecoration(
                 color: borderColor,
                 borderRadius:
-                    BorderRadius.circular(10),
+                BorderRadius.circular(10),
               ),
             ),
             const SizedBox(height: 16),
@@ -798,6 +813,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: navy,
                   fontSize: 16,
@@ -807,13 +824,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const SizedBox(height: 10),
             ...options.map(
-              (option) {
+                  (option) {
                 final isSelected =
                     option == selected;
 
                 return ListTile(
                   contentPadding:
-                      EdgeInsets.zero,
+                  EdgeInsets.zero,
                   onTap: () {
                     Navigator.pop(
                       context,
@@ -830,15 +847,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                   title: Text(
                     option,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: isSelected
                           ? darkBlue
                           : navy,
                       fontSize: 12,
                       fontWeight:
-                          isSelected
-                              ? FontWeight.w800
-                              : FontWeight.w600,
+                      isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
                     ),
                   ),
                 );
@@ -852,31 +871,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // ============================================================
   // SUBMIT BUTTON
+  //
+  // Was `SizedBox(height: 42)` around a button whose label had no
+  // maxLines/overflow handling at all. At a larger system font
+  // scale "Submit a New Report" needs more width than 42px of
+  // height can comfortably lay out with the icon, which is exactly
+  // the kind of thing that overflows on a real device but not an
+  // emulator at 1.0x scale.
   // ============================================================
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 42,
-      child: ElevatedButton.icon(
-        onPressed: _showSubmitReportDialog,
-        icon: const Icon(
-          Icons.add_rounded,
-          size: 20,
-        ),
-        label: const Text(
-          'Submit a New Report',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 42),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _showSubmitReportDialog,
+          icon: const Icon(
+            Icons.add_rounded,
+            size: 20,
           ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: darkBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+          label: const Text(
+            'Submit a New Report',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: darkBlue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         ),
       ),
@@ -897,6 +931,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             const Text(
               'Reports',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: navy,
                 fontSize: 13,
@@ -906,6 +942,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             const Spacer(),
             Text(
               '${reports.length} found',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: greyText,
                 fontSize: 9,
@@ -936,7 +974,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           _buildEmptyReports()
         else
           ...reports.map(
-            (report) => _buildReportCard(report),
+                (report) => _buildReportCard(report),
           ),
       ],
     );
@@ -949,7 +987,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildEmptyReports() {
     final hasFilters =
         _searchQuery.isNotEmpty ||
-        _dateFilter != 'All dates';
+            _dateFilter != 'All dates';
 
     return Container(
       width: double.infinity,
@@ -965,6 +1003,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             hasFilters
@@ -978,6 +1017,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             hasFilters
                 ? 'No matching reports'
                 : 'No reports yet',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: navy,
               fontSize: 12,
@@ -990,6 +1031,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ? 'Try changing your search or date filter.'
                 : 'Reports you submit will appear here.',
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: greyText,
               fontSize: 10,
@@ -1007,7 +1050,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildReportCard(NgoReport report) {
     final hasAttachment =
         report.attachmentPath != null &&
-        report.attachmentPath!.isNotEmpty;
+            report.attachmentPath!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1042,7 +1085,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             child: Row(
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 36,
@@ -1052,9 +1095,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                   decoration: BoxDecoration(
                     color:
-                        _reportIconBackground(report),
+                    _reportIconBackground(report),
                     borderRadius:
-                        BorderRadius.circular(8),
+                    BorderRadius.circular(8),
                   ),
                   child: Icon(
                     _reportIcon(report),
@@ -1065,14 +1108,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                 Expanded(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    CrossAxisAlignment.start,
                     children: [
                       Text(
                         report.title,
                         maxLines: 1,
                         overflow:
-                            TextOverflow.ellipsis,
+                        TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: navy,
                           fontSize: 11,
@@ -1090,7 +1134,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                           maxLines: 2,
                           overflow:
-                              TextOverflow.ellipsis,
+                          TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: greyText,
                             fontSize: 9,
@@ -1106,15 +1150,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                           const SizedBox(width: 7),
 
-                          Text(
-                            _formatDate(
-                              report.createdAt,
-                            ),
-                            style: const TextStyle(
-                              color: greyText,
-                              fontSize: 8.5,
-                              fontWeight:
-                                  FontWeight.w500,
+                          Flexible(
+                            child: Text(
+                              _formatDate(
+                                report.createdAt,
+                              ),
+                              maxLines: 1,
+                              overflow:
+                              TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: greyText,
+                                fontSize: 8.5,
+                                fontWeight:
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
 
@@ -1195,6 +1244,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           SizedBox(width: 3),
           Text(
             'Submitted',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: green,
               fontSize: 8,
@@ -1236,7 +1287,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               child: Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                CrossAxisAlignment.start,
                 children: [
                   Center(
                     child: Container(
@@ -1245,7 +1296,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       decoration: BoxDecoration(
                         color: borderColor,
                         borderRadius:
-                            BorderRadius.circular(10),
+                        BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -1253,10 +1304,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const SizedBox(height: 16),
 
                   Row(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
                           report.title,
+                          maxLines: 2,
+                          overflow:
+                          TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: navy,
                             fontSize: 18,
@@ -1282,14 +1338,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     children: [
                       _buildStatusBadge(),
                       const SizedBox(width: 8),
-                      Text(
-                        _formatDate(
-                          report.createdAt,
-                        ),
-                        style: const TextStyle(
-                          color: greyText,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          _formatDate(
+                            report.createdAt,
+                          ),
+                          maxLines: 1,
+                          overflow:
+                          TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: greyText,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -1319,8 +1380,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Map<String, String> _parseReportDetails(
-    String? description,
-  ) {
+      String? description,
+      ) {
     final result = <String, String>{};
 
     if (description == null ||
@@ -1338,19 +1399,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (trimmed.isEmpty) continue;
 
       final separator =
-          trimmed.indexOf(':');
+      trimmed.indexOf(':');
 
       if (separator > 0) {
         currentKey =
             trimmed.substring(0, separator).trim();
 
         final value =
-            trimmed.substring(separator + 1).trim();
+        trimmed.substring(separator + 1).trim();
 
         result[currentKey] = value;
       } else if (currentKey != null) {
         result[currentKey] =
-            '${result[currentKey]} $trimmed';
+        '${result[currentKey]} $trimmed';
       }
     }
 
@@ -1358,15 +1419,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildDetailSection(
-    String title,
-    Map<String, String> details,
-  ) {
+      String title,
+      Map<String, String> details,
+      ) {
     return Column(
       crossAxisAlignment:
-          CrossAxisAlignment.start,
+      CrossAxisAlignment.start,
       children: [
         Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: navy,
             fontSize: 13,
@@ -1382,72 +1445,75 @@ class _ReportsScreenState extends State<ReportsScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius:
-                BorderRadius.circular(10),
+            BorderRadius.circular(10),
             border: Border.all(
               color: borderColor,
             ),
           ),
           child: details.isEmpty
               ? const Text(
-                  'No additional details provided.',
-                  style: TextStyle(
-                    color: greyText,
-                    fontSize: 10,
-                  ),
-                )
+            'No additional details provided.',
+            style: TextStyle(
+              color: greyText,
+              fontSize: 10,
+            ),
+          )
               : Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: details.entries
-                      .map(
-                        (entry) => Padding(
-                          padding:
-                              const EdgeInsets.only(
-                            bottom: 11,
-                          ),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-                            children: [
-                              Text(
-                                entry.key,
-                                style:
-                                    const TextStyle(
-                                  color: greyText,
-                                  fontSize: 9,
-                                  fontWeight:
-                                      FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 3,
-                              ),
-                              Text(
-                                entry.value,
-                                style:
-                                    const TextStyle(
-                                  color: navy,
-                                  fontSize: 11,
-                                  height: 1.35,
-                                  fontWeight:
-                                      FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
+            children: details.entries
+                .map(
+                  (entry) => Padding(
+                padding:
+                const EdgeInsets.only(
+                  bottom: 11,
                 ),
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
+                  children: [
+                    Text(
+                      entry.key,
+                      maxLines: 1,
+                      overflow: TextOverflow
+                          .ellipsis,
+                      style:
+                      const TextStyle(
+                        color: greyText,
+                        fontSize: 9,
+                        fontWeight:
+                        FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 3,
+                    ),
+                    Text(
+                      entry.value,
+                      style:
+                      const TextStyle(
+                        color: navy,
+                        fontSize: 11,
+                        height: 1.35,
+                        fontWeight:
+                        FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+                .toList(),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildAttachmentInfo(
-    String path,
-  ) {
+      String path,
+      ) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 12),
@@ -1457,6 +1523,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
             Icons.attach_file_rounded,
@@ -1466,11 +1533,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
           const SizedBox(width: 9),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Attachment available',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: navy,
                     fontSize: 10,
@@ -1482,7 +1552,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   path.split('/').last,
                   maxLines: 1,
                   overflow:
-                      TextOverflow.ellipsis,
+                  TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: greyText,
                     fontSize: 9,
@@ -1502,7 +1572,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   IconData _reportIcon(NgoReport report) {
     final title =
-        report.title.toLowerCase();
+    report.title.toLowerCase();
 
     if (title.contains('water')) {
       return Icons.water_drop_rounded;
@@ -1525,7 +1595,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Color _reportIconColor(NgoReport report) {
     final title =
-        report.title.toLowerCase();
+    report.title.toLowerCase();
 
     if (title.contains('sanitation')) {
       return red;
@@ -1543,10 +1613,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Color _reportIconBackground(
-    NgoReport report,
-  ) {
+      NgoReport report,
+      ) {
     final title =
-        report.title.toLowerCase();
+    report.title.toLowerCase();
 
     if (title.contains('sanitation')) {
       return lightRed;
@@ -1605,27 +1675,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom:
-                    MediaQuery.of(context)
-                        .viewInsets
-                        .bottom,
+                MediaQuery.of(context)
+                    .viewInsets
+                    .bottom,
               ),
               child: Container(
                 constraints:
-                    const BoxConstraints(
+                const BoxConstraints(
                   maxHeight: 760,
                 ),
                 decoration:
-                    const BoxDecoration(
+                const BoxDecoration(
                   color: background,
                   borderRadius:
-                      BorderRadius.vertical(
+                  BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
                 ),
                 child:
-                    SingleChildScrollView(
+                SingleChildScrollView(
                   padding:
-                      const EdgeInsets.fromLTRB(
+                  const EdgeInsets.fromLTRB(
                     18,
                     12,
                     18,
@@ -1635,18 +1705,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      CrossAxisAlignment.start,
                       children: [
                         Center(
                           child: Container(
                             width: 40,
                             height: 4,
                             decoration:
-                                BoxDecoration(
+                            BoxDecoration(
                               color: borderColor,
                               borderRadius:
-                                  BorderRadius
-                                      .circular(
+                              BorderRadius
+                                  .circular(
                                 10,
                               ),
                             ),
@@ -1658,17 +1728,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
 
                         Row(
+                          crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
                           children: [
                             const Expanded(
                               child: Text(
                                 'Submit a New Report',
+                                maxLines: 1,
+                                overflow:
+                                TextOverflow
+                                    .ellipsis,
                                 style:
-                                    TextStyle(
+                                TextStyle(
                                   color: navy,
                                   fontSize: 17,
                                   fontWeight:
-                                      FontWeight
-                                          .w800,
+                                  FontWeight
+                                      .w800,
                                 ),
                               ),
                             ),
@@ -1701,9 +1778,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         TextFormField(
                           controller:
-                              _titleController,
+                          _titleController,
                           textInputAction:
-                              TextInputAction.next,
+                          TextInputAction.next,
                           validator: (value) {
                             if (value == null ||
                                 value
@@ -1715,7 +1792,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             return null;
                           },
                           decoration:
-                              _inputDecoration(
+                          _inputDecoration(
                             'Enter report title',
                           ),
                         ),
@@ -1725,14 +1802,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
 
                         Row(
+                          crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
                           children: [
                             Expanded(
                               child:
-                                  _buildDropdownField(
+                              _buildDropdownField(
                                 label:
-                                    'Category',
+                                'Category',
                                 value:
-                                    _selectedCategory,
+                                _selectedCategory,
                                 items: const [
                                   'General',
                                   'Attendance',
@@ -1751,7 +1831,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   }
 
                                   setSheetState(
-                                    () {
+                                        () {
                                       _selectedCategory =
                                           value;
                                     },
@@ -1766,11 +1846,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                             Expanded(
                               child:
-                                  _buildDropdownField(
+                              _buildDropdownField(
                                 label:
-                                    'Priority',
+                                'Priority',
                                 value:
-                                    _selectedPriority,
+                                _selectedPriority,
                                 items: const [
                                   'Low',
                                   'Medium',
@@ -1785,7 +1865,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   }
 
                                   setSheetState(
-                                    () {
+                                        () {
                                       _selectedPriority =
                                           value;
                                     },
@@ -1811,35 +1891,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         InkWell(
                           onTap: () =>
                               _pickReportDate(
-                            setSheetState,
-                          ),
+                                setSheetState,
+                              ),
                           borderRadius:
-                              BorderRadius
-                                  .circular(
+                          BorderRadius
+                              .circular(
                             7,
                           ),
                           child: Container(
                             width:
-                                double.infinity,
+                            double.infinity,
                             padding:
-                                const EdgeInsets
-                                    .symmetric(
+                            const EdgeInsets
+                                .symmetric(
                               horizontal: 12,
                               vertical: 12,
                             ),
                             decoration:
-                                BoxDecoration(
+                            BoxDecoration(
                               color:
-                                  Colors.white,
+                              Colors.white,
                               borderRadius:
-                                  BorderRadius
-                                      .circular(
+                              BorderRadius
+                                  .circular(
                                 7,
                               ),
                               border:
-                                  Border.all(
+                              Border.all(
                                 color:
-                                    borderColor,
+                                borderColor,
                               ),
                             ),
                             child: Row(
@@ -1849,24 +1929,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       .calendar_month_rounded,
                                   size: 18,
                                   color:
-                                      darkBlue,
+                                  darkBlue,
                                 ),
                                 const SizedBox(
                                   width: 8,
                                 ),
-                                Text(
-                                  _formatDate(
-                                    _reportDate,
-                                  ),
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        navy,
-                                    fontSize:
-                                        11,
-                                    fontWeight:
-                                        FontWeight
-                                            .w600,
+                                Flexible(
+                                  child: Text(
+                                    _formatDate(
+                                      _reportDate,
+                                    ),
+                                    maxLines: 1,
+                                    overflow:
+                                    TextOverflow
+                                        .ellipsis,
+                                    style:
+                                    const TextStyle(
+                                      color:
+                                      navy,
+                                      fontSize:
+                                      11,
+                                      fontWeight:
+                                      FontWeight
+                                          .w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1888,11 +1974,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         TextFormField(
                           controller:
-                              _locationController,
+                          _locationController,
                           textInputAction:
-                              TextInputAction.next,
+                          TextInputAction.next,
                           decoration:
-                              _inputDecoration(
+                          _inputDecoration(
                             'Enter project or location',
                           ),
                         ),
@@ -1911,10 +1997,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         TextFormField(
                           controller:
-                              _descriptionController,
+                          _descriptionController,
                           maxLines: 3,
                           decoration:
-                              _inputDecoration(
+                          _inputDecoration(
                             'Briefly describe the report...',
                           ),
                         ),
@@ -1933,10 +2019,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         TextFormField(
                           controller:
-                              _observationsController,
+                          _observationsController,
                           maxLines: 3,
                           decoration:
-                              _inputDecoration(
+                          _inputDecoration(
                             'What did you observe?',
                           ),
                         ),
@@ -1955,10 +2041,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         TextFormField(
                           controller:
-                              _findingsController,
+                          _findingsController,
                           maxLines: 3,
                           decoration:
-                              _inputDecoration(
+                          _inputDecoration(
                             'Mention issues or findings...',
                           ),
                         ),
@@ -1977,10 +2063,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         TextFormField(
                           controller:
-                              _actionController,
+                          _actionController,
                           maxLines: 3,
                           decoration:
-                              _inputDecoration(
+                          _inputDecoration(
                             'What action do you recommend?',
                           ),
                         ),
@@ -1997,55 +2083,68 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           height: 6,
                         ),
 
-                        SizedBox(
-                          width:
-                              double.infinity,
-                          height: 44,
-                          child:
-                              OutlinedButton.icon(
-                            onPressed: () async {
-                              await _pickAttachment();
+                        ConstrainedBox(
+                          constraints:
+                          const BoxConstraints(
+                            minHeight: 44,
+                          ),
+                          child: SizedBox(
+                            width:
+                            double.infinity,
+                            child:
+                            OutlinedButton.icon(
+                              onPressed:
+                                  () async {
+                                await _pickAttachment();
 
-                              setSheetState(
-                                () {},
-                              );
-                            },
-                            icon: const Icon(
-                              Icons
-                                  .attach_file_rounded,
-                              size: 20,
-                            ),
-                            label: Text(
-                              _attachmentName ??
-                                  'Attach file / photo (optional)',
-                              maxLines: 1,
-                              overflow:
-                                  TextOverflow
-                                      .ellipsis,
-                              style:
-                                  const TextStyle(
-                                fontSize:
-                                    10.5,
-                                fontWeight:
-                                    FontWeight
-                                        .w700,
+                                setSheetState(
+                                      () {},
+                                );
+                              },
+                              icon: const Icon(
+                                Icons
+                                    .attach_file_rounded,
+                                size: 20,
                               ),
-                            ),
-                            style:
-                                OutlinedButton
-                                    .styleFrom(
-                              foregroundColor:
-                                  darkBlue,
-                              backgroundColor:
-                                  lightBlue,
-                              side:
-                                  BorderSide.none,
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  7,
+                              label: Text(
+                                _attachmentName ??
+                                    'Attach file / photo (optional)',
+                                maxLines: 1,
+                                overflow:
+                                TextOverflow
+                                    .ellipsis,
+                                style:
+                                const TextStyle(
+                                  fontSize:
+                                  10.5,
+                                  fontWeight:
+                                  FontWeight
+                                      .w700,
+                                ),
+                              ),
+                              style:
+                              OutlinedButton
+                                  .styleFrom(
+                                foregroundColor:
+                                darkBlue,
+                                backgroundColor:
+                                lightBlue,
+                                padding:
+                                const EdgeInsets
+                                    .symmetric(
+                                  horizontal:
+                                  12,
+                                  vertical: 10,
+                                ),
+                                side: BorderSide
+                                    .none,
+                                shape:
+                                RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                    7,
+                                  ),
                                 ),
                               ),
                             ),
@@ -2058,13 +2157,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                           Text(
                             _error!,
+                            maxLines: 3,
+                            overflow: TextOverflow
+                                .ellipsis,
                             style:
-                                const TextStyle(
+                            const TextStyle(
                               color: red,
                               fontSize: 10,
                               fontWeight:
-                                  FontWeight
-                                      .w600,
+                              FontWeight
+                                  .w600,
                             ),
                           ),
                         ],
@@ -2073,59 +2175,75 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           height: 17,
                         ),
 
-                        SizedBox(
-                          width:
-                              double.infinity,
-                          height: 44,
-                          child:
-                              ElevatedButton(
-                            onPressed:
-                                _isSubmitting
-                                    ? null
-                                    : _handleSubmit,
-                            style:
-                                ElevatedButton
-                                    .styleFrom(
-                              backgroundColor:
-                                  darkBlue,
-                              foregroundColor:
-                                  Colors.white,
-                              elevation: 0,
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  7,
+                        ConstrainedBox(
+                          constraints:
+                          const BoxConstraints(
+                            minHeight: 44,
+                          ),
+                          child: SizedBox(
+                            width:
+                            double.infinity,
+                            child:
+                            ElevatedButton(
+                              onPressed:
+                              _isSubmitting
+                                  ? null
+                                  : _handleSubmit,
+                              style:
+                              ElevatedButton
+                                  .styleFrom(
+                                backgroundColor:
+                                darkBlue,
+                                foregroundColor:
+                                Colors.white,
+                                padding:
+                                const EdgeInsets
+                                    .symmetric(
+                                  horizontal:
+                                  14,
+                                  vertical: 10,
+                                ),
+                                elevation: 0,
+                                shape:
+                                RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                    7,
+                                  ),
+                                ),
+                              ),
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child:
+                                CircularProgressIndicator(
+                                  strokeWidth:
+                                  2.2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<
+                                      Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                                  : const Text(
+                                'Submit Report',
+                                maxLines: 1,
+                                overflow:
+                                TextOverflow
+                                    .ellipsis,
+                                style:
+                                TextStyle(
+                                  fontSize:
+                                  12,
+                                  fontWeight:
+                                  FontWeight
+                                      .w800,
                                 ),
                               ),
                             ),
-                            child: _isSubmitting
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child:
-                                        CircularProgressIndicator(
-                                      strokeWidth:
-                                          2.2,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<
-                                              Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : const Text(
-                                    'Submit Report',
-                                    style:
-                                        TextStyle(
-                                      fontSize:
-                                          12,
-                                      fontWeight:
-                                          FontWeight
-                                              .w800,
-                                    ),
-                                  ),
                           ),
                         ),
                       ],
@@ -2147,6 +2265,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildFormLabel(String label) {
     return Text(
       label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         color: navy,
         fontSize: 11,
@@ -2162,8 +2282,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required ValueChanged<String?> onChanged,
   }) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment:
-          CrossAxisAlignment.start,
+      CrossAxisAlignment.start,
       children: [
         _buildFormLabel(label),
         const SizedBox(height: 6),
@@ -2173,32 +2294,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
           items: items
               .map(
                 (item) =>
-                    DropdownMenuItem<String>(
+                DropdownMenuItem<String>(
                   value: item,
                   child: Text(
                     item,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style:
-                        const TextStyle(
+                    const TextStyle(
                       color: navy,
                       fontSize: 10,
                       fontWeight:
-                          FontWeight.w600,
+                      FontWeight.w600,
                     ),
                   ),
                 ),
-              )
+          )
               .toList(),
           onChanged: onChanged,
           decoration:
-              _inputDecoration('Select'),
+          _inputDecoration('Select'),
         ),
       ],
     );
   }
 
   InputDecoration _inputDecoration(
-    String hint,
-  ) {
+      String hint,
+      ) {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(
@@ -2208,27 +2331,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
       filled: true,
       fillColor: Colors.white,
       contentPadding:
-          const EdgeInsets.symmetric(
+      const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 12,
       ),
       border: OutlineInputBorder(
         borderRadius:
-            BorderRadius.circular(7),
+        BorderRadius.circular(7),
         borderSide: const BorderSide(
           color: borderColor,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius:
-            BorderRadius.circular(7),
+        BorderRadius.circular(7),
         borderSide: const BorderSide(
           color: borderColor,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius:
-            BorderRadius.circular(7),
+        BorderRadius.circular(7),
         borderSide: const BorderSide(
           color: blue,
           width: 1.3,
@@ -2236,15 +2359,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius:
-            BorderRadius.circular(7),
+        BorderRadius.circular(7),
         borderSide: const BorderSide(
           color: red,
         ),
       ),
       focusedErrorBorder:
-          OutlineInputBorder(
+      OutlineInputBorder(
         borderRadius:
-            BorderRadius.circular(7),
+        BorderRadius.circular(7),
         borderSide: const BorderSide(
           color: red,
         ),

@@ -72,7 +72,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     // Automatically refresh Supabase data every 30 seconds.
     _autoReloadTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) {
+          (_) {
         _loadDashboardData();
       },
     );
@@ -111,28 +111,28 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       // ----------------------------------------------------------
 
       final attendanceFuture =
-          NgoAttendanceService.instance.fetchHistory(user.id);
+      NgoAttendanceService.instance.fetchHistory(user.id);
 
       // ----------------------------------------------------------
       // Load complete reports
       // ----------------------------------------------------------
 
       final reportsFuture =
-          NgoReportsService.instance.fetchReports(user.id);
+      NgoReportsService.instance.fetchReports(user.id);
 
       // ----------------------------------------------------------
       // Load camera feeds
       // ----------------------------------------------------------
 
       final feedsFuture =
-          NgoCameraService.instance.fetchFeeds(user.id);
+      NgoCameraService.instance.fetchFeeds(user.id);
 
       // ----------------------------------------------------------
       // Load NGO / Institute name
       // ----------------------------------------------------------
 
       final organizationFuture =
-          NgoInstituteService.instance.fetchOrganizationName(
+      NgoInstituteService.instance.fetchOrganizationName(
         user.id,
       );
 
@@ -176,8 +176,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
         final isToday =
             recordDate.year == todayYear &&
-            recordDate.month == todayMonth &&
-            recordDate.day == todayDay;
+                recordDate.month == todayMonth &&
+                recordDate.day == todayDay;
 
         if (!isToday) {
           continue;
@@ -205,8 +205,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
         final isToday =
             reportDate.year == todayYear &&
-            reportDate.month == todayMonth &&
-            reportDate.day == todayDay;
+                reportDate.month == todayMonth &&
+                reportDate.day == todayDay;
 
         if (isToday) {
           todayReports++;
@@ -402,9 +402,9 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   Widget _buildTopHeader() {
     final organizationName =
-        _organizationName?.trim().isNotEmpty == true
-            ? _organizationName!.trim()
-            : 'NGO / Institute';
+    _organizationName?.trim().isNotEmpty == true
+        ? _organizationName!.trim()
+        : 'NGO / Institute';
 
     return Container(
       width: double.infinity,
@@ -442,10 +442,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _getGreeting(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -484,13 +487,23 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // GOVERNMENT BANNER
+  //
+  // Was `Container(height: 82, ...)` around three text columns.
+  // A fixed pixel height with fixed-size text is exactly the
+  // pattern that overflows once the device's system font scale is
+  // larger than the emulator's default 1.0x. `height:` is now a
+  // `minHeight` constraint (so the banner keeps its normal size in
+  // the common case) and `IntrinsicHeight` sizes the row to
+  // whichever of the three columns actually needs the most room, so
+  // all three grow together instead of clipping.
   // ============================================================
 
   Widget _buildGovernmentBanner() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Container(
-        height: 82,
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 82),
         padding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 10,
@@ -509,103 +522,129 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            const Expanded(
-              flex: 6,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Let's build a stronger,",
-                    style: TextStyle(
-                      color: navy,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    "more inclusive society",
-                    style: TextStyle(
-                      color: navy,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              flex: 4,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(
-                    bottom: 11,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: const Color(0xFFFFC66D),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 6,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "Let's build a stronger,",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 6,
-                    left: 18,
-                    right: 4,
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: const Color(0xFF54B96B),
+                    Text(
+                      "more inclusive society",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            const Expanded(
-              flex: 4,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Government',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
+              Expanded(
+                flex: 4,
+                child: Center(
+                  // The decorative underline bars are graphics, not
+                  // text, so a small fixed height for just this
+                  // element is safe — it doesn't grow with font
+                  // scale and doesn't need to.
+                  child: SizedBox(
+                    height: 34,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned(
+                          bottom: 11,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              borderRadius:
+                              BorderRadius.circular(10),
+                              color: const Color(0xFFFFC66D),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 6,
+                          left: 18,
+                          right: 4,
+                          child: Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              borderRadius:
+                              BorderRadius.circular(10),
+                              color: const Color(0xFF54B96B),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    'for a Brighter',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'Tomorrow',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              Expanded(
+                flex: 4,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Text(
+                      'Government',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'for a Brighter',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Tomorrow',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -613,6 +652,12 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // TOTAL STATUS
+  //
+  // Was `SizedBox(height: 108, child: Row(...))`. `IntrinsicHeight`
+  // replaces it: it still gives the Row the bounded height it needs
+  // to lay out inside a ListView, but that height comes from
+  // whichever status card actually needs the most space, instead of
+  // a number picked for one font scale.
   // ============================================================
 
   Widget _buildTotalStatus() {
@@ -625,10 +670,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(height: 12),
 
-          // Explicit height prevents the Row from receiving
-          // infinite vertical constraints inside the ListView.
-          SizedBox(
-            height: 108,
+          IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -638,7 +680,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     iconColor: green,
                     title: 'Attendance',
                     bottomText:
-                        '$_totalAttendance Submitted',
+                    '$_totalAttendance Submitted',
                     bottomColor: green,
                     showCheck: _totalAttendance > 0,
                     onTap: _openAttendance,
@@ -653,7 +695,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     iconColor: darkBlue,
                     title: 'Reports',
                     bottomText:
-                        '$_totalReports Submitted',
+                    '$_totalReports Submitted',
                     bottomColor: green,
                     showCheck: _totalReports > 0,
                     onTap: _openReports,
@@ -701,7 +743,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(9),
         child: Container(
-          height: 108,
+          // minHeight instead of a locked height: keeps the usual
+          // 108px card in the common case but lets it grow if a
+          // larger system font scale needs more room.
+          constraints: const BoxConstraints(minHeight: 108),
           padding: const EdgeInsets.symmetric(
             horizontal: 7,
             vertical: 10,
@@ -788,6 +833,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // TODAY'S OVERVIEW
+  //
+  // Same fix as Total Status: `SizedBox(height: 105, ...)` replaced
+  // with `IntrinsicHeight` so the row's height comes from its
+  // tallest card rather than a hardcoded number.
   // ============================================================
 
   Widget _buildTodayOverview() {
@@ -810,12 +859,16 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 color: Colors.grey,
               ),
               const SizedBox(width: 4),
-              Text(
-                _todayLabel(),
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  _todayLabel(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -823,10 +876,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(height: 12),
 
-          // Explicit height prevents infinite-height Row
-          // constraints on Flutter Web.
-          SizedBox(
-            height: 105,
+          IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -870,6 +920,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // OVERVIEW CARD
+  //
+  // The big number can grow (large headcounts) and the label was
+  // relying on an embedded '\n' for its two lines with no maxLines
+  // safety net — both are exactly the kind of dynamic content that
+  // fits fine at 1.0x font scale and overflows above it. The number
+  // now shrinks via FittedBox instead of overflowing, and the label
+  // is capped at 2 lines with ellipsis as a backstop.
   // ============================================================
 
   Widget _buildOverviewCard({
@@ -879,7 +936,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     required String label,
   }) {
     return Container(
-      height: 105,
+      constraints: const BoxConstraints(minHeight: 105),
       padding: const EdgeInsets.fromLTRB(
         10,
         10,
@@ -901,6 +958,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
@@ -911,24 +969,35 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(height: 5),
 
-          Text(
-            number,
-            style: const TextStyle(
-              color: navy,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                number,
+                maxLines: 1,
+                style: const TextStyle(
+                  color: navy,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
 
           const SizedBox(height: 1),
 
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 9,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 9,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -938,6 +1007,9 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // QUICK STATUS
+  //
+  // Both rows had `SizedBox(height: 86, ...)`; replaced with
+  // `IntrinsicHeight` for the same reason as the sections above.
   // ============================================================
 
   Widget _buildQuickStatus() {
@@ -950,9 +1022,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(height: 12),
 
-          // Explicit height for the first Quick Status row.
-          SizedBox(
-            height: 86,
+          IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -979,9 +1049,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(height: 10),
 
-          // Explicit height for the second Quick Status row.
-          SizedBox(
-            height: 86,
+          IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -993,7 +1061,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) =>
-                              const CallHistoryScreen(),
+                          const CallHistoryScreen(),
                         ),
                       );
                     },
@@ -1029,7 +1097,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(9),
         child: Container(
-          height: 86,
+          constraints: const BoxConstraints(minHeight: 86),
           decoration: BoxDecoration(
             color: cardBackground,
             borderRadius: BorderRadius.circular(9),
@@ -1055,13 +1123,20 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
               const SizedBox(height: 8),
 
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: navy,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                ),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -1078,6 +1153,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         color: navy,
         fontSize: 15,

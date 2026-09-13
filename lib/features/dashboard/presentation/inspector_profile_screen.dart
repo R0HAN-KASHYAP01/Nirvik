@@ -18,7 +18,16 @@ class InspectorProfileScreen extends StatefulWidget {
       _InspectorProfileScreenState();
 }
 
-class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
+class _InspectorProfileScreenState
+    extends State<InspectorProfileScreen> {
+  static const Color _navy = Color(0xFF123E68);
+  static const Color _background = Color(0xFFEAF2F8);
+  static const Color _cardBackground = Color(0xFFE1ECF3);
+  static const Color _softBlue = Color(0xFFD7E5EE);
+  static const Color _textDark = Color(0xFF17324D);
+  static const Color _textGrey = Color(0xFF667788);
+  static const Color _border = Color(0xFFD1DEE7);
+
   bool _loadingProfile = true;
   String? _loadError;
   InspectorProfileData? _profile;
@@ -218,7 +227,10 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          softWrap: true,
+        ),
         backgroundColor: AppColors.error,
       ),
     );
@@ -229,7 +241,10 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          softWrap: true,
+        ),
         backgroundColor: AppColors.success,
       ),
     );
@@ -238,9 +253,17 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF1F6),
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('My Profile'),
+        backgroundColor: _background,
+        foregroundColor: _navy,
+        elevation: 0,
+        title: const Text(
+          'My Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
       body: SafeArea(
         child: _buildBody(),
@@ -257,31 +280,51 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
 
     if (_loadError != null || _profile == null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 40,
-                color: AppColors.error,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Card(
+            color: _cardBackground,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(
+                color: _border,
               ),
-              const SizedBox(height: 12),
-              Text(
-                _loadError ?? 'Something went wrong.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 40,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _loadError ?? 'Something went wrong.',
+                    textAlign: TextAlign.center,
+                    softWrap: true,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: _textGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    onPressed: _loadProfile,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _navy,
+                      side: const BorderSide(
+                        color: _navy,
+                      ),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: _loadProfile,
-                child: const Text('Retry'),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -290,7 +333,12 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
     final profile = _profile!;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -304,61 +352,89 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
     );
   }
 
-  Widget _buildProfileCard(InspectorProfileData profile) {
+  Widget _buildProfileCard(
+    InspectorProfileData profile,
+  ) {
     final email =
         Supabase.instance.client.auth.currentUser?.email ?? '—';
 
     return Card(
-      color: Colors.white,
+      color: _cardBackground,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(
+          color: _border,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Color(0xFF123E68),
-                  child: Icon(
-                    Icons.badge_outlined,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.fullName,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF17324D),
-                        ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const CircleAvatar(
+                      radius: 28,
+                      backgroundColor: _navy,
+                      child: Icon(
+                        Icons.badge_outlined,
+                        color: Colors.white,
+                        size: 28,
                       ),
-                      const SizedBox(height: 4),
-                      StatusBadge(
-                        label: _statusLabel(profile.status),
-                        color: _statusColor(profile.status),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile.fullName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: _textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              StatusBadge(
+                                label:
+                                    _statusLabel(profile.status),
+                                color:
+                                    _statusColor(profile.status),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
+
             const Divider(
               height: 28,
-              color: Color(0xFFD3E0E8),
+              color: _border,
             ),
+
             _InfoRow(
               icon: Icons.email_outlined,
               label: 'Email',
               value: email,
             ),
+
             if (profile.phone != null &&
                 profile.phone!.trim().isNotEmpty)
               _InfoRow(
@@ -366,11 +442,13 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                 label: 'Phone',
                 value: profile.phone!,
               ),
+
             _InfoRow(
               icon: Icons.apartment_outlined,
               label: 'Department',
               value: profile.department,
             ),
+
             if (profile.designation != null &&
                 profile.designation!.trim().isNotEmpty)
               _InfoRow(
@@ -378,6 +456,7 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                 label: 'Designation',
                 value: profile.designation!,
               ),
+
             _InfoRow(
               icon: Icons.calendar_today_outlined,
               label: 'Joined',
@@ -389,9 +468,18 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
     );
   }
 
-  Widget _buildLocationCard(InspectorProfileData profile) {
+  Widget _buildLocationCard(
+    InspectorProfileData profile,
+  ) {
     return Card(
-      color: Colors.white,
+      color: _cardBackground,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(
+          color: _border,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -402,17 +490,21 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF17324D),
+                color: _textDark,
               ),
             ),
+
             const SizedBox(height: 12),
+
             if (profile.hasLocation) ...[
               _InfoRow(
                 icon: Icons.my_location,
                 label: 'Coordinates',
                 value:
-                    '${profile.latitude!.toStringAsFixed(5)}, ${profile.longitude!.toStringAsFixed(5)}',
+                    '${profile.latitude!.toStringAsFixed(5)}, '
+                    '${profile.longitude!.toStringAsFixed(5)}',
               ),
+
               if (profile.locationUpdatedAt != null)
                 _InfoRow(
                   icon: Icons.update,
@@ -423,36 +515,54 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
             ] else
               const Text(
                 'Your current location has not been detected yet.',
+                softWrap: true,
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary,
+                  color: _textGrey,
                 ),
               ),
+
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed:
-                  _detectingLocation ? null : _detectLocation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF31588C),
-                foregroundColor: Colors.white,
-              ),
-              icon: _detectingLocation
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _detectingLocation
+                    ? null
+                    : _detectLocation,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _navy,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      _navy.withValues(alpha: 0.55),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: _detectingLocation
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.gps_fixed,
+                        size: 18,
                       ),
-                    )
-                  : const Icon(
-                      Icons.gps_fixed,
-                      size: 18,
-                    ),
-              label: Text(
-                _detectingLocation
-                    ? 'Detecting location...'
-                    : 'Detect My Current Location',
+                label: Text(
+                  _detectingLocation
+                      ? 'Detecting location...'
+                      : 'Detect My Current Location',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ],
@@ -466,7 +576,14 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
         Supabase.instance.client.auth.currentUser?.email ?? '—';
 
     return Card(
-      color: Colors.white,
+      color: _cardBackground,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(
+          color: _border,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -477,21 +594,25 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF17324D),
+                color: _textDark,
               ),
             ),
+
             const SizedBox(height: 12),
+
             _InfoRow(
               icon: Icons.alternate_email,
               label: 'Signed in as',
               value: email,
             ),
+
             const SizedBox(height: 12),
 
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: _signingOut ? null : _signOut,
+                onPressed:
+                    _signingOut ? null : _signOut,
                 icon: _signingOut
                     ? const SizedBox(
                         width: 18,
@@ -518,6 +639,12 @@ class _InspectorProfileScreenState extends State<InspectorProfileScreen> {
                   foregroundColor: AppColors.error,
                   side: const BorderSide(
                     color: AppColors.error,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
@@ -567,26 +694,36 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 0),
           Icon(
             icon,
             size: 18,
             color: AppColors.textSecondary,
           ),
+
           const SizedBox(width: 10),
+
           SizedBox(
-            width: 100,
+            width: 92,
             child: Text(
               label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              softWrap: true,
               style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
               ),
             ),
           ),
+
+          const SizedBox(width: 8),
+
           Expanded(
             child: Text(
               value,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              softWrap: true,
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textPrimary,

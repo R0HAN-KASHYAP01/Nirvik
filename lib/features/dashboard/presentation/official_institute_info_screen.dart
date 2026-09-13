@@ -5,8 +5,9 @@ import '../../../core/widgets/status_badge.dart';
 import '../../../models/assignment.dart';
 
 /// Basic, read-only information about an institute's scheduled inspection,
-/// shown to the Official role. Intentionally has no "Start Inspection"
-/// action — officials review institutes, they don't perform inspections.
+/// shown to the Official role.
+///
+/// Officials can review institute information but do not perform inspections.
 class OfficialInstituteInfoScreen extends StatelessWidget {
   final AssignmentSummary assignment;
 
@@ -15,38 +16,45 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
     required this.assignment,
   });
 
-  // Government Digital India theme
+  // ---------------------------------------------------------------------------
+  // Theme
+  // ---------------------------------------------------------------------------
+
   static const Color _navy = Color(0xFF123E68);
-  static const Color _background = Color(0xFFEAF1F6);
+  static const Color _primaryBlue = Color(0xFF14568A);
+
+  static const Color _background = Color(0xFFEAF2F8);
   static const Color _cardBackground = Color(0xFFE1ECF3);
+  static const Color _borderColor = Color(0xFFD1DEE7);
+
   static const Color _textDark = Color(0xFF17324D);
   static const Color _textGrey = Color(0xFF667788);
-  static const Color _border = Color(0xFFD1DEE7);
-  static const Color _green = Color(0xFF168A45);
-  static const Color _saffron = Color(0xFFE88A18);
-  static const Color _red = Color(0xFFD64545);
+
+  // ---------------------------------------------------------------------------
+  // Status / Priority
+  // ---------------------------------------------------------------------------
 
   Color _statusColor(AssignmentStatus status) {
     switch (status) {
       case AssignmentStatus.assigned:
-        return _navy;
+        return Colors.blueGrey;
       case AssignmentStatus.inProgress:
         return Colors.indigo;
-      case AssignmentStatus.completed:
-        return _green;
       case AssignmentStatus.expired:
-        return Colors.grey;
+        return Colors.red;
+      case AssignmentStatus.completed:
+        return Colors.green;
     }
   }
 
   Color _priorityColor(Priority priority) {
     switch (priority) {
       case Priority.low:
-        return _green;
+        return Colors.green;
       case Priority.medium:
-        return _saffron;
+        return Colors.orange;
       case Priority.high:
-        return _red;
+        return Colors.red;
     }
   }
 
@@ -59,6 +67,10 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
         '$hour:$minute $period';
   }
 
+  // ---------------------------------------------------------------------------
+  // Info Row
+  // ---------------------------------------------------------------------------
+
   Widget _infoRow(
     IconData icon,
     String label,
@@ -69,10 +81,21 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 18,
-            color: _navy,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: _borderColor,
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 17,
+              color: _navy,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -81,17 +104,21 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     color: _textGrey,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   value,
+                  softWrap: true,
                   style: const TextStyle(
                     fontSize: 14,
+                    height: 1.35,
                     fontWeight: FontWeight.w600,
                     color: _textDark,
                   ),
@@ -104,74 +131,160 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Responsive Header
+  // ---------------------------------------------------------------------------
+
+  Widget _buildInstituteHeader(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmall = constraints.maxWidth < 350;
+
+        if (isSmall) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                assignment.instituteName,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                  color: _textDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+              StatusBadge(
+                label: assignment.status.label,
+                color: _statusColor(assignment.status),
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                assignment.instituteName,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                  color: _textDark,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: StatusBadge(
+                  label: assignment.status.label,
+                  color: _statusColor(assignment.status),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
+    final hasInspectorDetails =
+        (assignment.inspectorDesignation != null &&
+                assignment.inspectorDesignation!.isNotEmpty) ||
+            (assignment.inspectorDepartment != null &&
+                assignment.inspectorDepartment!.isNotEmpty);
+
+    final inspectorDetails = [
+      assignment.inspectorDesignation,
+      assignment.inspectorDepartment,
+    ].where((value) => value != null && value.isNotEmpty).join(' · ');
+
     return Scaffold(
       backgroundColor: _background,
+
+      // -----------------------------------------------------------------------
+      // App Bar
+      // -----------------------------------------------------------------------
       appBar: AppBar(
-        title: const Text(
-          'Institute Information',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
         backgroundColor: _navy,
         foregroundColor: Colors.white,
         elevation: 0,
+        titleSpacing: 16,
+        title: const Text(
+          'Institute Information',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-          AppCard(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _cardBackground,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: _border,
-                ),
-              ),
+
+      // -----------------------------------------------------------------------
+      // Body
+      // -----------------------------------------------------------------------
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            28,
+          ),
+          children: [
+            // =================================================================
+            // Institute Information Card
+            // =================================================================
+            AppCard(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          assignment.displayName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: _textDark,
-                          ),
-                        ),
-                      ),
-                      StatusBadge(
-                        label: assignment.status.label,
-                        color: _statusColor(assignment.status),
-                      ),
-                    ],
+                  _buildInstituteHeader(context),
+
+                  const SizedBox(height: 10),
+
+                  // Priority badge
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: StatusBadge(
+                      label: '${assignment.priority.label} priority',
+                      color: _priorityColor(assignment.priority),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  StatusBadge(
-                    label: '${assignment.priority.label} priority',
-                    color: _priorityColor(assignment.priority),
-                  ),
+
                   const SizedBox(height: 20),
+
+                  // Location
                   _infoRow(
                     Icons.location_on_outlined,
                     'Location',
-                    assignment.displayLocation,
+                    assignment.fullAddress,
                   ),
+
+                  // Scheduled date
                   _infoRow(
                     Icons.calendar_today_outlined,
                     'Scheduled Date & Time',
-                    _formatDateTime(assignment.scheduledDateTime),
+                    _formatDateTime(
+                      assignment.scheduledDateTime,
+                    ),
                   ),
+
+                  // Coordinates
                   if (assignment.instituteLatitude != null &&
                       assignment.instituteLongitude != null)
                     _infoRow(
@@ -183,8 +296,114 @@ class OfficialInstituteInfoScreen extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 16),
+
+            // =================================================================
+            // Inspector Information Card
+            // =================================================================
+            AppCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _borderColor,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.person_outline,
+                          size: 19,
+                          color: _primaryBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Assigned PMU Inspector',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.25,
+                            fontWeight: FontWeight.w700,
+                            color: _textDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // Inspector name
+                  _infoRow(
+                    Icons.person_outline,
+                    'Inspector Name',
+                    assignment.inspectorName ??
+                        'No inspector assigned',
+                  ),
+
+                  // Inspector designation / department
+                  if (hasInspectorDetails)
+                    _infoRow(
+                      Icons.badge_outlined,
+                      'Designation / Department',
+                      inspectorDetails,
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            // =================================================================
+            // Read-only information note
+            // =================================================================
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _borderColor,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: _primaryBlue,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'This is a read-only institute information view for '
+                      'Officials.',
+                      softWrap: true,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        color: _textGrey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

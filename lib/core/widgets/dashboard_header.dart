@@ -39,6 +39,7 @@ class DashboardHeader extends StatelessWidget {
               Text(
                 userName,
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ],

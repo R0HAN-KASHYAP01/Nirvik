@@ -392,15 +392,26 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
                 Expanded(
                   child: Text(
                     title,
+                    // Title is free-text from an inspector's text field and
+                    // has no natural length limit; cap it so it can't push
+                    // the card into an unexpectedly tall, overflow-prone
+                    // shape.
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                StatusBadge(
-                  label: severity.toUpperCase(),
-                  color: _severityColor(severity),
+                // Flexible so the badge can compress rather than overflow
+                // the row if the title's ellipsis still leaves too little
+                // width (narrow screens / large font scale).
+                Flexible(
+                  child: StatusBadge(
+                    label: severity.toUpperCase(),
+                    color: _severityColor(severity),
+                  ),
                 ),
               ],
             ),

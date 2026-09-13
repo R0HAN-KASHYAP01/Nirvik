@@ -23,6 +23,7 @@ class QuickActionCard extends StatelessWidget {
       child: AppCard(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: primary, size: 26),
             const SizedBox(height: 8),

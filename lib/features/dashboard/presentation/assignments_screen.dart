@@ -148,30 +148,58 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     final filters = <AssignmentStatus?>[
       null,
       AssignmentStatus.assigned,
-      AssignmentStatus.inProgress,
       AssignmentStatus.completed,
       AssignmentStatus.expired,
     ];
 
+    final isTodaySelected = _selectedFilter == 'today';
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: filters.map((status) {
-          final selected = _selectedStatus == status;
-
-          return Padding(
+        children: [
+          // "Today" is a date-based filter (assignments scheduled for the
+          // current day), not a status, so it drives _selectedFilter --
+          // which _filteredAssignments already knows how to apply -- rather
+          // than _selectedStatus. Picking it clears the active status chip
+          // so only one filter reads as selected at a time.
+          Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              label: Text(_statusFilterLabel(status)),
-              selected: selected,
-              onSelected: (_) {
+              label: const Text('Today'),
+              selected: isTodaySelected,
+              onSelected: (selected) {
                 setState(() {
-                  _selectedStatus = status;
+                  _selectedFilter = selected ? 'today' : null;
+                  _selectedStatus = null;
                 });
               },
             ),
-          );
-        }).toList(),
+          ),
+          ...filters.map((status) {
+            // "All" (status == null) must only show as selected when
+            // neither a status nor "Today" is active -- otherwise it would
+            // incorrectly light up whenever "Today" is picked, since both
+            // states share a null _selectedStatus.
+            final selected = status == null
+                ? (_selectedStatus == null && !isTodaySelected)
+                : _selectedStatus == status;
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(_statusFilterLabel(status)),
+                selected: selected,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedStatus = status;
+                    _selectedFilter = null;
+                  });
+                },
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -205,9 +233,11 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                       ),
                     ),
                   ),
-                  StatusBadge(
-                    label: assignment.status.label,
-                    color: _statusColor(assignment.status),
+                  Flexible(
+                    child: StatusBadge(
+                      label: assignment.status.label,
+                      color: _statusColor(assignment.status),
+                    ),
                   ),
                 ],
               ),
@@ -254,9 +284,14 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  StatusBadge(
-                    label: '${assignment.priority.label} priority',
-                    color: _priorityColor(assignment.priority),
+                  // Flexible: the badge shrinks instead of overflowing the
+                  // row when its label + system font scale takes up more
+                  // width than a fixed-size widget would allow.
+                  Flexible(
+                    child: StatusBadge(
+                      label: '${assignment.priority.label} priority',
+                      color: _priorityColor(assignment.priority),
+                    ),
                   ),
                   const Spacer(),
                   const Icon(
@@ -282,7 +317,14 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     return 'Assignments';
   }
 
-  Widget _buildBody() {
+  // Content BELOW the header/filter bar only: loading, error, empty, or the
+  // list. The header and filter bar themselves are built once in build()
+  // and stay on screen across every one of these states -- previously they
+  // lived inside this method's "has results" branch only, so switching to
+  // a filter with zero matches (e.g. "Today" with no assignments scheduled)
+  // dropped the chips entirely and made the screen look like a different
+  // page instead of just showing an empty result for the same page.
+  Widget _buildContent() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -346,26 +388,45 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       onRefresh: _loadAssignments,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-          SectionHeader(
-            title: _screenTitle,
-            actionLabel: '${assignments.length} found',
-          ),
-          const SizedBox(height: 12),
-          _buildFilterBar(),
-          const SizedBox(height: 16),
-          ...assignments.map(_buildAssignmentCard),
-        ],
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        children: assignments.map(_buildAssignmentCard).toList(),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasCount = !_isLoading && _errorMessage == null;
+
     return Scaffold(
       appBar: AppBar(title: Text(_screenTitle)),
-      body: _buildBody(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header + filter bar now live directly in build(), outside of
+            // _buildContent(), so they stay visible for every state
+            // (loading / error / empty / populated) instead of only when
+            // the current filter happens to return results.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader(
+                    title: _screenTitle,
+                    actionLabel:
+                        hasCount ? '${_filteredAssignments.length} found' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFilterBar(),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            Expanded(child: _buildContent()),
+          ],
+        ),
+      ),
     );
   }
 }

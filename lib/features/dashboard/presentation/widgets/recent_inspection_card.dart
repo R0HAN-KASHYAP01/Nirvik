@@ -66,7 +66,9 @@ class RecentInspectionCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      StatusBadge(label: inspection.status.label, color: _statusColor),
+                      Flexible(
+                        child: StatusBadge(label: inspection.status.label, color: _statusColor),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -79,9 +81,24 @@ class RecentInspectionCard extends StatelessWidget {
                     children: [
                       const Icon(Icons.access_time, size: 14, color: Colors.black38),
                       const SizedBox(width: 4),
-                      Text(_formatTime(inspection.dateTime), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      // Flexible + ellipsis: lets the time text shrink
+                      // instead of overflowing when combined with the risk
+                      // badge below exceeds the available row width (narrow
+                      // screens / large system font scale).
+                      Flexible(
+                        child: Text(
+                          _formatTime(inspection.dateTime),
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       const Spacer(),
-                      StatusBadge(label: '${inspection.risk.label} risk', color: _riskColor),
+                      // Flexible so the badge can compress rather than push
+                      // the row past its bounds.
+                      Flexible(
+                        child: StatusBadge(label: '${inspection.risk.label} risk', color: _riskColor),
+                      ),
                     ],
                   ),
                 ],

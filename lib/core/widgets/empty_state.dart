@@ -18,6 +18,7 @@ class EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 40, color: Colors.black26),
             const SizedBox(height: 12),

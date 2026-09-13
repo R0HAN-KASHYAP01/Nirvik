@@ -99,14 +99,27 @@ class AssignmentCard extends StatelessWidget {
               children: [
                 const Icon(Icons.access_time, size: 14, color: Colors.black38),
                 const SizedBox(width: 4),
-                Text(
-                  _formatTime(assignment.scheduledDateTime),
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                // Flexible (not a bare Text) so the time string can shrink
+                // instead of forcing a horizontal RenderFlex overflow when
+                // the priority badge next to it also needs room -- this is
+                // the "two fixed-size siblings + Spacer" pattern that
+                // overflows on narrow screens / large system font scale.
+                Flexible(
+                  child: Text(
+                    _formatTime(assignment.scheduledDateTime),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const Spacer(),
-                StatusBadge(
-                  label: '${assignment.priority.label} priority',
-                  color: _priorityColor,
+                // Flexible so the badge can also give up space if the row
+                // gets tight, rather than pushing the row past its bounds.
+                Flexible(
+                  child: StatusBadge(
+                    label: '${assignment.priority.label} priority',
+                    color: _priorityColor,
+                  ),
                 ),
               ],
             ),

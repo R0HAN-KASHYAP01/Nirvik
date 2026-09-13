@@ -11,6 +11,7 @@ class LoadingState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(
               width: 22,

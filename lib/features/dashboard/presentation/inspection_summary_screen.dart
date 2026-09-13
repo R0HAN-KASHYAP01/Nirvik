@@ -497,9 +497,19 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
-          Text(
-            '${_evidence.length}',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          // Flexible + FittedBox: the count is an unbounded number (could
+          // in theory grow to several digits) sitting next to an Expanded
+          // sibling that already claims the rest of the row, so this is the
+          // "growing number with no shrink behavior" overflow pattern.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                '${_evidence.length}',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
         ],
       ),
@@ -521,11 +531,18 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
-              Text(
-                '${_findings.length}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+              // Same growing-number risk as the evidence count above.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${_findings.length}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -593,19 +610,29 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                 children: [
                   Text(
                     title,
+                    // Free-text finding title has no length limit; cap it
+                    // so a long one can't blow up this preview card.
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     category,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ],
               ),
             ),
-            StatusBadge(
-              label: severity.toUpperCase(),
-              color: _riskColor(severity),
+            // Flexible so the badge can compress rather than overflow the
+            // row on narrow screens / large font scale.
+            Flexible(
+              child: StatusBadge(
+                label: severity.toUpperCase(),
+                color: _riskColor(severity),
+              ),
             ),
           ],
         ),
@@ -691,20 +718,34 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
+        // Never demand more height than the icon/number/label actually
+        // need -- avoids this tile being stretched or clipped when the
+        // three tiles in a row end up with mismatched intrinsic heights.
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 20, color: color),
           const SizedBox(height: 6),
-          Text(
-            '$value',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: color,
+          // FittedBox lets the count shrink instead of overflowing this
+          // narrow (1-of-3) tile if the value ever reaches multiple digits
+          // or the system font scale is increased.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '$value',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 11, color: Colors.black54),
           ),
         ],

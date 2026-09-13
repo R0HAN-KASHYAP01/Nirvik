@@ -34,9 +34,19 @@ class SummaryStatCard extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 6),
-            Text(
-              count,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            // FittedBox: this card is typically placed as one of 3 equal
+            // Expanded siblings in a Row (see InspectorHomeScreen), so its
+            // width is narrow and fixed. The count string has no natural
+            // length limit (loading placeholder, single digit, or a large
+            // number), so let it scale down instead of overflowing rather
+            // than relying on the number always being short.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                count,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 2),
             Text(

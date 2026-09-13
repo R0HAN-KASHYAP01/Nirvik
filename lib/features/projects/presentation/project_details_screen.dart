@@ -35,11 +35,11 @@ class ProjectDetailsScreen extends StatelessWidget {
   }
 
   Widget _infoRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
+      BuildContext context,
+      IconData icon,
+      String label,
+      String value,
+      ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -53,6 +53,7 @@ class ProjectDetailsScreen extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -74,11 +75,11 @@ class ProjectDetailsScreen extends StatelessWidget {
   }
 
   Widget _statTile(
-    BuildContext context,
-    String label,
-    String value, {
-    Color? color,
-  }) {
+      BuildContext context,
+      String label,
+      String value, {
+        Color? color,
+      }) {
     return Container(
       constraints: const BoxConstraints(
         minHeight: 72,
@@ -88,28 +89,33 @@ class ProjectDetailsScreen extends StatelessWidget {
         vertical: 8,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(
-                    color: color ?? AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(
+                  color: color ?? AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
         ],
       ),
@@ -117,8 +123,8 @@ class ProjectDetailsScreen extends StatelessWidget {
   }
 
   void _openRiskIntelligence(
-    BuildContext context,
-  ) {
+      BuildContext context,
+      ) {
     if (project.profileId == null ||
         project.profileId!.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,6 +172,7 @@ class ProjectDetailsScreen extends StatelessWidget {
 
         Expanded(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -205,6 +212,27 @@ class ProjectDetailsScreen extends StatelessWidget {
     );
   }
 
+  /// Computes a stat-tile row height that adapts to the available width
+  /// AND the device's system font-scale setting, instead of relying on a
+  /// single fixed [childAspectRatio]. A static ratio can look fine on an
+  /// emulator (default 1.0x text scale) yet overflow on a real device
+  /// where the user has increased their system font size, because the
+  /// label text wraps to a second line inside a height that was computed
+  /// for one line only.
+  double _statTileExtent(BuildContext context, {required bool isNarrow}) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+
+    // Base height assumes: padding + one line of the (FittedBox'd) value
+    // + spacing + up to two lines of label, at a 1.0x text scale.
+    final baseHeight = isNarrow ? 92.0 : 100.0;
+
+    final scaledHeight = baseHeight * textScale.clamp(1.0, 1.6);
+
+    // Clamp so the tile never collapses below a usable tap target, and
+    // never grows absurdly tall on extreme accessibility font sizes.
+    return scaledHeight.clamp(76.0, 170.0);
+  }
+
   Widget _buildInspectionSummary(BuildContext context) {
     return AppCard(
       child: LayoutBuilder(
@@ -215,76 +243,56 @@ class ProjectDetailsScreen extends StatelessWidget {
            */
           final isNarrow = constraints.maxWidth < 430;
 
+          final tiles = [
+            _statTile(
+              context,
+              'Total',
+              '${project.totalInspections}',
+            ),
+            _statTile(
+              context,
+              'Completed',
+              '${project.completedInspections}',
+              color: AppColors.success,
+            ),
+            _statTile(
+              context,
+              'Pending',
+              '${project.pendingInspections}',
+              color: AppColors.warning,
+            ),
+            _statTile(
+              context,
+              'High-Risk',
+              '${project.highRiskFindings}',
+              color: AppColors.error,
+            ),
+          ];
+
           if (isNarrow) {
-            return GridView.count(
-              crossAxisCount: 2,
+            return GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              childAspectRatio: 1.65,
-              children: [
-                _statTile(
-                  context,
-                  'Total',
-                  '${project.totalInspections}',
-                ),
-                _statTile(
-                  context,
-                  'Completed',
-                  '${project.completedInspections}',
-                  color: AppColors.success,
-                ),
-                _statTile(
-                  context,
-                  'Pending',
-                  '${project.pendingInspections}',
-                  color: AppColors.warning,
-                ),
-                _statTile(
-                  context,
-                  'High-Risk',
-                  '${project.highRiskFindings}',
-                  color: AppColors.error,
-                ),
-              ],
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                // Dynamically calculated instead of a static
+                // childAspectRatio, so the row grows with font scale.
+                mainAxisExtent: _statTileExtent(context, isNarrow: true),
+              ),
+              children: tiles,
             );
           }
 
-          return Row(
-            children: [
-              Expanded(
-                child: _statTile(
-                  context,
-                  'Total',
-                  '${project.totalInspections}',
-                ),
-              ),
-              Expanded(
-                child: _statTile(
-                  context,
-                  'Completed',
-                  '${project.completedInspections}',
-                  color: AppColors.success,
-                ),
-              ),
-              Expanded(
-                child: _statTile(
-                  context,
-                  'Pending',
-                  '${project.pendingInspections}',
-                  color: AppColors.warning,
-                ),
-              ),
-              Expanded(
-                child: _statTile(
-                  context,
-                  'High-Risk',
-                  '${project.highRiskFindings}',
-                  color: AppColors.error,
-                ),
-              ),
-            ],
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final tile in tiles)
+                  Expanded(child: tile),
+              ],
+            ),
           );
         },
       ),
@@ -310,7 +318,7 @@ class ProjectDetailsScreen extends StatelessWidget {
             24,
           ),
           keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
+          ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
             _buildHeader(context),
 
@@ -324,6 +332,7 @@ class ProjectDetailsScreen extends StatelessWidget {
 
             AppCard(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _infoRow(
                     context,
@@ -363,6 +372,7 @@ class ProjectDetailsScreen extends StatelessWidget {
 
             AppCard(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _infoRow(
                     context,
@@ -428,7 +438,7 @@ class ProjectDetailsScreen extends StatelessWidget {
             const SizedBox(height: 10),
 
             ...project.recentInspections.map(
-              (inspection) => Padding(
+                  (inspection) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: AppCard(
                   child: Row(
@@ -436,8 +446,9 @@ class ProjectDetailsScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          CrossAxisAlignment.start,
                           children: [
                             Text(
                               _formatDate(inspection.date),
@@ -499,6 +510,7 @@ class ProjectDetailsScreen extends StatelessWidget {
 
             AppCard(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -515,8 +527,8 @@ class ProjectDetailsScreen extends StatelessWidget {
                           project.riskLevel == RiskLevel.high
                               ? 'This project has active high-risk findings requiring review.'
                               : project.riskLevel == RiskLevel.medium
-                                  ? 'This project has moderate risk factors under monitoring.'
-                                  : 'This project currently has no significant risk factors.',
+                              ? 'This project has moderate risk factors under monitoring.'
+                              : 'This project currently has no significant risk factors.',
                           softWrap: true,
                           style: Theme.of(context)
                               .textTheme
@@ -532,7 +544,7 @@ class ProjectDetailsScreen extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton.icon(
                       onPressed: project.profileId == null ||
-                              project.profileId!.trim().isEmpty
+                          project.profileId!.trim().isEmpty
                           ? null
                           : () => _openRiskIntelligence(context),
                       icon: const Icon(

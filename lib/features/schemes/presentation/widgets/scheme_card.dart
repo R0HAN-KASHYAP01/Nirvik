@@ -50,6 +50,7 @@ class SchemeCard extends StatelessWidget {
 
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(

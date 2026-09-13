@@ -45,10 +45,17 @@ class InstituteDetailsScreen extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: Theme.of(context).textTheme.bodySmall),
-                Text(value, style: Theme.of(context).textTheme.bodyLarge),
+                Text(
+                  value,
+                  softWrap: true,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ],
             ),
           ),
@@ -83,11 +90,22 @@ class InstituteDetailsScreen extends StatelessWidget {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(institute.name, style: Theme.of(context).textTheme.headlineMedium),
+                      Text(
+                        institute.name,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                       const SizedBox(height: 2),
-                      Text(institute.id, style: Theme.of(context).textTheme.bodyMedium),
+                      Text(
+                        institute.id,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                       const SizedBox(height: 6),
                       InstituteStatusChip(status: institute.status),
                     ],
@@ -101,6 +119,7 @@ class InstituteDetailsScreen extends StatelessWidget {
             const SizedBox(height: 10),
             AppCard(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _infoRow(context, Icons.category_outlined, 'Category', institute.category),
                   _infoRow(context, Icons.place_outlined, 'Location', institute.location),
@@ -114,6 +133,7 @@ class InstituteDetailsScreen extends StatelessWidget {
             const SizedBox(height: 10),
             AppCard(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _infoRow(context, Icons.person_outline, 'Contact Person', institute.contactPerson),
                   _infoRow(context, Icons.call_outlined, 'Phone', institute.contactPhone),
@@ -127,6 +147,7 @@ class InstituteDetailsScreen extends StatelessWidget {
             const SizedBox(height: 10),
             AppCard(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _infoRow(context, Icons.account_balance_wallet_outlined, 'Allocated', _formatCurrency(institute.fundsAllocated)),
@@ -157,12 +178,14 @@ class InstituteDetailsScreen extends StatelessWidget {
               AppCard(
                 child: Text(
                   'No inspections have been recorded for this institute yet.',
+                  softWrap: true,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               )
             else
               AppCard(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _infoRow(context, Icons.event_outlined, 'Date & Time', _formatDateTime(lastInspection.dateTime)),
@@ -171,7 +194,11 @@ class InstituteDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text('Report Summary', style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: 4),
-                    Text(lastInspection.reportSummary, style: Theme.of(context).textTheme.bodyLarge),
+                    Text(
+                      lastInspection.reportSummary,
+                      softWrap: true,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
                   ],
                 ),
               ),

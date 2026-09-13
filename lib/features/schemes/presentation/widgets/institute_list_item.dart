@@ -44,17 +44,42 @@ class InstituteListItem extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(institute.name, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    institute.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 2),
-                  Text(institute.category, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    institute.category,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 6),
+                  // Row previously let a long address push past the card's
+                  // right edge (horizontal RenderFlex overflow) because the
+                  // Text had no Expanded/maxLines to bound or truncate it.
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.place_outlined, size: 13, color: AppColors.textSecondary),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.place_outlined, size: 13, color: AppColors.textSecondary),
+                      ),
                       const SizedBox(width: 4),
-                      Text(institute.location, style: Theme.of(context).textTheme.bodySmall),
+                      Expanded(
+                        child: Text(
+                          institute.location,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -62,6 +87,8 @@ class InstituteListItem extends StatelessWidget {
                     lastInspection == null
                         ? 'No inspections yet'
                         : 'Last Inspection: ${_formatDate(lastInspection.dateTime)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),
@@ -70,6 +97,7 @@ class InstituteListItem extends StatelessWidget {
               ),
             ),
             Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 CallButton(
                   calleeId: institute.id,

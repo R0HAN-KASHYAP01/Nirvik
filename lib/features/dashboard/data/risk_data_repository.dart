@@ -5,9 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///
 /// IMPORTANT:
 /// - This repository does NOT calculate risk.
-/// - Risk calculation is handled by Member 1's Risk Engine.
+/// - Risk calculation is handled by the Risk Engine.
 /// - ngo_institutes does NOT contain a risk_level column.
-/// - Historical inspection risk_level comes from pmu_inspection_submissions.
+/// - Historical inspection risk_level comes from
+///   pmu_inspection_submissions.
+/// - pmu_inspection_findings does NOT contain finding_type, so the
+///   repository does not request or depend on that column.
 class RiskDataRepository {
   final SupabaseClient _supabase;
 
@@ -32,11 +35,17 @@ class RiskDataRepository {
       );
     }
 
-    final assignments = await getProjectAssignments(instituteProfileId);
+    final assignments = await getProjectAssignments(
+      instituteProfileId,
+    );
 
-    final inspections = await getProjectInspectionHistory(instituteProfileId);
+    final inspections = await getProjectInspectionHistory(
+      instituteProfileId,
+    );
 
-    final findings = await getProjectFindings(instituteProfileId);
+    final findings = await getProjectFindings(
+      instituteProfileId,
+    );
 
     final aggregate = _buildProjectAggregate(
       project: project,
@@ -51,7 +60,10 @@ class RiskDataRepository {
     );
 
     return <String, dynamic>{
-      'project': <String, dynamic>{...project, 'aggregate': aggregate},
+      'project': <String, dynamic>{
+        ...project,
+        'aggregate': aggregate,
+      },
       'inspections': inspectionInputs,
     };
   }
@@ -106,7 +118,9 @@ class RiskDataRepository {
         .order('scheduled_datetime', ascending: false);
 
     return (response as List)
-        .map((row) => Map<String, dynamic>.from(row))
+        .map(
+          (row) => Map<String, dynamic>.from(row),
+        )
         .toList();
   }
 
@@ -134,12 +148,18 @@ class RiskDataRepository {
         .order('submitted_at', ascending: false);
 
     return (response as List)
-        .map((row) => Map<String, dynamic>.from(row))
+        .map(
+          (row) => Map<String, dynamic>.from(row),
+        )
         .toList();
   }
 
   /// Gets all findings belonging to the project's assignments.
-  Future<List<Map<String, dynamic>>> getProjectFindings(
+  ///
+  /// IMPORTANT:
+  /// The current pmu_inspection_findings table does not contain
+  /// `finding_type`, so it is intentionally NOT selected here.
+     Future<List<Map<String, dynamic>>> getProjectFindings(
     String instituteProfileId,
   ) async {
     final assignments = await _supabase
@@ -164,17 +184,17 @@ class RiskDataRepository {
           assignment_id,
           inspector_profile_id,
           institute_profile_id,
-          finding_type,
           severity,
           description,
-          evidence_url,
           created_at
         ''')
         .inFilter('assignment_id', assignmentIds)
         .order('created_at', ascending: false);
 
     return (response as List)
-        .map((row) => Map<String, dynamic>.from(row))
+        .map(
+          (row) => Map<String, dynamic>.from(row),
+        )
         .toList();
   }
 
@@ -194,7 +214,9 @@ class RiskDataRepository {
     final totalInspections = inspections.length;
 
     final completedInspections = inspections.where((inspection) {
-      final status = _normalizeInspectionStatus(inspection['overall_status']);
+      final status = _normalizeInspectionStatus(
+        inspection['overall_status'],
+      );
 
       return status == 'completed' ||
           status == 'approved' ||
@@ -202,27 +224,26 @@ class RiskDataRepository {
     }).length;
 
     final highRiskFindings = findings.where((finding) {
-      final severity = finding['severity']?.toString().toLowerCase().trim();
+      final severity = finding['severity']
+          ?.toString()
+          .toLowerCase()
+          .trim();
 
       return severity == 'high' ||
           severity == 'critical' ||
           severity == 'severe';
     }).length;
 
-    final openFindings = findings.where((finding) {
-      final status = finding['status']?.toString().toLowerCase().trim();
-
-      if (status == null || status.isEmpty) {
-        return true;
-      }
-
-      return status != 'resolved' &&
-          status != 'closed' &&
-          status != 'completed';
-    }).length;
+    // pmu_inspection_findings currently does not expose a finding
+    // status column in this repository, so findings are treated as
+    // open unless/until the database provides a status field.
+    final openFindings = findings.length;
 
     final pendingAssignments = assignments.where((assignment) {
-      final status = assignment['status']?.toString().toLowerCase().trim();
+      final status = assignment['status']
+          ?.toString()
+          .toLowerCase()
+          .trim();
 
       return status == 'assigned' ||
           status == 'in_progress' ||
@@ -230,7 +251,10 @@ class RiskDataRepository {
     }).length;
 
     final completedAssignments = assignments.where((assignment) {
-      final status = assignment['status']?.toString().toLowerCase().trim();
+      final status = assignment['status']
+          ?.toString()
+          .toLowerCase()
+          .trim();
 
       return status == 'completed';
     }).length;
@@ -256,63 +280,64 @@ class RiskDataRepository {
     required List<Map<String, dynamic>> findings,
   }) {
     return inspections.map((inspection) {
-      final assignmentId = inspection['assignment_id']?.toString();
+      final assignmentId =
+          inspection['assignment_id']?.toString();
 
       final inspectionFindings = findings.where((finding) {
-        return finding['assignment_id']?.toString() == assignmentId;
+        return finding['assignment_id']?.toString() ==
+            assignmentId;
       }).toList();
 
-      final openFindingCount = inspectionFindings.where((finding) {
-        final status = finding['status']?.toString().toLowerCase().trim();
-
-        if (status == null || status.isEmpty) {
-          return true;
-        }
-
-        return status != 'resolved' &&
-            status != 'closed' &&
-            status != 'completed';
-      }).length;
-
-      final repeatedIssueCount = inspectionFindings.where((finding) {
-        final findingType = finding['finding_type']
-            ?.toString()
-            .trim()
-            .toLowerCase();
-
-        return findingType != null && findingType.isNotEmpty;
-      }).length;
+      // The current findings table does not contain `finding_type`.
+      //
+      // Instead of fabricating a finding type, we use the number
+      // of findings for this inspection as the available issue
+      // signal. This keeps the Risk Engine input valid without
+      // inventing database data.
+      final repeatedIssueCount = inspectionFindings.length;
 
       return <String, dynamic>{
         'id': inspection['id'],
         'assignment_id': inspection['assignment_id'],
-        'inspector_profile_id': inspection['inspector_profile_id'],
-        'institute_profile_id': inspection['institute_profile_id'],
+        'inspector_profile_id':
+            inspection['inspector_profile_id'],
+        'institute_profile_id':
+            inspection['institute_profile_id'],
         'submitted_at': inspection['submitted_at'],
         'overall_status': _normalizeInspectionStatus(
           inspection['overall_status'],
         ),
 
-        // This is historical inspection risk.
-        // It is NOT the current project risk.
-        'risk_level': _normalizeRiskLevel(inspection['risk_level']),
+        // Historical inspection risk.
+        // This is NOT the current project risk.
+        'risk_level': _normalizeRiskLevel(
+          inspection['risk_level'],
+        ),
 
-        'inspector_remarks': inspection['inspector_remarks'],
-        'report_summary': inspection['report_summary'],
-        'open_finding_count': openFindingCount,
-        'repeated_issue_count': repeatedIssueCount,
-        'finding_count': inspectionFindings.length,
+        'inspector_remarks':
+            inspection['inspector_remarks'],
+        'report_summary':
+            inspection['report_summary'],
+
+        'open_finding_count':
+            inspectionFindings.length,
+
+        'repeated_issue_count':
+            repeatedIssueCount,
+
+        'finding_count':
+            inspectionFindings.length,
       };
     }).toList();
   }
 
   /// Normalizes historical risk levels.
   ///
-  /// IMPORTANT:
   /// Unknown/missing values are represented as "unknown".
   /// We do NOT silently convert missing risk information to "low".
   String _normalizeRiskLevel(dynamic value) {
-    final normalized = value?.toString().toLowerCase().trim();
+    final normalized =
+        value?.toString().toLowerCase().trim();
 
     switch (normalized) {
       case 'critical':
@@ -334,7 +359,8 @@ class RiskDataRepository {
 
   /// Normalizes project status.
   String _normalizeStatus(dynamic value) {
-    final normalized = value?.toString().toLowerCase().trim();
+    final normalized =
+        value?.toString().toLowerCase().trim();
 
     if (normalized == null || normalized.isEmpty) {
       return 'unknown';
@@ -345,7 +371,8 @@ class RiskDataRepository {
 
   /// Normalizes inspection submission status.
   String _normalizeInspectionStatus(dynamic value) {
-    final normalized = value?.toString().toLowerCase().trim();
+    final normalized =
+        value?.toString().toLowerCase().trim();
 
     switch (normalized) {
       case 'completed':

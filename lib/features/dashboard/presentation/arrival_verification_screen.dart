@@ -89,11 +89,16 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
+            final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
+
+      // TEMP DEBUG — remove after diagnosing
+      debugPrint('Device position: ${position.latitude}, ${position.longitude}');
+      debugPrint('Device accuracy: ${position.accuracy} meters');
+      debugPrint('Institute position: $latitude, $longitude');
 
       final distance = GeoUtils.distanceKm(
         position.latitude,
@@ -101,6 +106,9 @@ class _ArrivalVerificationScreenState extends State<ArrivalVerificationScreen> {
         latitude,
         longitude,
       );
+
+      // TEMP DEBUG — remove after diagnosing
+      debugPrint('Calculated distance: ${distance * 1000} meters');
 
       if (!mounted) {
         return;

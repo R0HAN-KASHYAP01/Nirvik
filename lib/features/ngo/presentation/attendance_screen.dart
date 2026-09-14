@@ -55,17 +55,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   bool _loadingAiAttendance = true;
   String? _aiAttendanceError;
+  bool _aiBlockedBySubmission = false;
 
   Map<String, dynamic>? _aiSummary;
   Map<String, dynamic>? _aiRoleStatistics;
   Map<String, dynamic>? _aiLatestSession;
 
+  // Number of most-recent days to show inline under "Recent Submissions".
+  static const int _recentDaysWindow = 3;
+
   @override
   void initState() {
     super.initState();
 
-    _loadHistory();
-    _loadAiAttendance();
+    _loadHistory().then((_) => _loadAiAttendance());
   }
 
   @override
@@ -119,14 +122,75 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // ============================================================
-  // AI ATTENDANCE
+  // RECENT (LAST N DAYS) HISTORY
+  //
+  // Filters _history down to records whose date falls within the
+  // last `_recentDaysWindow` calendar days (inclusive of today).
+  // Comparison is done on the date component only, ignoring time.
   // ============================================================
+
+  List<AttendanceRecord> get _recentHistory {
+    if (_history.isEmpty) return _history;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final cutoff =
+    today.subtract(const Duration(days: _recentDaysWindow - 1));
+
+    return _history.where((record) {
+      final recordDate = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
+
+      return !recordDate.isBefore(cutoff);
+    }).toList();
+  }
+
+  // ============================================================
+  // AI ATTENDANCE
+  //
+  // The AI monitoring panel should only unlock once the institute
+  // has submitted BOTH beneficiary and staff manual attendance for
+  // today. Checking for "any" record submitted today is not enough,
+  // since either type alone would incorrectly unlock the section.
+  // ============================================================
+
+  bool _isSubmittedToday(AttendanceType type) {
+    final now = DateTime.now();
+
+    return _history.any(
+          (record) =>
+      record.type == type &&
+          record.date.year == now.year &&
+          record.date.month == now.month &&
+          record.date.day == now.day,
+    );
+  }
+
+  bool get _hasSubmittedToday {
+    return _isSubmittedToday(AttendanceType.beneficiary) &&
+        _isSubmittedToday(AttendanceType.staff);
+  }
 
   Future<void> _loadAiAttendance() async {
     if (!mounted) return;
 
+    if (!_hasSubmittedToday) {
+      setState(() {
+        _loadingAiAttendance = false;
+        _aiBlockedBySubmission = true;
+        _aiAttendanceError =
+        "Submit today's beneficiary and staff attendance first to use AI attendance monitoring.";
+      });
+
+      return;
+    }
+
     setState(() {
       _loadingAiAttendance = true;
+      _aiBlockedBySubmission = false;
       _aiAttendanceError = null;
     });
 
@@ -150,6 +214,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
       setState(() {
         _loadingAiAttendance = false;
+        _aiBlockedBySubmission = false;
         _aiAttendanceError =
         'Unable to connect to the AI attendance server.';
       });
@@ -157,10 +222,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _refreshAll() async {
-    await Future.wait([
-      _loadHistory(),
-      _loadAiAttendance(),
-    ]);
+    await _loadHistory();
+    await _loadAiAttendance();
   }
 
   // ============================================================
@@ -270,6 +333,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
 
       await _loadHistory();
+      await _loadAiAttendance();
     } catch (_) {
       if (!mounted) return;
 
@@ -492,14 +556,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               const SizedBox(height: 20),
 
               // ==================================================
-              // AI ATTENDANCE
-              // ==================================================
-
-              _buildAiAttendanceSection(),
-
-              const SizedBox(height: 24),
-
-              // ==================================================
               // MANUAL ATTENDANCE
               // ==================================================
 
@@ -542,12 +598,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               const SizedBox(height: 24),
 
               // ==================================================
+              // AI ATTENDANCE
+              // ==================================================
+
+              _buildAiAttendanceSection(),
+
+              const SizedBox(height: 24),
+
+              // ==================================================
               // HISTORY
               // ==================================================
 
-              const SectionHeader(
-                title: 'Recent Submissions',
-              ),
+              _buildHistorySectionHeader(),
 
               const SizedBox(height: 12),
 
@@ -561,14 +623,145 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   title: 'No attendance submitted yet',
                   message: 'Submitted records will appear here.',
                 )
+              else if (_recentHistory.isEmpty)
+                const EmptyState(
+                  icon: Icons.event_busy_outlined,
+                  title: 'No submissions in the last 3 days',
+                  message: 'Tap "View all" to see older records.',
+                )
               else
-                ..._history.map(
+                ..._recentHistory.map(
                       (record) => _buildHistoryRow(record),
                 ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // ============================================================
+  // HISTORY SECTION HEADER (title + "View all" button)
+  // ============================================================
+
+  Widget _buildHistorySectionHeader() {
+    final hasOlderRecords = _history.length > _recentHistory.length;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Expanded(
+          child: SectionHeader(
+            title: 'Recent Submissions',
+          ),
+        ),
+
+        if (hasOlderRecords)
+          TextButton(
+            onPressed: _showAllHistory,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'View all',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // "VIEW ALL" — FULL HISTORY BOTTOM SHEET
+  // ============================================================
+
+  void _showAllHistory() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'All Submissions',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.of(context).pop(),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Expanded(
+                    child: _history.isEmpty
+                        ? const EmptyState(
+                      icon: Icons.event_busy_outlined,
+                      title: 'No attendance submitted yet',
+                      message:
+                      'Submitted records will appear here.',
+                    )
+                        : ListView.builder(
+                      controller: scrollController,
+                      itemCount: _history.length,
+                      itemBuilder: (context, index) =>
+                          _buildHistoryRow(_history[index]),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -621,8 +814,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 crossAxisAlignment:
                 CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.cloud_off_outlined,
+                  Icon(
+                    _aiBlockedBySubmission
+                        ? Icons.lock_outline
+                        : Icons.cloud_off_outlined,
                     color: AppColors.warning,
                   ),
 
@@ -641,13 +836,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ),
 
-            const SizedBox(height: 14),
+            if (!_aiBlockedBySubmission) ...[
+              const SizedBox(height: 14),
 
-            SecondaryButton(
-              label: 'Retry AI Connection',
-              icon: Icons.refresh,
-              onPressed: _loadAiAttendance,
-            ),
+              SecondaryButton(
+                label: 'Retry AI Connection',
+                icon: Icons.refresh,
+                onPressed: _loadAiAttendance,
+              ),
+            ],
           ],
         ),
       );

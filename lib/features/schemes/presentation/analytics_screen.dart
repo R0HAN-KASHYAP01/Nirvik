@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../projects/presentation/project_list_screen.dart';
 import '../../schemes/presentation/schemes_screen.dart';
-import 'assignments_screen.dart';
-import 'official_cctv_screen.dart';
-import 'official_profile_screen.dart';
-import 'official_shell_screen.dart';
-import 'pmu_monitoring_screen.dart';
+import '../../dashboard/presentation/assignments_screen.dart';
+import '../../dashboard/presentation/official_cctv_screen.dart';
+import '../../dashboard/presentation/official_profile_screen.dart';
+import '../../dashboard/presentation/official_shell_screen.dart';
+import '../../dashboard/presentation/pmu_monitoring_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});

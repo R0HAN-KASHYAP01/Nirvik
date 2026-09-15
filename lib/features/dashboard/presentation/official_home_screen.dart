@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../services/session_service.dart';
 import '../../../app/routes.dart';
@@ -34,14 +37,16 @@ class OfficialHomeScreen extends StatefulWidget {
   static const Color red = Color(0xFFD83A3A);
 
   @override
-  State<OfficialHomeScreen> createState() => _OfficialHomeScreenState();
+  State<OfficialHomeScreen> createState() =>
+      _OfficialHomeScreenState();
 }
 
 class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   final AssignmentsRepository _assignmentsRepository =
       AssignmentsRepository();
 
-  final ProjectsRepository _projectsRepository = ProjectsRepository();
+  final ProjectsRepository _projectsRepository =
+      ProjectsRepository();
 
   final InspectionHistoryRepository _inspectionHistoryRepository =
       InspectionHistoryRepository();
@@ -54,12 +59,23 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   List<InspectionSummary> _recentInspections = [];
 
   // ============================================================
-  // DYNAMIC NOTIFICATIONS
+  // NOTIFICATION STORAGE
   // ============================================================
+
+  static const String _notificationStorageKey =
+      'official_notification_history';
 
   List<_OfficialNotification> _notifications = [];
 
   final Set<String> _readNotificationIds = <String>{};
+
+  bool _notificationStorageLoaded = false;
+
+  bool _showNotificationHistory = false;
+
+  // ============================================================
+  // UNREAD NOTIFICATIONS
+  // ============================================================
 
   List<_OfficialNotification> get _unreadNotifications {
     return _notifications
@@ -70,25 +86,190 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
         .toList();
   }
 
-  int get _unreadNotificationCount => _unreadNotifications.length;
+  int get _unreadNotificationCount =>
+      _unreadNotifications.length;
+
+  // ============================================================
+  // LAST 30 DAYS HISTORY
+  // ============================================================
+
+  List<_OfficialNotification> get _last30DaysNotifications {
+    final cutoff =
+        DateTime.now().subtract(const Duration(days: 30));
+
+    final list = _notifications
+        .where(
+          (notification) =>
+              !notification.createdAt.isBefore(cutoff),
+        )
+        .toList();
+
+    list.sort(
+      (a, b) => b.createdAt.compareTo(a.createdAt),
+    );
+
+    return list;
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
 
   @override
   void initState() {
     super.initState();
-    _loadHomeStats();
+
+    _initializeNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    await _loadNotificationHistory();
+
+    if (!mounted) return;
+
+    await _loadHomeStats();
   }
 
   // ============================================================
-  // HELPERS
+  // LOAD SAVED NOTIFICATIONS
   // ============================================================
 
-  bool _isSameDay(DateTime first, DateTime second) {
+  Future<void> _loadNotificationHistory() async {
+    try {
+      final prefs =
+          await SharedPreferences.getInstance();
+
+      final rawList =
+          prefs.getStringList(_notificationStorageKey) ?? [];
+
+      final loadedNotifications =
+          <_OfficialNotification>[];
+
+      for (final raw in rawList) {
+        try {
+          final jsonMap =
+              jsonDecode(raw) as Map<String, dynamic>;
+
+          final notification =
+              _OfficialNotification.fromJson(jsonMap);
+
+          if (notification.id.isNotEmpty) {
+            loadedNotifications.add(notification);
+          }
+        } catch (error) {
+          debugPrint(
+            'Invalid official notification: $error',
+          );
+        }
+      }
+
+      final cutoff =
+          DateTime.now().subtract(const Duration(days: 30));
+
+      final validNotifications =
+          loadedNotifications
+              .where(
+                (notification) =>
+                    !notification.createdAt
+                        .isBefore(cutoff),
+              )
+              .toList();
+
+      validNotifications.sort(
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      );
+
+      final readIds = <String>{};
+
+      for (final notification in validNotifications) {
+        if (notification.readAt != null) {
+          readIds.add(notification.id);
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _notifications = validNotifications;
+
+        _readNotificationIds
+          ..clear()
+          ..addAll(readIds);
+
+        _notificationStorageLoaded = true;
+      });
+    } catch (error) {
+      debugPrint(
+        'Failed to load official notification history: $error',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _notificationStorageLoaded = true;
+      });
+    }
+  }
+
+  // ============================================================
+  // SAVE NOTIFICATIONS
+  // ============================================================
+
+  Future<void> _saveNotificationHistory() async {
+    try {
+      final prefs =
+          await SharedPreferences.getInstance();
+
+      final cutoff =
+          DateTime.now().subtract(const Duration(days: 30));
+
+      final validNotifications = _notifications
+          .where(
+            (notification) =>
+                !notification.createdAt.isBefore(cutoff),
+          )
+          .toList();
+
+      validNotifications.sort(
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      );
+
+      await prefs.setStringList(
+        _notificationStorageKey,
+        validNotifications
+            .map(
+              (notification) =>
+                  jsonEncode(notification.toJson()),
+            )
+            .toList(),
+      );
+    } catch (error) {
+      debugPrint(
+        'Failed to save official notification history: $error',
+      );
+    }
+  }
+
+  // ============================================================
+  // SAME DAY
+  // ============================================================
+
+  bool _isSameDay(
+    DateTime first,
+    DateTime second,
+  ) {
     return first.year == second.year &&
         first.month == second.month &&
         first.day == second.day;
   }
 
-  InspectionStatus _parseInspectionStatus(String? value) {
+  // ============================================================
+  // INSPECTION STATUS
+  // ============================================================
+
+  InspectionStatus _parseInspectionStatus(
+    String? value,
+  ) {
     switch (value?.toLowerCase()) {
       case 'approved':
         return InspectionStatus.approved;
@@ -113,7 +294,13 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     }
   }
 
-  RiskLevel _parseRiskLevel(String? value) {
+  // ============================================================
+  // RISK LEVEL
+  // ============================================================
+
+  RiskLevel _parseRiskLevel(
+    String? value,
+  ) {
     switch (value?.toLowerCase()) {
       case 'high':
         return RiskLevel.high;
@@ -127,110 +314,214 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     }
   }
 
+  // ============================================================
+  // RECENT INSPECTIONS
+  // ============================================================
+
   List<InspectionSummary> _mapToRecentInspections(
     List<Map<String, dynamic>> rows,
   ) {
     final topFive = rows.take(5).toList();
 
-    return List.generate(topFive.length, (index) {
-      final row = topFive[index];
+    return List.generate(
+      topFive.length,
+      (index) {
+        final row = topFive[index];
 
-      final instituteId =
-          row['institute_profile_id']?.toString() ?? '';
+        final instituteId =
+            row['institute_profile_id']?.toString() ?? '';
 
-      final shortInstituteId = instituteId.isEmpty
-          ? 'Unknown'
-          : instituteId.substring(
-              0,
-              instituteId.length < 8
-                  ? instituteId.length
-                  : 8,
-            );
+        final shortInstituteId = instituteId.isEmpty
+            ? 'Unknown'
+            : instituteId.substring(
+                0,
+                instituteId.length < 8
+                    ? instituteId.length
+                    : 8,
+              );
 
-      final submittedAt = DateTime.tryParse(
-        row['submitted_at']?.toString() ?? '',
-      );
+        final submittedAt = DateTime.tryParse(
+          row['submitted_at']?.toString() ?? '',
+        );
 
-      return InspectionSummary(
-        projectName: 'Inspection #${index + 1}',
-        inspectorName: 'Institute ID: $shortInstituteId',
-        dateTime: submittedAt ?? DateTime.now(),
-        status: _parseInspectionStatus(
-          row['overall_status']?.toString(),
-        ),
-        risk: _parseRiskLevel(
-          row['risk_level']?.toString(),
-        ),
-      );
-    });
+        return InspectionSummary(
+          projectName: 'Inspection #${index + 1}',
+          inspectorName:
+              'Institute ID: $shortInstituteId',
+          dateTime:
+              submittedAt ?? DateTime.now(),
+          status: _parseInspectionStatus(
+            row['overall_status']?.toString(),
+          ),
+          risk: _parseRiskLevel(
+            row['risk_level']?.toString(),
+          ),
+        );
+      },
+    );
   }
 
   // ============================================================
-  // CREATE REAL NOTIFICATIONS FROM REAL DATA
+  // CREATE / UPDATE NOTIFICATIONS
   // ============================================================
 
   List<_OfficialNotification> _buildNotifications({
     required List<project_model.Project> projects,
     required List<AssignmentSummary> assignments,
   }) {
-    final notifications = <_OfficialNotification>[];
+    final existingById =
+        <String, _OfficialNotification>{
+      for (final notification in _notifications)
+        notification.id: notification,
+    };
 
-    // ----------------------------------------------------------
+    final currentNotifications =
+        <_OfficialNotification>[];
+
+    // ==========================================================
     // HIGH RISK PROJECTS
-    // ----------------------------------------------------------
+    // ==========================================================
 
     final highRiskProjects = projects.where(
       (project) =>
-          project.riskLevel == project_model.RiskLevel.high,
+          project.riskLevel ==
+          project_model.RiskLevel.high,
     );
 
     for (final project in highRiskProjects) {
-      notifications.add(
+      final id = 'high-risk-${project.id}';
+
+      final existing = existingById[id];
+
+      currentNotifications.add(
         _OfficialNotification(
-          id: 'high-risk-${project.id}',
+          id: id,
           title: 'High Risk Project',
           message:
               '${project.name} has been marked as a high-risk project.',
           type: _NotificationType.highRisk,
-          icon: Icons.warning_amber_rounded,
-          color: OfficialHomeScreen.red,
+          createdAt:
+              existing?.createdAt ?? DateTime.now(),
+          readAt: existing?.readAt,
         ),
       );
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // PENDING REVIEW ASSIGNMENTS
-    // ----------------------------------------------------------
+    // ==========================================================
+
+    final staleThreshold =
+        DateTime.now().subtract(
+      const Duration(days: 3),
+    );
 
     final pendingAssignments = assignments.where(
       (assignment) =>
-          assignment.status == AssignmentStatus.assigned &&
-          assignment.scheduledDateTime.isBefore(
-            DateTime.now().subtract(
-              const Duration(days: 3),
-            ),
-          ),
+          assignment.status ==
+              AssignmentStatus.assigned &&
+          assignment.scheduledDateTime
+              .isBefore(staleThreshold),
     );
 
     for (final assignment in pendingAssignments) {
-      notifications.add(
+      final id =
+          'pending-review-${assignment.id}';
+
+      final existing = existingById[id];
+
+      currentNotifications.add(
         _OfficialNotification(
-          id: 'pending-review-${assignment.id}',
+          id: id,
           title: 'Pending Review',
           message:
               '${assignment.instituteName} requires review.',
           type: _NotificationType.pendingReview,
-          icon: Icons.assignment_outlined,
-          color: OfficialHomeScreen.saffron,
+          createdAt:
+              existing?.createdAt ??
+              assignment.createdAt,
+          readAt: existing?.readAt,
         ),
       );
     }
 
-    return notifications;
+    return currentNotifications;
   }
 
   // ============================================================
-  // LOAD HOME DATA
+  // MERGE CURRENT NOTIFICATIONS WITH HISTORY
+  // ============================================================
+
+  Future<void> _updateNotificationHistory({
+    required List<_OfficialNotification>
+        currentNotifications,
+  }) async {
+    final existingById =
+        <String, _OfficialNotification>{
+      for (final notification in _notifications)
+        notification.id: notification,
+    };
+
+    // Keep existing history.
+    // Update/create current notifications.
+    for (final notification in currentNotifications) {
+      final existing =
+          existingById[notification.id];
+
+      if (existing != null) {
+        existingById[notification.id] =
+            notification.copyWith(
+          createdAt: existing.createdAt,
+          readAt: existing.readAt,
+        );
+      } else {
+        existingById[notification.id] =
+            notification;
+      }
+    }
+
+    final cutoff =
+        DateTime.now().subtract(
+      const Duration(days: 30),
+    );
+
+    final history = existingById.values
+        .where(
+          (notification) =>
+              !notification.createdAt
+                  .isBefore(cutoff),
+        )
+        .toList();
+
+    history.sort(
+      (a, b) => b.createdAt.compareTo(a.createdAt),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _notifications = history;
+
+      _readNotificationIds
+        ..clear()
+        ..addAll(
+          history
+              .where(
+                (notification) =>
+                    notification.readAt != null,
+              )
+              .map(
+                (notification) =>
+                    notification.id,
+              ),
+        );
+    });
+
+    await _saveNotificationHistory();
+  }
+
+  // ============================================================
+  // LOAD HOME STATS
   // ============================================================
 
   Future<void> _loadHomeStats() async {
@@ -242,12 +533,19 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
           await _projectsRepository.getProjects();
 
       final inspectionRows =
-          await _inspectionHistoryRepository.getInspectionHistory();
+          await _inspectionHistoryRepository
+              .getInspectionHistory();
 
       final now = DateTime.now();
 
       final staleThreshold =
-          now.subtract(const Duration(days: 3));
+          now.subtract(
+        const Duration(days: 3),
+      );
+
+      // ========================================================
+      // TODAY'S INSPECTIONS
+      // ========================================================
 
       final todaysCount = assignments
           .where(
@@ -258,41 +556,68 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
           )
           .length;
 
-      final pendingReviewCount = assignments
-          .where(
-            (assignment) =>
-                assignment.status ==
-                    AssignmentStatus.assigned &&
-                assignment.scheduledDateTime
-                    .isBefore(staleThreshold),
-          )
-          .length;
+      // ========================================================
+      // PENDING REVIEWS
+      // ========================================================
 
-      final highRiskCount = projects
-          .where(
-            (project) =>
-                project.riskLevel ==
-                project_model.RiskLevel.high,
-          )
-          .length;
+      final pendingReviewCount =
+          assignments
+              .where(
+                (assignment) =>
+                    assignment.status ==
+                        AssignmentStatus.assigned &&
+                    assignment.scheduledDateTime
+                        .isBefore(staleThreshold),
+              )
+              .length;
 
-      final newNotifications = _buildNotifications(
+      // ========================================================
+      // HIGH RISK
+      // ========================================================
+
+      final highRiskCount =
+          projects
+              .where(
+                (project) =>
+                    project.riskLevel ==
+                    project_model.RiskLevel.high,
+              )
+              .length;
+
+      // ========================================================
+      // NOTIFICATIONS
+      // ========================================================
+
+      final newNotifications =
+          _buildNotifications(
         projects: projects,
         assignments: assignments,
+      );
+
+      await _updateNotificationHistory(
+        currentNotifications:
+            newNotifications,
       );
 
       if (!mounted) return;
 
       setState(() {
-        _todaysInspectionsCount = todaysCount;
-        _pendingReviewsCount = pendingReviewCount;
-        _totalProjectsCount = projects.length;
-        _highRiskCount = highRiskCount;
+        _todaysInspectionsCount =
+            todaysCount;
+
+        _pendingReviewsCount =
+            pendingReviewCount;
+
+        _totalProjectsCount =
+            projects.length;
+
+        _highRiskCount =
+            highRiskCount;
 
         _recentInspections =
-            _mapToRecentInspections(inspectionRows);
-
-        _notifications = newNotifications;
+            _mapToRecentInspections(
+          inspectionRows,
+        );
       });
     } catch (error) {
       debugPrint(
@@ -302,55 +627,120 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   }
 
   // ============================================================
-  // MARK NOTIFICATION AS READ
+  // MARK ONE NOTIFICATION READ
   // ============================================================
 
-  void _markNotificationAsRead(String notificationId) {
-    if (!_readNotificationIds.contains(notificationId)) {
-      setState(() {
-        _readNotificationIds.add(notificationId);
-      });
-    }
-  }
+  Future<void> _markNotificationAsRead(
+    String notificationId,
+  ) async {
+    final index =
+        _notifications.indexWhere(
+      (notification) =>
+          notification.id ==
+          notificationId,
+    );
 
-  void _markAllNotificationsAsRead() {
-    if (_unreadNotificationCount == 0) return;
+    if (index == -1) return;
+
+    final notification =
+        _notifications[index];
+
+    if (notification.readAt != null) {
+      return;
+    }
+
+    final readAt = DateTime.now();
+
+    final updated =
+        notification.copyWith(
+      readAt: readAt,
+    );
 
     setState(() {
-      _readNotificationIds.addAll(
-        _notifications.map((notification) => notification.id),
+      _notifications[index] = updated;
+
+      _readNotificationIds.add(
+        notificationId,
       );
     });
+
+    await _saveNotificationHistory();
+  }
+
+  // ============================================================
+  // MARK ALL READ
+  // ============================================================
+
+  Future<void> _markAllNotificationsAsRead() async {
+    if (_unreadNotificationCount == 0) {
+      return;
+    }
+
+    final readAt = DateTime.now();
+
+    final updatedNotifications =
+        _notifications
+            .map(
+              (notification) =>
+                  notification.readAt == null
+                      ? notification.copyWith(
+                          readAt: readAt,
+                        )
+                      : notification,
+            )
+            .toList();
+
+    setState(() {
+      _notifications =
+          updatedNotifications;
+
+      _readNotificationIds
+        ..clear()
+        ..addAll(
+          updatedNotifications.map(
+            (notification) =>
+                notification.id,
+          ),
+        );
+    });
+
+    await _saveNotificationHistory();
   }
 
   // ============================================================
   // NOTIFICATION ACTION
   // ============================================================
 
-  void _handleNotificationTap(
+  Future<void> _handleNotificationTap(
     BuildContext context,
     _OfficialNotification notification,
-  ) {
-    _markNotificationAsRead(notification.id);
+  ) async {
+    await _markNotificationAsRead(
+      notification.id,
+    );
+
+    if (!context.mounted) return;
 
     Navigator.of(context).pop();
 
-    if (notification.type == _NotificationType.highRisk) {
+    if (notification.type ==
+        _NotificationType.highRisk) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const ProjectListScreen(
+          builder: (_) =>
+              const ProjectListScreen(
             initialHighRiskFilter: true,
           ),
         ),
       );
-    } else if (
-        notification.type ==
-        _NotificationType.pendingReview
-    ) {
+    } else if (notification.type ==
+        _NotificationType.pendingReview) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const AssignmentsScreen(
-            initialFilter: 'pendingReview',
+          builder: (_) =>
+              const AssignmentsScreen(
+            initialFilter:
+                'pendingReview',
           ),
         ),
       );
@@ -358,77 +748,142 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   }
 
   // ============================================================
-  // NOTIFICATION BOTTOM SHEET
+  // SHOW NOTIFICATION HISTORY
   // ============================================================
 
-  void _showNotifications(BuildContext context) {
+  void _showNotifications(
+    BuildContext context,
+  ) {
+    // Every time the sheet opens, start with unread view.
+    _showNotificationHistory = false;
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, modalSetState) {
-            final notifications = _notifications;
+          builder: (
+            context,
+            modalSetState,
+          ) {
+            final unreadNotifications =
+                _unreadNotifications;
+
+            final historyNotifications =
+                _last30DaysNotifications;
+
+            final notifications =
+                _showNotificationHistory
+                    ? historyNotifications
+                    : unreadNotifications;
+
+            final unreadCount =
+                _unreadNotificationCount;
 
             return Container(
               constraints: BoxConstraints(
                 maxHeight:
-                    MediaQuery.sizeOf(context).height * 0.78,
+                    MediaQuery.sizeOf(context)
+                            .height *
+                        0.82,
               ),
-              decoration: const BoxDecoration(
-                color: OfficialHomeScreen.background,
-                borderRadius: BorderRadius.vertical(
+              decoration:
+                  const BoxDecoration(
+                color:
+                    OfficialHomeScreen
+                        .background,
+                borderRadius:
+                    BorderRadius.vertical(
                   top: Radius.circular(24),
                 ),
               ),
               child: SafeArea(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize:
+                      MainAxisSize.min,
                   children: [
-                    const SizedBox(height: 10),
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    // ==================================================
+                    // HANDLE
+                    // ==================================================
 
                     Container(
                       width: 42,
                       height: 4,
-                      decoration: BoxDecoration(
-                        color: OfficialHomeScreen.borderColor,
-                        borderRadius: BorderRadius.circular(10),
+                      decoration:
+                          BoxDecoration(
+                        color:
+                            OfficialHomeScreen
+                                .borderColor,
+                        borderRadius:
+                            BorderRadius
+                                .circular(
+                          10,
+                        ),
                       ),
                     ),
 
+                    // ==================================================
+                    // HEADER
+                    // ==================================================
+
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(
+                      padding:
+                          const EdgeInsets
+                              .fromLTRB(
                         18,
-                        16,
+                        15,
                         14,
-                        10,
+                        4,
                       ),
                       child: Row(
                         children: [
                           const Expanded(
                             child: Text(
                               'Notifications',
-                              style: TextStyle(
-                                color: OfficialHomeScreen.textDark,
+                              style:
+                                  TextStyle(
+                                color:
+                                    OfficialHomeScreen
+                                        .textDark,
                                 fontSize: 20,
-                                fontWeight: FontWeight.w800,
+                                fontWeight:
+                                    FontWeight
+                                        .w800,
                               ),
                             ),
                           ),
 
-                          if (_unreadNotificationCount > 0)
+                          if (unreadCount >
+                                  0 &&
+                              !_showNotificationHistory)
                             TextButton(
-                              onPressed: () {
-                                _markAllNotificationsAsRead();
-                                modalSetState(() {});
+                              onPressed:
+                                  () async {
+                                await _markAllNotificationsAsRead();
+
+                                if (context
+                                    .mounted) {
+                                  modalSetState(
+                                    () {},
+                                  );
+                                }
                               },
-                              child: const Text(
+                              child:
+                                  const Text(
                                 'Mark all read',
-                                style: TextStyle(
+                                style:
+                                    TextStyle(
                                   color:
-                                      OfficialHomeScreen.primaryBlue,
-                                  fontWeight: FontWeight.w700,
+                                      OfficialHomeScreen
+                                          .primaryBlue,
+                                  fontWeight:
+                                      FontWeight
+                                          .w700,
                                 ),
                               ),
                             ),
@@ -436,72 +891,320 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                       ),
                     ),
 
-                    if (notifications.isEmpty)
+                    // ==================================================
+                    // HISTORY TOGGLE
+                    // ==================================================
+
+                    Padding(
+                      padding:
+                          const EdgeInsets
+                              .fromLTRB(
+                        18,
+                        2,
+                        18,
+                        10,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _showNotificationHistory
+                                ? Icons
+                                    .history_rounded
+                                : Icons
+                                    .notifications_none_rounded,
+                            size: 15,
+                            color:
+                                OfficialHomeScreen
+                                    .textGrey,
+                          ),
+
+                          const SizedBox(
+                            width: 6,
+                          ),
+
+                          Expanded(
+                            child: Text(
+                              _showNotificationHistory
+                                  ? 'Notification history'
+                                  : unreadCount >
+                                          0
+                                      ? '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}'
+                                      : 'No unread notifications',
+                              style:
+                                  const TextStyle(
+                                color:
+                                    OfficialHomeScreen
+                                        .textGrey,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+
+                          // ==================================================
+                          // LAST 30 DAYS BUTTON
+                          // ==================================================
+
+                          GestureDetector(
+                            onTap: () {
+                              modalSetState(
+                                () {
+                                  _showNotificationHistory =
+                                      !_showNotificationHistory;
+                                },
+                              );
+                            },
+                            child:
+                                AnimatedContainer(
+                              duration:
+                                  const Duration(
+                                milliseconds:
+                                    180,
+                              ),
+                              padding:
+                                  const EdgeInsets
+                                      .symmetric(
+                                horizontal:
+                                    10,
+                                vertical: 6,
+                              ),
+                              decoration:
+                                  BoxDecoration(
+                                color: _showNotificationHistory
+                                    ? OfficialHomeScreen
+                                        .primaryBlue
+                                    : OfficialHomeScreen
+                                        .softBlue,
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  20,
+                                ),
+                                border:
+                                    Border.all(
+                                  color:
+                                      OfficialHomeScreen
+                                          .primaryBlue
+                                          .withValues(
+                                    alpha: 0.15,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                _showNotificationHistory
+                                    ? 'Unread'
+                                    : 'Last 30 days',
+                                style:
+                                    TextStyle(
+                                  color:
+                                      _showNotificationHistory
+                                          ? Colors
+                                              .white
+                                          : OfficialHomeScreen
+                                              .primaryBlue,
+                                  fontSize: 10,
+                                  fontWeight:
+                                      FontWeight
+                                          .w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // ==================================================
+                    // HISTORY INFO
+                    // ==================================================
+
+                    if (_showNotificationHistory)
                       const Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          35,
+                        padding:
+                            EdgeInsets
+                                .fromLTRB(
+                          18,
+                          0,
+                          18,
+                          8,
+                        ),
+                        child: Align(
+                          alignment:
+                              Alignment
+                                  .centerLeft,
+                          child: Text(
+                            'Showing notifications from the last 30 days',
+                            style:
+                                TextStyle(
+                              color:
+                                  OfficialHomeScreen
+                                      .textGrey,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // ==================================================
+                    // EMPTY STATE
+                    // ==================================================
+
+                    if (notifications.isEmpty)
+                      Padding(
+                        padding:
+                            const EdgeInsets
+                                .fromLTRB(
                           20,
                           45,
+                          20,
+                          55,
                         ),
                         child: Column(
                           children: [
                             Icon(
-                              Icons.notifications_none,
-                              size: 48,
-                              color: OfficialHomeScreen.textGrey,
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'No notifications',
-                              style: TextStyle(
-                                color:
-                                    OfficialHomeScreen.textDark,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                              _showNotificationHistory
+                                  ? Icons
+                                      .history_toggle_off_rounded
+                                  : Icons
+                                      .notifications_none_rounded,
+                              size: 52,
+                              color:
+                                  const Color(
+                                0xFF9EAFBC,
                               ),
                             ),
-                            SizedBox(height: 5),
+
+                            const SizedBox(
+                              height: 13,
+                            ),
+
                             Text(
-                              'You are all caught up.',
-                              style: TextStyle(
+                              _showNotificationHistory
+                                  ? 'No notification history'
+                                  : 'No unread notifications',
+                              style:
+                                  const TextStyle(
                                 color:
-                                    OfficialHomeScreen.textGrey,
+                                    OfficialHomeScreen
+                                        .textDark,
+                                fontSize: 15,
+                                fontWeight:
+                                    FontWeight
+                                        .w700,
+                              ),
+                            ),
+
+                            const SizedBox(
+                              height: 5,
+                            ),
+
+                            Text(
+                              _showNotificationHistory
+                                  ? 'There are no notifications from the last 30 days.'
+                                  : 'You are all caught up.',
+                              textAlign:
+                                  TextAlign
+                                      .center,
+                              style:
+                                  const TextStyle(
+                                color:
+                                    OfficialHomeScreen
+                                        .textGrey,
                                 fontSize: 12,
                               ),
                             ),
+
+                            const SizedBox(
+                              height: 14,
+                            ),
+
+                            if (!_showNotificationHistory &&
+                                historyNotifications
+                                    .isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  modalSetState(
+                                    () {
+                                      _showNotificationHistory =
+                                          true;
+                                    },
+                                  );
+                                },
+                                child:
+                                    const Text(
+                                  'View last 30 days',
+                                  style:
+                                      TextStyle(
+                                    color:
+                                        OfficialHomeScreen
+                                            .primaryBlue,
+                                    fontSize:
+                                        11,
+                                    fontWeight:
+                                        FontWeight
+                                            .w700,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       )
                     else
+
+                      // ==================================================
+                      // NOTIFICATION LIST
+                      // ==================================================
+
                       Flexible(
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(
+                        child:
+                            ListView.separated(
+                          padding:
+                              const EdgeInsets
+                                  .fromLTRB(
                             14,
-                            4,
+                            3,
                             14,
                             20,
                           ),
-                          itemCount: notifications.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
+                          itemCount:
+                              notifications
+                                  .length,
+                          separatorBuilder:
+                              (_, __) =>
+                                  const SizedBox(
+                            height: 8,
+                          ),
+                          itemBuilder:
+                              (
+                            context,
+                            index,
+                          ) {
                             final notification =
-                                notifications[index];
+                                notifications[
+                                    index];
 
                             final isRead =
-                                _readNotificationIds.contains(
-                              notification.id,
-                            );
+                                notification
+                                        .readAt !=
+                                    null;
 
                             return _NotificationTile(
-                              notification: notification,
-                              isRead: isRead,
-                              onTap: () {
-                                _handleNotificationTap(
+                              notification:
+                                  notification,
+                              isRead:
+                                  isRead,
+                              onTap:
+                                  () async {
+                                await _handleNotificationTap(
                                   context,
                                   notification,
                                 );
+
+                                if (context
+                                    .mounted) {
+                                  modalSetState(
+                                    () {},
+                                  );
+                                }
                               },
                             );
                           },
@@ -522,18 +1225,25 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   // ============================================================
 
   @override
-  Widget build(BuildContext context) {
-    final user = SessionService.instance.currentUser;
+  Widget build(
+    BuildContext context,
+  ) {
+    final user =
+        SessionService.instance.currentUser;
 
-    final inspections = _recentInspections;
+    final inspections =
+        _recentInspections;
 
-    final unreadNotifications = _unreadNotifications;
+    final unreadNotifications =
+        _unreadNotifications;
 
     return Scaffold(
-      backgroundColor: OfficialHomeScreen.background,
+      backgroundColor:
+          OfficialHomeScreen.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
+          padding:
+              const EdgeInsets.fromLTRB(
             14,
             12,
             14,
@@ -545,10 +1255,15 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
             // ======================================================
 
             _HomeHeader(
-              userName: user?.name ?? 'DoSJE Official',
-              alertCount: _unreadNotificationCount,
+              userName:
+                  user?.name ??
+                  'DoSJE Official',
+              alertCount:
+                  _unreadNotificationCount,
               onNotificationTap: () {
-                _showNotifications(context);
+                _showNotifications(
+                  context,
+                );
               },
             ),
 
@@ -556,55 +1271,76 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
             // DYNAMIC NOTIFICATION BANNER
             // ======================================================
 
-            if (unreadNotifications.isNotEmpty) ...[
-              const SizedBox(height: 12),
+            if (unreadNotifications
+                .isNotEmpty) ...[
+              const SizedBox(
+                height: 12,
+              ),
 
               _AlertBanner(
-                notification: unreadNotifications.first,
-                count: unreadNotifications.length,
+                notification:
+                    unreadNotifications.first,
+                count:
+                    unreadNotifications.length,
                 onTap: () {
-                  _showNotifications(context);
+                  _showNotifications(
+                    context,
+                  );
                 },
               ),
             ],
 
-            const SizedBox(height: 10),
+            const SizedBox(
+              height: 10,
+            ),
 
             // ======================================================
             // STATISTICS
             // ======================================================
 
             LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
+              builder: (
+                context,
+                constraints,
+              ) {
+                final width =
+                    constraints.maxWidth;
 
-                final columns = width < 340 ? 2 : 3;
+                final columns =
+                    width < 340 ? 2 : 3;
 
                 const spacing = 8.0;
 
                 final cardWidth =
                     (width -
-                            (spacing * (columns - 1))) /
+                            (spacing *
+                                (columns -
+                                    1))) /
                         columns;
 
                 return Wrap(
                   spacing: spacing,
                   runSpacing: spacing,
                   children: [
+                    // TODAY'S INSPECTIONS
                     SizedBox(
                       width: cardWidth,
                       child: _MiniStatCard(
-                        icon:
-                            Icons.calendar_today_outlined,
-                        label: "Today's\nInspections",
+                        icon: Icons
+                            .calendar_today_outlined,
+                        label:
+                            "Today's\nInspections",
                         count:
                             _todaysInspectionsCount
                                     ?.toString() ??
                                 '—',
                         color:
-                            OfficialHomeScreen.primaryBlue,
+                            OfficialHomeScreen
+                                .primaryBlue,
                         onTap: () {
-                          Navigator.of(context).push(
+                          Navigator.of(
+                            context,
+                          ).push(
                             MaterialPageRoute(
                               builder: (_) =>
                                   const OfficialTodayInstitutesScreen(),
@@ -614,20 +1350,25 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                       ),
                     ),
 
+                    // PENDING REVIEWS
                     SizedBox(
                       width: cardWidth,
                       child: _MiniStatCard(
-                        icon:
-                            Icons.assignment_outlined,
-                        label: 'Pending\nReviews',
+                        icon: Icons
+                            .assignment_outlined,
+                        label:
+                            'Pending\nReviews',
                         count:
                             _pendingReviewsCount
                                     ?.toString() ??
                                 '—',
                         color:
-                            OfficialHomeScreen.saffron,
+                            OfficialHomeScreen
+                                .saffron,
                         onTap: () {
-                          Navigator.of(context).push(
+                          Navigator.of(
+                            context,
+                          ).push(
                             MaterialPageRoute(
                               builder: (_) =>
                                   const AssignmentsScreen(
@@ -640,21 +1381,27 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                       ),
                     ),
 
+                    // TOTAL PROJECTS
                     SizedBox(
                       width: cardWidth,
                       child: _MiniStatCard(
-                        icon:
-                            Icons.apartment_outlined,
-                        label: 'Total\nProjects',
+                        icon: Icons
+                            .apartment_outlined,
+                        label:
+                            'Total\nProjects',
                         count:
                             _totalProjectsCount
                                     ?.toString() ??
                                 '—',
                         color:
-                            OfficialHomeScreen.green,
+                            OfficialHomeScreen
+                                .green,
                         onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.projectsPlaceholder,
+                          Navigator.of(
+                            context,
+                          ).pushNamed(
+                            AppRoutes
+                                .projectsPlaceholder,
                           );
                         },
                       ),
@@ -664,17 +1411,23 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
             // ======================================================
             // RECENT INSPECTIONS
             // ======================================================
 
             SectionHeader(
-              title: 'Recent Inspections',
-              actionLabel: 'View all',
+              title:
+                  'Recent Inspections',
+              actionLabel:
+                  'View all',
               onActionTap: () {
-                Navigator.of(context).push(
+                Navigator.of(
+                  context,
+                ).push(
                   MaterialPageRoute(
                     builder: (_) =>
                         const InspectionHistoryScreen(),
@@ -683,93 +1436,134 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
               },
             ),
 
-            const SizedBox(height: 7),
+            const SizedBox(
+              height: 7,
+            ),
 
             if (inspections.isEmpty)
               const _CompactEmptyInspectionState()
             else
               Column(
-                children: inspections
-                    .map(
-                      (inspection) => Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: 7),
-                        child: _RecentInspectionTile(
-                          inspection: inspection,
-                        ),
-                      ),
-                    )
-                    .toList(),
+                children:
+                    inspections
+                        .map(
+                          (
+                            inspection,
+                          ) =>
+                              Padding(
+                            padding:
+                                const EdgeInsets
+                                    .only(
+                              bottom: 7,
+                            ),
+                            child:
+                                _RecentInspectionTile(
+                              inspection:
+                                  inspection,
+                            ),
+                          ),
+                        )
+                        .toList(),
               ),
 
-            const SizedBox(height: 14),
+            const SizedBox(
+              height: 14,
+            ),
 
             // ======================================================
             // QUICK ACTIONS
             // ======================================================
 
             const SectionHeader(
-              title: 'Quick Actions',
+              title:
+                  'Quick Actions',
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(
+              height: 8,
+            ),
 
             LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
+              builder: (
+                context,
+                constraints,
+              ) {
+                final width =
+                    constraints.maxWidth;
 
-                final columns = width >= 620
-                    ? 5
-                    : width >= 390
-                        ? 3
-                        : 2;
+                final columns =
+                    width >= 620
+                        ? 5
+                        : width >= 390
+                            ? 3
+                            : 2;
 
                 const spacing = 8.0;
 
                 final itemWidth =
                     (width -
-                            (spacing * (columns - 1))) /
+                            (spacing *
+                                (columns -
+                                    1))) /
                         columns;
 
                 return Wrap(
                   spacing: spacing,
                   runSpacing: spacing,
                   children: [
+                    // PROJECTS
                     SizedBox(
                       width: itemWidth,
-                      child: QuickActionCard(
-                        icon: Icons.apartment,
-                        label: 'Projects',
+                      child:
+                          QuickActionCard(
+                        icon:
+                            Icons.apartment,
+                        label:
+                            'Projects',
                         onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.projectsPlaceholder,
+                          Navigator.of(
+                            context,
+                          ).pushNamed(
+                            AppRoutes
+                                .projectsPlaceholder,
                           );
                         },
                       ),
                     ),
 
+                    // INSPECTIONS
                     SizedBox(
                       width: itemWidth,
-                      child: QuickActionCard(
-                        icon:
-                            Icons.fact_check_outlined,
-                        label: 'Inspections',
+                      child:
+                          QuickActionCard(
+                        icon: Icons
+                            .fact_check_outlined,
+                        label:
+                            'Inspections',
                         onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.inspectionsPlaceholder,
+                          Navigator.of(
+                            context,
+                          ).pushNamed(
+                            AppRoutes
+                                .inspectionsPlaceholder,
                           );
                         },
                       ),
                     ),
 
+                    // CCTV
                     SizedBox(
                       width: itemWidth,
-                      child: QuickActionCard(
-                        icon:
-                            Icons.videocam_outlined,
-                        label: 'CCTV',
+                      child:
+                          QuickActionCard(
+                        icon: Icons
+                            .videocam_outlined,
+                        label:
+                            'CCTV',
                         onTap: () {
-                          Navigator.of(context).push(
+                          Navigator.of(
+                            context,
+                          ).push(
                             MaterialPageRoute(
                               builder: (_) =>
                                   const OfficialCctvScreen(),
@@ -779,26 +1573,39 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                       ),
                     ),
 
+                    // ANALYTICS
                     SizedBox(
                       width: itemWidth,
-                      child: QuickActionCard(
-                        icon: Icons.bar_chart,
-                        label: 'Analytics',
+                      child:
+                          QuickActionCard(
+                        icon:
+                            Icons.bar_chart,
+                        label:
+                            'Analytics',
                         onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.analyticsPlaceholder,
+                          Navigator.of(
+                            context,
+                          ).pushNamed(
+                            AppRoutes
+                                .analyticsPlaceholder,
                           );
                         },
                       ),
                     ),
 
+                    // CALL HISTORY
                     SizedBox(
                       width: itemWidth,
-                      child: QuickActionCard(
-                        icon: Icons.history,
-                        label: 'Call History',
+                      child:
+                          QuickActionCard(
+                        icon:
+                            Icons.history,
+                        label:
+                            'Call History',
                         onTap: () {
-                          Navigator.of(context).push(
+                          Navigator.of(
+                            context,
+                          ).push(
                             MaterialPageRoute(
                               builder: (_) =>
                                   const CallHistoryScreen(),
@@ -819,7 +1626,7 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 }
 
 // ============================================================
-// NOTIFICATION MODEL
+// NOTIFICATION TYPE
 // ============================================================
 
 enum _NotificationType {
@@ -827,22 +1634,115 @@ enum _NotificationType {
   pendingReview,
 }
 
+// ============================================================
+// NOTIFICATION MODEL
+// ============================================================
+
 class _OfficialNotification {
   final String id;
   final String title;
   final String message;
   final _NotificationType type;
-  final IconData icon;
-  final Color color;
+  final DateTime createdAt;
+  final DateTime? readAt;
 
   const _OfficialNotification({
     required this.id,
     required this.title,
     required this.message,
     required this.type,
-    required this.icon,
-    required this.color,
+    required this.createdAt,
+    this.readAt,
   });
+
+  IconData get icon {
+    switch (type) {
+      case _NotificationType.highRisk:
+        return Icons.warning_amber_rounded;
+
+      case _NotificationType.pendingReview:
+        return Icons.assignment_outlined;
+    }
+  }
+
+  Color get color {
+    switch (type) {
+      case _NotificationType.highRisk:
+        return OfficialHomeScreen.red;
+
+      case _NotificationType.pendingReview:
+        return OfficialHomeScreen.saffron;
+    }
+  }
+
+  _OfficialNotification copyWith({
+    String? id,
+    String? title,
+    String? message,
+    _NotificationType? type,
+    DateTime? createdAt,
+    DateTime? readAt,
+  }) {
+    return _OfficialNotification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      createdAt: createdAt ?? this.createdAt,
+      readAt: readAt ?? this.readAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'message': message,
+      'type': type.name,
+      'createdAt':
+          createdAt.toIso8601String(),
+      'readAt':
+          readAt?.toIso8601String(),
+    };
+  }
+
+  factory _OfficialNotification.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final typeValue =
+        json['type']?.toString();
+
+    final type =
+        _NotificationType.values.firstWhere(
+      (value) =>
+          value.name == typeValue,
+      orElse: () =>
+          _NotificationType.highRisk,
+    );
+
+    return _OfficialNotification(
+      id:
+          json['id']?.toString() ?? '',
+      title:
+          json['title']?.toString() ?? '',
+      message:
+          json['message']?.toString() ?? '',
+      type: type,
+      createdAt:
+          DateTime.tryParse(
+                json['createdAt']
+                        ?.toString() ??
+                    '',
+              ) ??
+              DateTime.now(),
+      readAt:
+          json['readAt'] == null
+              ? null
+              : DateTime.tryParse(
+                  json['readAt'].toString(),
+                ),
+    );
+  }
 }
 
 // ============================================================
@@ -861,7 +1761,8 @@ class _HomeHeader extends StatelessWidget {
   });
 
   String _greeting() {
-    final hour = DateTime.now().hour;
+    final hour =
+        DateTime.now().hour;
 
     if (hour < 12) {
       return 'Good Morning,';
@@ -875,22 +1776,30 @@ class _HomeHeader extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding:
+          const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 9,
       ),
       decoration: BoxDecoration(
-        color: OfficialHomeScreen.navy,
-        borderRadius: BorderRadius.circular(17),
+        color:
+            OfficialHomeScreen.navy,
+        borderRadius:
+            BorderRadius.circular(17),
         boxShadow: [
           BoxShadow(
-            color: OfficialHomeScreen.navy.withValues(
+            color:
+                OfficialHomeScreen.navy
+                    .withValues(
               alpha: 0.12,
             ),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset:
+                const Offset(0, 4),
           ),
         ],
       ),
@@ -898,48 +1807,65 @@ class _HomeHeader extends StatelessWidget {
         children: [
           const CircleAvatar(
             radius: 21,
-            backgroundColor: Colors.white,
+            backgroundColor:
+                Colors.white,
             child: Icon(
               Icons.person,
-              color: OfficialHomeScreen.navy,
+              color:
+                  OfficialHomeScreen.navy,
               size: 22,
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(
+            width: 10,
+          ),
 
           Expanded(
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+                  CrossAxisAlignment
+                      .start,
+              mainAxisSize:
+                  MainAxisSize.min,
               children: [
                 Text(
                   _greeting(),
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     fontSize: 10,
-                    color: Colors.white70,
+                    color:
+                        Colors.white70,
                   ),
                 ),
 
-                const SizedBox(height: 1),
+                const SizedBox(
+                  height: 1,
+                ),
 
                 Text(
                   userName,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                  style:
+                      const TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    fontWeight:
+                        FontWeight.w700,
+                    color:
+                        Colors.white,
                   ),
                 ),
 
                 const Text(
                   'Official',
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     fontSize: 9,
-                    color: Colors.white70,
+                    color:
+                        Colors.white70,
                   ),
                 ),
               ],
@@ -947,27 +1873,35 @@ class _HomeHeader extends StatelessWidget {
           ),
 
           // ======================================================
-          // DYNAMIC BELL
+          // NOTIFICATION BELL
           // ======================================================
 
           Stack(
-            clipBehavior: Clip.none,
+            clipBehavior:
+                Clip.none,
             children: [
               IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
+                padding:
+                    EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(
                   minWidth: 38,
                   minHeight: 38,
                 ),
-                visualDensity: VisualDensity.compact,
+                visualDensity:
+                    VisualDensity.compact,
                 icon: Icon(
                   alertCount > 0
-                      ? Icons.notifications
-                      : Icons.notifications_none,
-                  color: Colors.white,
+                      ? Icons
+                          .notifications
+                      : Icons
+                          .notifications_none,
+                  color:
+                      Colors.white,
                   size: 23,
                 ),
-                onPressed: onNotificationTap,
+                onPressed:
+                    onNotificationTap,
               ),
 
               if (alertCount > 0)
@@ -975,22 +1909,37 @@ class _HomeHeader extends StatelessWidget {
                   right: 1,
                   top: 1,
                   child: Container(
-                    padding: const EdgeInsets.all(3),
-                    constraints: const BoxConstraints(
+                    padding:
+                        const EdgeInsets
+                            .all(
+                      3,
+                    ),
+                    constraints:
+                        const BoxConstraints(
                       minWidth: 15,
                       minHeight: 15,
                     ),
-                    decoration: const BoxDecoration(
-                      color: OfficialHomeScreen.red,
-                      shape: BoxShape.circle,
+                    decoration:
+                        const BoxDecoration(
+                      color:
+                          OfficialHomeScreen
+                              .red,
+                      shape:
+                          BoxShape.circle,
                     ),
                     child: Text(
-                      '$alertCount',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      alertCount > 99
+                          ? '99+'
+                          : '$alertCount',
+                      textAlign:
+                          TextAlign.center,
+                      style:
+                          const TextStyle(
                         fontSize: 8,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                        color:
+                            Colors.white,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
                   ),
@@ -1007,7 +1956,8 @@ class _HomeHeader extends StatelessWidget {
 // DYNAMIC ALERT BANNER
 // ============================================================
 
-class _AlertBanner extends StatelessWidget {
+class _AlertBanner
+    extends StatelessWidget {
   final _OfficialNotification notification;
   final int count;
   final VoidCallback onTap;
@@ -1019,20 +1969,28 @@ class _AlertBanner extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(11),
+      borderRadius:
+          BorderRadius.circular(11),
       child: Container(
-        padding: const EdgeInsets.symmetric(
+        padding:
+            const EdgeInsets.symmetric(
           horizontal: 11,
           vertical: 9,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF6E8),
-          borderRadius: BorderRadius.circular(11),
+          color:
+              const Color(0xFFFFF6E8),
+          borderRadius:
+              BorderRadius.circular(11),
           border: Border.all(
-            color: notification.color.withValues(
+            color:
+                notification.color
+                    .withValues(
               alpha: 0.35,
             ),
           ),
@@ -1040,37 +1998,52 @@ class _AlertBanner extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: notification.color.withValues(
+              padding:
+                  const EdgeInsets.all(6),
+              decoration:
+                  BoxDecoration(
+                color:
+                    notification.color
+                        .withValues(
                   alpha: 0.12,
                 ),
-                borderRadius: BorderRadius.circular(7),
+                borderRadius:
+                    BorderRadius.circular(7),
               ),
               child: Icon(
                 notification.icon,
-                color: notification.color,
+                color:
+                    notification.color,
                 size: 19,
               ),
             ),
 
-            const SizedBox(width: 8),
+            const SizedBox(
+              width: 8,
+            ),
 
             Expanded(
               child: Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    CrossAxisAlignment
+                        .start,
                 children: [
                   Text(
                     count == 1
                         ? notification.title
                         : '$count notifications require attention',
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    overflow:
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        const TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: OfficialHomeScreen.textDark,
+                      fontWeight:
+                          FontWeight.w700,
+                      color:
+                          OfficialHomeScreen
+                              .textDark,
                     ),
                   ),
 
@@ -1078,10 +2051,15 @@ class _AlertBanner extends StatelessWidget {
                     Text(
                       notification.message,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      overflow:
+                          TextOverflow
+                              .ellipsis,
+                      style:
+                          const TextStyle(
                         fontSize: 10,
-                        color: OfficialHomeScreen.textGrey,
+                        color:
+                            OfficialHomeScreen
+                                .textGrey,
                       ),
                     ),
                 ],
@@ -1090,7 +2068,8 @@ class _AlertBanner extends StatelessWidget {
 
             const Icon(
               Icons.chevron_right,
-              color: OfficialHomeScreen.navy,
+              color:
+                  OfficialHomeScreen.navy,
               size: 17,
             ),
           ],
@@ -1104,7 +2083,8 @@ class _AlertBanner extends StatelessWidget {
 // NOTIFICATION TILE
 // ============================================================
 
-class _NotificationTile extends StatelessWidget {
+class _NotificationTile
+    extends StatelessWidget {
   final _OfficialNotification notification;
   final bool isRead;
   final VoidCallback onTap;
@@ -1115,22 +2095,56 @@ class _NotificationTile extends StatelessWidget {
     required this.onTap,
   });
 
+  String _formatDateTime(
+    DateTime dateTime,
+  ) {
+    final hour =
+        dateTime.hour % 12 == 0
+            ? 12
+            : dateTime.hour % 12;
+
+    final minute =
+        dateTime.minute
+            .toString()
+            .padLeft(2, '0');
+
+    final period =
+        dateTime.hour >= 12
+            ? 'PM'
+            : 'AM';
+
+    return '${dateTime.day}/'
+        '${dateTime.month}/'
+        '${dateTime.year} · '
+        '$hour:$minute $period';
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius:
+          BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(13),
+        padding:
+            const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: isRead
               ? Colors.white
-              : notification.color.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(14),
+              : notification.color
+                  .withValues(
+                  alpha: 0.07,
+                ),
+          borderRadius:
+              BorderRadius.circular(14),
           border: Border.all(
             color: isRead
-                ? OfficialHomeScreen.borderColor
-                : notification.color.withValues(
+                ? OfficialHomeScreen
+                    .borderColor
+                : notification.color
+                    .withValues(
                     alpha: 0.25,
                   ),
           ),
@@ -1139,28 +2153,45 @@ class _NotificationTile extends StatelessWidget {
           crossAxisAlignment:
               CrossAxisAlignment.start,
           children: [
+            // ==================================================
+            // ICON
+            // ==================================================
+
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: notification.color.withValues(
+                color:
+                    notification.color
+                        .withValues(
                   alpha: 0.10,
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius:
+                    BorderRadius.circular(
+                  10,
+                ),
               ),
               child: Icon(
                 notification.icon,
-                color: notification.color,
+                color:
+                    notification.color,
                 size: 21,
               ),
             ),
 
-            const SizedBox(width: 11),
+            const SizedBox(
+              width: 11,
+            ),
+
+            // ==================================================
+            // CONTENT
+            // ==================================================
 
             Expanded(
               child: Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    CrossAxisAlignment
+                        .start,
                 children: [
                   Row(
                     children: [
@@ -1169,14 +2200,19 @@ class _NotificationTile extends StatelessWidget {
                           notification.title,
                           maxLines: 1,
                           overflow:
-                              TextOverflow.ellipsis,
+                              TextOverflow
+                                  .ellipsis,
                           style: TextStyle(
                             color:
-                                OfficialHomeScreen.textDark,
+                                OfficialHomeScreen
+                                    .textDark,
                             fontSize: 13,
-                            fontWeight: isRead
-                                ? FontWeight.w600
-                                : FontWeight.w800,
+                            fontWeight:
+                                isRead
+                                    ? FontWeight
+                                        .w600
+                                    : FontWeight
+                                        .w800,
                           ),
                         ),
                       ),
@@ -1185,51 +2221,108 @@ class _NotificationTile extends StatelessWidget {
                         Container(
                           width: 7,
                           height: 7,
-                          decoration: BoxDecoration(
-                            color: notification.color,
-                            shape: BoxShape.circle,
+                          decoration:
+                              BoxDecoration(
+                            color:
+                                notification
+                                    .color,
+                            shape:
+                                BoxShape
+                                    .circle,
                           ),
                         ),
                     ],
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(
+                    height: 4,
+                  ),
 
                   Text(
                     notification.message,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: OfficialHomeScreen.textGrey,
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(
+                      color:
+                          OfficialHomeScreen
+                              .textGrey,
                       fontSize: 11,
                       height: 1.35,
                     ),
                   ),
 
-                  const SizedBox(height: 7),
+                  const SizedBox(
+                    height: 7,
+                  ),
 
+                  // CREATED TIME
                   Text(
-                    isRead ? 'Read' : 'Unread • Tap to open',
-                    style: TextStyle(
-                      color: isRead
-                          ? OfficialHomeScreen.textGrey
-                          : notification.color,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                    _formatDateTime(
+                      notification
+                          .createdAt,
+                    ),
+                    style:
+                        const TextStyle(
+                      color:
+                          OfficialHomeScreen
+                              .textGrey,
+                      fontSize: 9,
                     ),
                   ),
+
+                  const SizedBox(
+                    height: 4,
+                  ),
+
+                  // READ STATUS
+                  if (isRead &&
+                      notification.readAt !=
+                          null)
+                    Text(
+                      'Read · ${_formatDateTime(notification.readAt!)}',
+                      style:
+                          const TextStyle(
+                        color:
+                            OfficialHomeScreen
+                                .green,
+                        fontSize: 9,
+                        fontWeight:
+                            FontWeight.w600,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Unread • Tap to open',
+                      style: TextStyle(
+                        color:
+                            notification
+                                .color,
+                        fontSize: 10,
+                        fontWeight:
+                            FontWeight.w700,
+                      ),
+                    ),
                 ],
               ),
             ),
 
-            const SizedBox(width: 5),
+            const SizedBox(
+              width: 5,
+            ),
 
             const Padding(
-              padding: EdgeInsets.only(top: 12),
+              padding:
+                  EdgeInsets.only(
+                top: 12,
+              ),
               child: Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: OfficialHomeScreen.textGrey,
+                color:
+                    OfficialHomeScreen
+                        .textGrey,
               ),
             ),
           ],
@@ -1243,7 +2336,8 @@ class _NotificationTile extends StatelessWidget {
 // MINI STAT CARD
 // ============================================================
 
-class _MiniStatCard extends StatelessWidget {
+class _MiniStatCard
+    extends StatelessWidget {
   final IconData icon;
   final String label;
   final String count;
@@ -1259,40 +2353,61 @@ class _MiniStatCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius:
+          BorderRadius.circular(12),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(9),
+        padding:
+            const EdgeInsets.all(9),
         decoration: BoxDecoration(
-          color: OfficialHomeScreen.cardBackground,
-          borderRadius: BorderRadius.circular(12),
+          color:
+              OfficialHomeScreen
+                  .cardBackground,
+          borderRadius:
+              BorderRadius.circular(12),
           border: Border.all(
-            color: OfficialHomeScreen.borderColor,
+            color:
+                OfficialHomeScreen
+                    .borderColor,
           ),
           boxShadow: [
             BoxShadow(
-              color: OfficialHomeScreen.navy.withValues(
+              color:
+                  OfficialHomeScreen
+                      .navy
+                      .withValues(
                 alpha: 0.035,
               ),
               blurRadius: 6,
-              offset: const Offset(0, 2),
+              offset:
+                  const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment:
               CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.10),
+              padding:
+                  const EdgeInsets.all(6),
+              decoration:
+                  BoxDecoration(
+                color:
+                    color.withValues(
+                  alpha: 0.10,
+                ),
                 borderRadius:
-                    BorderRadius.circular(7),
+                    BorderRadius.circular(
+                  7,
+                ),
               ),
               child: Icon(
                 icon,
@@ -1301,39 +2416,56 @@ class _MiniStatCard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(
+              height: 6,
+            ),
 
             Text(
               count,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              overflow:
+                  TextOverflow.ellipsis,
+              style:
+                  const TextStyle(
                 fontSize: 19,
-                fontWeight: FontWeight.bold,
-                color: OfficialHomeScreen.navy,
+                fontWeight:
+                    FontWeight.bold,
+                color:
+                    OfficialHomeScreen
+                        .navy,
               ),
             ),
 
-            const SizedBox(height: 1),
+            const SizedBox(
+              height: 1,
+            ),
 
             Text(
               label,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              overflow:
+                  TextOverflow.ellipsis,
+              style:
+                  const TextStyle(
                 fontSize: 10,
-                color: OfficialHomeScreen.textGrey,
+                color:
+                    OfficialHomeScreen
+                        .textGrey,
                 height: 1.15,
               ),
             ),
 
-            const SizedBox(height: 5),
+            const SizedBox(
+              height: 5,
+            ),
 
             Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+                  MainAxisSize.min,
               crossAxisAlignment:
                   CrossAxisAlignment.end,
-              children: List.generate(
+              children:
+                  List.generate(
                 4,
                 (i) {
                   const heights = [
@@ -1344,18 +2476,29 @@ class _MiniStatCard extends StatelessWidget {
                   ];
 
                   return Padding(
-                    padding: const EdgeInsets.only(
+                    padding:
+                        const EdgeInsets
+                            .only(
                       right: 2,
                     ),
                     child: Container(
                       width: 4,
-                      height: heights[i],
-                      decoration: BoxDecoration(
-                        color: color.withValues(
-                          alpha: 0.35 + (i * 0.15),
+                      height:
+                          heights[i],
+                      decoration:
+                          BoxDecoration(
+                        color:
+                            color.withValues(
+                          alpha:
+                              0.35 +
+                                  (i *
+                                      0.15),
                         ),
                         borderRadius:
-                            BorderRadius.circular(2),
+                            BorderRadius
+                                .circular(
+                          2,
+                        ),
                       ),
                     ),
                   );
@@ -1378,61 +2521,90 @@ class _CompactEmptyInspectionState
   const _CompactEmptyInspectionState();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
+      padding:
+          const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 12,
       ),
       decoration: BoxDecoration(
-        color: OfficialHomeScreen.cardBackground,
-        borderRadius: BorderRadius.circular(12),
+        color:
+            OfficialHomeScreen
+                .cardBackground,
+        borderRadius:
+            BorderRadius.circular(12),
         border: Border.all(
-          color: OfficialHomeScreen.borderColor,
+          color:
+              OfficialHomeScreen
+                  .borderColor,
         ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: OfficialHomeScreen.softBlue,
+            padding:
+                const EdgeInsets.all(8),
+            decoration:
+                BoxDecoration(
+              color:
+                  OfficialHomeScreen
+                      .softBlue,
               borderRadius:
-                  BorderRadius.circular(9),
+                  BorderRadius.circular(
+                9,
+              ),
             ),
             child: const Icon(
-              Icons.fact_check_outlined,
+              Icons
+                  .fact_check_outlined,
               size: 22,
-              color: OfficialHomeScreen.navy,
+              color:
+                  OfficialHomeScreen
+                      .navy,
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(
+            width: 10,
+          ),
 
           const Expanded(
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  CrossAxisAlignment
+                      .start,
               children: [
                 Text(
                   'No recent inspections',
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: OfficialHomeScreen.textDark,
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        OfficialHomeScreen
+                            .textDark,
                   ),
                 ),
-
-                SizedBox(height: 2),
-
+                SizedBox(
+                  height: 2,
+                ),
                 Text(
                   'Inspections will appear here once submitted.',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                  style:
+                      TextStyle(
                     fontSize: 10,
-                    color: OfficialHomeScreen.textGrey,
+                    color:
+                        OfficialHomeScreen
+                            .textGrey,
                   ),
                 ),
               ],
@@ -1459,64 +2631,90 @@ class _RecentInspectionTile
   Color get _statusColor {
     switch (inspection.status) {
       case InspectionStatus.approved:
-        return OfficialHomeScreen.green;
+        return OfficialHomeScreen
+            .green;
 
       case InspectionStatus.overdue:
-        return OfficialHomeScreen.red;
+        return OfficialHomeScreen
+            .red;
 
       case InspectionStatus.underReview:
-        return OfficialHomeScreen.saffron;
+        return OfficialHomeScreen
+            .saffron;
 
       case InspectionStatus.submitted:
-        return OfficialHomeScreen.primaryBlue;
+        return OfficialHomeScreen
+            .primaryBlue;
 
       case InspectionStatus.inProgress:
-        return OfficialHomeScreen.navy;
+        return OfficialHomeScreen
+            .navy;
 
       case InspectionStatus.assigned:
-        return OfficialHomeScreen.textGrey;
+        return OfficialHomeScreen
+            .textGrey;
     }
   }
 
   Color get _riskColor {
     switch (inspection.risk) {
       case RiskLevel.high:
-        return OfficialHomeScreen.red;
+        return OfficialHomeScreen
+            .red;
 
       case RiskLevel.medium:
-        return OfficialHomeScreen.saffron;
+        return OfficialHomeScreen
+            .saffron;
 
       case RiskLevel.low:
-        return OfficialHomeScreen.green;
+        return OfficialHomeScreen
+            .green;
     }
   }
 
-  String _formatTime(DateTime dt) {
-    final hour = dt.hour % 12 == 0
-        ? 12
-        : dt.hour % 12;
+  String _formatTime(
+    DateTime dt,
+  ) {
+    final hour =
+        dt.hour % 12 == 0
+            ? 12
+            : dt.hour % 12;
 
-    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    final period =
+        dt.hour >= 12
+            ? 'PM'
+            : 'AM';
 
     final minute =
-        dt.minute.toString().padLeft(2, '0');
+        dt.minute
+            .toString()
+            .padLeft(2, '0');
 
     return '${dt.day} Sep ${dt.year} · '
         '$hour:$minute $period';
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return InkWell(
       onTap: () {},
-      borderRadius: BorderRadius.circular(12),
+      borderRadius:
+          BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(9),
+        padding:
+            const EdgeInsets.all(9),
         decoration: BoxDecoration(
-          color: OfficialHomeScreen.cardBackground,
-          borderRadius: BorderRadius.circular(12),
+          color:
+              OfficialHomeScreen
+                  .cardBackground,
+          borderRadius:
+              BorderRadius.circular(12),
           border: Border.all(
-            color: OfficialHomeScreen.borderColor,
+            color:
+                OfficialHomeScreen
+                    .borderColor,
           ),
         ),
         child: Row(
@@ -1526,54 +2724,76 @@ class _RecentInspectionTile
             Container(
               width: 42,
               height: 42,
-              decoration: BoxDecoration(
-                color: OfficialHomeScreen.softBlue,
+              decoration:
+                  BoxDecoration(
+                color:
+                    OfficialHomeScreen
+                        .softBlue,
                 borderRadius:
-                    BorderRadius.circular(9),
+                    BorderRadius.circular(
+                  9,
+                ),
               ),
               child: const Icon(
                 Icons.apartment,
-                color: OfficialHomeScreen.navy,
+                color:
+                    OfficialHomeScreen
+                        .navy,
                 size: 21,
               ),
             ),
 
-            const SizedBox(width: 9),
+            const SizedBox(
+              width: 9,
+            ),
 
             Expanded(
               child: Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+                    CrossAxisAlignment
+                        .start,
+                mainAxisSize:
+                    MainAxisSize.min,
                 children: [
                   Text(
                     inspection.projectName,
                     maxLines: 1,
                     overflow:
-                        TextOverflow.ellipsis,
-                    style: const TextStyle(
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        const TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          FontWeight.w600,
                       color:
-                          OfficialHomeScreen.textDark,
+                          OfficialHomeScreen
+                              .textDark,
                     ),
                   ),
 
-                  const SizedBox(height: 1),
+                  const SizedBox(
+                    height: 1,
+                  ),
 
                   Text(
                     'Inspector: ${inspection.inspectorName}',
                     maxLines: 1,
                     overflow:
-                        TextOverflow.ellipsis,
-                    style: const TextStyle(
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        const TextStyle(
                       fontSize: 10,
                       color:
-                          OfficialHomeScreen.textGrey,
+                          OfficialHomeScreen
+                              .textGrey,
                     ),
                   ),
 
-                  const SizedBox(height: 2),
+                  const SizedBox(
+                    height: 2,
+                  ),
 
                   Row(
                     children: [
@@ -1581,31 +2801,39 @@ class _RecentInspectionTile
                         Icons.access_time,
                         size: 11,
                         color:
-                            OfficialHomeScreen.textGrey,
+                            OfficialHomeScreen
+                                .textGrey,
                       ),
 
-                      const SizedBox(width: 3),
+                      const SizedBox(
+                        width: 3,
+                      ),
 
                       Expanded(
                         child: Text(
                           _formatTime(
-                            inspection.dateTime,
+                            inspection
+                                .dateTime,
                           ),
                           maxLines: 1,
                           overflow:
-                              TextOverflow.ellipsis,
+                              TextOverflow
+                                  .ellipsis,
                           style:
                               const TextStyle(
                             fontSize: 10,
                             color:
-                                OfficialHomeScreen.textGrey,
+                                OfficialHomeScreen
+                                    .textGrey,
                           ),
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 5),
+                  const SizedBox(
+                    height: 5,
+                  ),
 
                   Wrap(
                     spacing: 5,
@@ -1613,13 +2841,18 @@ class _RecentInspectionTile
                     children: [
                       _SmallStatusBadge(
                         label:
-                            inspection.status.label,
-                        color: _statusColor,
+                            inspection
+                                .status
+                                .label,
+                        color:
+                            _statusColor,
                       ),
+
                       _SmallStatusBadge(
                         label:
                             '${inspection.risk.label} Risk',
-                        color: _riskColor,
+                        color:
+                            _riskColor,
                       ),
                     ],
                   ),
@@ -1627,14 +2860,21 @@ class _RecentInspectionTile
               ),
             ),
 
-            const SizedBox(width: 3),
+            const SizedBox(
+              width: 3,
+            ),
 
             const Padding(
-              padding: EdgeInsets.only(top: 12),
+              padding:
+                  EdgeInsets.only(
+                top: 12,
+              ),
               child: Icon(
                 Icons.chevron_right,
                 size: 17,
-                color: OfficialHomeScreen.textGrey,
+                color:
+                    OfficialHomeScreen
+                        .textGrey,
               ),
             ),
           ],
@@ -1659,24 +2899,37 @@ class _SmallStatusBadge
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding:
+          const EdgeInsets.symmetric(
         horizontal: 6,
         vertical: 3,
       ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(6),
+      decoration:
+          BoxDecoration(
+        color:
+            color.withValues(
+          alpha: 0.10,
+        ),
+        borderRadius:
+            BorderRadius.circular(6),
         border: Border.all(
-          color: color.withValues(alpha: 0.18),
+          color:
+              color.withValues(
+            alpha: 0.18,
+          ),
         ),
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style:
+            TextStyle(
           fontSize: 9,
-          fontWeight: FontWeight.w600,
+          fontWeight:
+              FontWeight.w600,
           color: color,
         ),
       ),

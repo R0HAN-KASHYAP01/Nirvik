@@ -485,7 +485,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   //   ]
   // }
   // ============================================================
+  // ============================================================
+  // DATE HELPERS
+  // ============================================================
 
+  /// Returns true only if [isoString] parses to a date matching
+  /// today's calendar date (year/month/day) in local time.
+  bool _isToday(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return false;
+
+    final parsed = DateTime.tryParse(isoString);
+    if (parsed == null) return false;
+
+    final local = parsed.toLocal();
+    final now = DateTime.now();
+
+    return local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day;
+  }
   Map<String, dynamic> _getRoleData(String role) {
     final data = _aiRoleStatistics;
 
@@ -850,8 +868,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
     }
 
-    final summary = _aiSummary ?? {};
-    final latest = _aiLatestSession ?? {};
+        final summary = _aiSummary ?? {};
+    final rawLatest = _aiLatestSession ?? {};
+
+    final latestIsToday = _isToday(
+      rawLatest['session_started_at']?.toString(),
+    );
+
+    // If the most recent AI session wasn't from today, don't
+    // present it as today's attendance.
+    final latest = latestIsToday ? rawLatest : <String, dynamic>{};
 
     // ==========================================================
     // SUMMARY DATA
@@ -1112,8 +1138,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             color: AppColors.border,
           ),
         ),
-        child: const Text(
-          'No AI attendance session available.',
+                child: const Text(
+          'No camera-based attendance recorded today. '
+          'Run the camera pipeline to update today\'s AI attendance.',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(

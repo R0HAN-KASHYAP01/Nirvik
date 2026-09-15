@@ -8,6 +8,7 @@ import '../../../services/ngo_camera_service.dart';
 import '../../../services/ngo_institute_service.dart';
 import '../../../services/ngo_reports_service.dart';
 import '../../../services/session_service.dart';
+
 import '../../calls/presentation/call_history_screen.dart';
 import 'ngo_notifications_screen.dart';
 
@@ -34,7 +35,6 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   int _todayBeneficiaries = 0;
   int _todayStaff = 0;
   int _todayReports = 0;
-
   bool _attendanceSubmittedToday = false;
 
   // ============================================================
@@ -43,8 +43,16 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   bool _loadingStats = true;
   String? _organizationName;
-
   Timer? _autoReloadTimer;
+
+  // ============================================================
+  // NOTIFICATION READ STATE
+  // ============================================================
+
+  // Read state is kept for the current screen session.
+  // Refreshing dashboard data will not make already-read
+  // notifications unread again.
+  final Set<String> _readNotificationIds = <String>{};
 
   // ============================================================
   // COLORS
@@ -69,10 +77,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
     _loadDashboardData();
 
-    // Automatically refresh Supabase data every 30 seconds.
+    // Automatically refresh dashboard data every 30 seconds.
     _autoReloadTimer = Timer.periodic(
       const Duration(seconds: 30),
-          (_) {
+      (_) {
         _loadDashboardData();
       },
     );
@@ -86,6 +94,203 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   void dispose() {
     _autoReloadTimer?.cancel();
     super.dispose();
+  }
+
+  // ============================================================
+  // DYNAMIC NOTIFICATIONS
+  // ============================================================
+
+  List<_NgoNotification> get _notifications {
+    final notifications = <_NgoNotification>[];
+
+    // ----------------------------------------------------------
+    // Attendance notification
+    // ----------------------------------------------------------
+    //
+    // If today's attendance has not been submitted, it becomes
+    // an unread notification.
+    //
+    if (!_attendanceSubmittedToday) {
+      notifications.add(
+        const _NgoNotification(
+          id: 'attendance-pending-today',
+          title: 'Attendance Pending',
+          message:
+              "Today's attendance has not been submitted yet. "
+              'Please submit the attendance for today.',
+          icon: Icons.groups_rounded,
+          iconColor: Color(0xFFF5A623),
+          type: _NgoNotificationType.attendance,
+        ),
+      );
+    }
+
+    // ----------------------------------------------------------
+    // Today's report notification
+    // ----------------------------------------------------------
+    //
+    // A report submitted today is treated as an application
+    // event. The notification exists only when real report data
+    // is present.
+    //
+    if (_todayReports > 0) {
+      notifications.add(
+        _NgoNotification(
+          id: 'reports-today-$_todayReports',
+          title: 'Reports Submitted',
+          message:
+              '$_todayReports report${_todayReports == 1 ? '' : 's'} '
+              'submitted today.',
+          icon: Icons.description_rounded,
+          iconColor: darkBlue,
+          type: _NgoNotificationType.reports,
+        ),
+      );
+    }
+
+    // ----------------------------------------------------------
+    // Camera feed notification
+    // ----------------------------------------------------------
+    //
+    // If there are no camera feeds available, show an actionable
+    // notification.
+    //
+    if (!_loadingStats && _totalCameraFeeds == 0) {
+      notifications.add(
+        const _NgoNotification(
+          id: 'camera-feed-unavailable',
+          title: 'Camera Feed Unavailable',
+          message:
+              'No camera feeds are currently available. '
+              'Check the Camera / Video section.',
+          icon: Icons.videocam_off_rounded,
+          iconColor: Color(0xFFD64545),
+          type: _NgoNotificationType.camera,
+        ),
+      );
+    }
+
+    return notifications;
+  }
+
+  // ============================================================
+  // UNREAD NOTIFICATIONS
+  // ============================================================
+
+  List<_NgoNotification> get _unreadNotifications {
+    return _notifications
+        .where(
+          (notification) =>
+              !_readNotificationIds.contains(notification.id),
+        )
+        .toList();
+  }
+
+  // ============================================================
+  // NOTIFICATION COUNT
+  // ============================================================
+
+  int get _unreadNotificationCount {
+    return _unreadNotifications.length;
+  }
+
+  // ============================================================
+  // OPEN NOTIFICATIONS
+  // ============================================================
+
+  void _openNotifications() {
+    final unread = _unreadNotifications;
+
+    // ----------------------------------------------------------
+    // No unread notifications
+    // ----------------------------------------------------------
+
+    if (unread.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('No new notifications'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // Notification bottom sheet
+    // ----------------------------------------------------------
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return _NgoNotificationSheet(
+          notifications: unread,
+          onNotificationTap: (notification) {
+            _markNotificationAsRead(notification.id);
+
+            Navigator.of(sheetContext).pop();
+
+            _openNotificationTarget(notification);
+          },
+          onMarkAllRead: () {
+            setState(() {
+              _readNotificationIds.addAll(
+                unread.map(
+                  (notification) => notification.id,
+                ),
+              );
+            });
+
+            Navigator.of(sheetContext).pop();
+          },
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // MARK SINGLE NOTIFICATION AS READ
+  // ============================================================
+
+  void _markNotificationAsRead(String id) {
+    if (!mounted) return;
+
+    setState(() {
+      _readNotificationIds.add(id);
+    });
+  }
+
+  // ============================================================
+  // OPEN NOTIFICATION TARGET
+  // ============================================================
+
+  void _openNotificationTarget(
+    _NgoNotification notification,
+  ) {
+    if (!mounted) return;
+
+    switch (notification.type) {
+      case _NgoNotificationType.attendance:
+        _openAttendance();
+        break;
+
+      case _NgoNotificationType.reports:
+        _openReports();
+        break;
+
+      case _NgoNotificationType.camera:
+        _openCamera();
+        break;
+
+      case _NgoNotificationType.notice:
+        _openNotices();
+        break;
+    }
   }
 
   // ============================================================
@@ -107,32 +312,32 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
     try {
       // ----------------------------------------------------------
-      // Load complete attendance history
+      // Attendance
       // ----------------------------------------------------------
 
       final attendanceFuture =
-      NgoAttendanceService.instance.fetchHistory(user.id);
+          NgoAttendanceService.instance.fetchHistory(user.id);
 
       // ----------------------------------------------------------
-      // Load complete reports
+      // Reports
       // ----------------------------------------------------------
 
       final reportsFuture =
-      NgoReportsService.instance.fetchReports(user.id);
+          NgoReportsService.instance.fetchReports(user.id);
 
       // ----------------------------------------------------------
-      // Load camera feeds
+      // Camera feeds
       // ----------------------------------------------------------
 
       final feedsFuture =
-      NgoCameraService.instance.fetchFeeds(user.id);
+          NgoCameraService.instance.fetchFeeds(user.id);
 
       // ----------------------------------------------------------
-      // Load NGO / Institute name
+      // NGO / Institute name
       // ----------------------------------------------------------
 
       final organizationFuture =
-      NgoInstituteService.instance.fetchOrganizationName(
+          NgoInstituteService.instance.fetchOrganizationName(
         user.id,
       );
 
@@ -143,22 +348,25 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         organizationFuture,
       ]);
 
-      final attendance = results[0] as List<AttendanceRecord>;
+      final attendance =
+          results[0] as List<AttendanceRecord>;
 
-      final reports = results[1] as List<NgoReport>;
+      final reports =
+          results[1] as List<NgoReport>;
 
       final feeds = results[2] as List;
 
-      final organizationName = results[3] as String?;
+      final organizationName =
+          results[3] as String?;
 
       // ==========================================================
-      // CALCULATE TOTAL ATTENDANCE
+      // TOTAL ATTENDANCE
       // ==========================================================
 
       final totalAttendance = attendance.length;
 
       // ==========================================================
-      // CALCULATE TODAY'S ATTENDANCE
+      // TODAY'S ATTENDANCE
       // ==========================================================
 
       final now = DateTime.now();
@@ -169,6 +377,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
       int todayBeneficiaries = 0;
       int todayStaff = 0;
+
       bool attendanceSubmittedToday = false;
 
       for (final record in attendance) {
@@ -229,8 +438,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         _todayBeneficiaries = todayBeneficiaries;
         _todayStaff = todayStaff;
         _todayReports = todayReports;
-
-        _attendanceSubmittedToday = attendanceSubmittedToday;
+        _attendanceSubmittedToday =
+            attendanceSubmittedToday;
 
         // NGO name
         _organizationName = organizationName;
@@ -273,19 +482,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   }
 
   // ============================================================
-  // NOTIFICATION NAVIGATION
-  // ============================================================
-
-  void _openNotifications() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const NgoNotificationsScreen(),
-      ),
-    );
-  }
-
-  // ============================================================
-  // NOTICES
+  // NOTIFICATION SCREEN
   // ============================================================
 
   void _openNotices() {
@@ -367,27 +564,19 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           color: darkBlue,
           backgroundColor: Colors.white,
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics:
+                const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             children: [
               _buildTopHeader(),
-
               const SizedBox(height: 12),
-
               _buildGovernmentBanner(),
-
               const SizedBox(height: 18),
-
               _buildTotalStatus(),
-
               const SizedBox(height: 20),
-
               _buildTodayOverview(),
-
               const SizedBox(height: 20),
-
               _buildQuickStatus(),
-
               const SizedBox(height: 24),
             ],
           ),
@@ -402,9 +591,12 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   Widget _buildTopHeader() {
     final organizationName =
-    _organizationName?.trim().isNotEmpty == true
-        ? _organizationName!.trim()
-        : 'NGO / Institute';
+        _organizationName?.trim().isNotEmpty == true
+            ? _organizationName!.trim()
+            : 'NGO / Institute';
+
+    final unreadCount =
+        _unreadNotificationCount;
 
     return Container(
       width: double.infinity,
@@ -422,8 +614,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment:
+            CrossAxisAlignment.center,
         children: [
+          // ------------------------------------------------------
+          // PROFILE CIRCLE
+          // ------------------------------------------------------
+
           Container(
             width: 55,
             height: 55,
@@ -440,28 +637,33 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           const SizedBox(width: 13),
 
+          // ------------------------------------------------------
+          // USER INFORMATION
+          // ------------------------------------------------------
+
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   _getGreeting(),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                      TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-
                 const SizedBox(height: 3),
-
                 Text(
                   organizationName,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                      TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -472,13 +674,70 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             ),
           ),
 
-          IconButton(
-            onPressed: _openNotices,
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.white,
-              size: 31,
-            ),
+          // ------------------------------------------------------
+          // NOTIFICATION BELL
+          // ------------------------------------------------------
+
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                onPressed: _openNotifications,
+                tooltip: 'Notifications',
+                icon: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: Colors.white,
+                  size: 31,
+                ),
+              ),
+
+              // --------------------------------------------------
+              // DYNAMIC BADGE
+              // --------------------------------------------------
+
+              if (unreadCount > 0)
+                Positioned(
+                  right: 5,
+                  top: 2,
+                  child: Container(
+                    constraints:
+                        const BoxConstraints(
+                      minWidth: 19,
+                      minHeight: 19,
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: unreadCount < 10
+                          ? BoxShape.circle
+                          : BoxShape.rectangle,
+                      borderRadius: unreadCount >= 10
+                          ? BorderRadius.circular(10)
+                          : null,
+                      border: Border.all(
+                        color: darkBlue,
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 99
+                            ? '99+'
+                            : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight:
+                              FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -487,36 +746,32 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // GOVERNMENT BANNER
-  //
-  // Was `Container(height: 82, ...)` around three text columns.
-  // A fixed pixel height with fixed-size text is exactly the
-  // pattern that overflows once the device's system font scale is
-  // larger than the emulator's default 1.0x. `height:` is now a
-  // `minHeight` constraint (so the banner keeps its normal size in
-  // the common case) and `IntrinsicHeight` sizes the row to
-  // whichever of the three columns actually needs the most room, so
-  // all three grow together instead of clipping.
   // ============================================================
 
   Widget _buildGovernmentBanner() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 18),
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 82),
+        constraints:
+            const BoxConstraints(minHeight: 82),
         padding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 10,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius:
+              BorderRadius.circular(10),
           border: Border.all(
             color: const Color(0xFFE0E8EE),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.035),
+              color: Colors.black.withValues(
+                alpha: 0.035,
+              ),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -524,46 +779,56 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         ),
         child: IntrinsicHeight(
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment:
+                CrossAxisAlignment.stretch,
             children: [
-              Expanded(
+              // --------------------------------------------------
+              // LEFT TEXT
+              // --------------------------------------------------
+
+              const Expanded(
                 flex: 6,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
                     Text(
                       "Let's build a stronger,",
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         color: navy,
                         fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                        fontWeight:
+                            FontWeight.w800,
                       ),
                     ),
                     Text(
                       "more inclusive society",
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         color: navy,
                         fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                        fontWeight:
+                            FontWeight.w800,
                       ),
                     ),
                   ],
                 ),
               ),
 
+              // --------------------------------------------------
+              // TRICOLOR LINES
+              // --------------------------------------------------
+
               Expanded(
                 flex: 4,
                 child: Center(
-                  // The decorative underline bars are graphics, not
-                  // text, so a small fixed height for just this
-                  // element is safe — it doesn't grow with font
-                  // scale and doesn't need to.
                   child: SizedBox(
                     height: 34,
                     child: Stack(
@@ -575,10 +840,14 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                           right: 0,
                           child: Container(
                             height: 4,
-                            decoration: BoxDecoration(
+                            decoration:
+                                BoxDecoration(
                               borderRadius:
-                              BorderRadius.circular(10),
-                              color: const Color(0xFFFFC66D),
+                                  BorderRadius
+                                      .circular(10),
+                              color: const Color(
+                                0xFFFFC66D,
+                              ),
                             ),
                           ),
                         ),
@@ -588,10 +857,14 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                           right: 4,
                           child: Container(
                             height: 4,
-                            decoration: BoxDecoration(
+                            decoration:
+                                BoxDecoration(
                               borderRadius:
-                              BorderRadius.circular(10),
-                              color: const Color(0xFF54B96B),
+                                  BorderRadius
+                                      .circular(10),
+                              color: const Color(
+                                0xFF54B96B,
+                              ),
                             ),
                           ),
                         ),
@@ -601,43 +874,56 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 ),
               ),
 
-              Expanded(
+              // --------------------------------------------------
+              // RIGHT TEXT
+              // --------------------------------------------------
+
+              const Expanded(
                 flex: 4,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
+                  children: [
                     Text(
                       'Government',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9,
                         color: Colors.grey,
-                        fontWeight: FontWeight.w600,
+                        fontWeight:
+                            FontWeight.w600,
                       ),
                     ),
                     Text(
                       'for a Brighter',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9,
                         color: Colors.grey,
-                        fontWeight: FontWeight.w600,
+                        fontWeight:
+                            FontWeight.w600,
                       ),
                     ),
                     Text(
                       'Tomorrow',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9,
                         color: Colors.grey,
-                        fontWeight: FontWeight.w600,
+                        fontWeight:
+                            FontWeight.w600,
                       ),
                     ),
                   ],
@@ -652,27 +938,26 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // TOTAL STATUS
-  //
-  // Was `SizedBox(height: 108, child: Row(...))`. `IntrinsicHeight`
-  // replaces it: it still gives the Row the bounded height it needs
-  // to lay out inside a ListView, but that height comes from
-  // whichever status card actually needs the most space, instead of
-  // a number picked for one font scale.
   // ============================================================
 
   Widget _buildTotalStatus() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Total Status'),
+          _buildSectionTitle(
+            'Total Status',
+          ),
 
           const SizedBox(height: 12),
 
           IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _buildStatusCard(
@@ -680,9 +965,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     iconColor: green,
                     title: 'Attendance',
                     bottomText:
-                    '$_totalAttendance Submitted',
+                        '$_totalAttendance Submitted',
                     bottomColor: green,
-                    showCheck: _totalAttendance > 0,
+                    showCheck:
+                        _totalAttendance > 0,
                     onTap: _openAttendance,
                   ),
                 ),
@@ -691,13 +977,15 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
                 Expanded(
                   child: _buildStatusCard(
-                    icon: Icons.description_rounded,
+                    icon:
+                        Icons.description_rounded,
                     iconColor: darkBlue,
                     title: 'Reports',
                     bottomText:
-                    '$_totalReports Submitted',
+                        '$_totalReports Submitted',
                     bottomColor: green,
-                    showCheck: _totalReports > 0,
+                    showCheck:
+                        _totalReports > 0,
                     onTap: _openReports,
                   ),
                 ),
@@ -706,7 +994,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
                 Expanded(
                   child: _buildStatusCard(
-                    icon: Icons.notifications_active_rounded,
+                    icon:
+                        Icons.notifications_active_rounded,
                     iconColor: orange,
                     title: 'Notices',
                     bottomText: 'View',
@@ -738,42 +1027,52 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   }) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius:
+          BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius:
+            BorderRadius.circular(9),
         child: Container(
-          // minHeight instead of a locked height: keeps the usual
-          // 108px card in the common case but lets it grow if a
-          // larger system font scale needs more room.
-          constraints: const BoxConstraints(minHeight: 108),
-          padding: const EdgeInsets.symmetric(
+          constraints:
+              const BoxConstraints(
+            minHeight: 108,
+          ),
+          padding:
+              const EdgeInsets.symmetric(
             horizontal: 7,
             vertical: 10,
           ),
           decoration: BoxDecoration(
             color: cardBackground,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius:
+                BorderRadius.circular(9),
             border: Border.all(
               color: borderColor,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
+                color: Colors.black.withValues(
+                  alpha: 0.025,
+                ),
                 blurRadius: 4,
-                offset: const Offset(0, 2),
+                offset:
+                    const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               Container(
                 width: 39,
                 height: 39,
-                decoration: BoxDecoration(
+                decoration:
+                    BoxDecoration(
                   color: softBlueGrey,
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius:
+                      BorderRadius.circular(11),
                 ),
                 child: Icon(
                   icon,
@@ -786,20 +1085,24 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
               Text(
                 title,
-                textAlign: TextAlign.center,
+                textAlign:
+                    TextAlign.center,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: navy,
                   fontSize: 10,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                      FontWeight.w700,
                 ),
               ),
 
               const SizedBox(height: 5),
 
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
                 children: [
                   if (showCheck) ...[
                     Icon(
@@ -809,16 +1112,20 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                     ),
                     const SizedBox(width: 3),
                   ],
+
                   Flexible(
                     child: Text(
                       bottomText,
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         color: bottomColor,
                         fontSize: 9,
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                            FontWeight.w700,
                       ),
                     ),
                   ),
@@ -833,17 +1140,15 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // TODAY'S OVERVIEW
-  //
-  // Same fix as Total Status: `SizedBox(height: 105, ...)` replaced
-  // with `IntrinsicHeight` so the row's height comes from its
-  // tallest card rather than a hardcoded number.
   // ============================================================
 
   Widget _buildTodayOverview() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           _buildSectionTitle(
             'Today’s Overview',
@@ -858,16 +1163,20 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 size: 14,
                 color: Colors.grey,
               ),
+
               const SizedBox(width: 4),
+
               Flexible(
                 child: Text(
                   _todayLabel(),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                      TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontWeight:
+                        FontWeight.w500,
                   ),
                 ),
               ),
@@ -878,14 +1187,18 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _buildOverviewCard(
-                    icon: Icons.groups_rounded,
+                    icon:
+                        Icons.groups_rounded,
                     iconColor: green,
-                    number: '$_todayBeneficiaries',
-                    label: 'Beneficiaries\npresent',
+                    number:
+                        '$_todayBeneficiaries',
+                    label:
+                        'Beneficiaries\npresent',
                   ),
                 ),
 
@@ -893,10 +1206,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
                 Expanded(
                   child: _buildOverviewCard(
-                    icon: Icons.badge_rounded,
+                    icon:
+                        Icons.badge_rounded,
                     iconColor: darkBlue,
-                    number: '$_todayStaff',
-                    label: 'Staff present',
+                    number:
+                        '$_todayStaff',
+                    label:
+                        'Staff present',
                   ),
                 ),
 
@@ -904,10 +1220,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
                 Expanded(
                   child: _buildOverviewCard(
-                    icon: Icons.description_rounded,
+                    icon:
+                        Icons.description_rounded,
                     iconColor: darkBlue,
-                    number: '$_todayReports',
-                    label: 'Reports\nsubmitted',
+                    number:
+                        '$_todayReports',
+                    label:
+                        'Reports\nsubmitted',
                   ),
                 ),
               ],
@@ -920,13 +1239,6 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // OVERVIEW CARD
-  //
-  // The big number can grow (large headcounts) and the label was
-  // relying on an embedded '\n' for its two lines with no maxLines
-  // safety net — both are exactly the kind of dynamic content that
-  // fits fine at 1.0x font scale and overflows above it. The number
-  // now shrinks via FittedBox instead of overflowing, and the label
-  // is capped at 2 lines with ellipsis as a backstop.
   // ============================================================
 
   Widget _buildOverviewCard({
@@ -936,8 +1248,12 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     required String label,
   }) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 105),
-      padding: const EdgeInsets.fromLTRB(
+      constraints:
+          const BoxConstraints(
+        minHeight: 105,
+      ),
+      padding:
+          const EdgeInsets.fromLTRB(
         10,
         10,
         7,
@@ -945,21 +1261,27 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       ),
       decoration: BoxDecoration(
         color: cardBackground,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius:
+            BorderRadius.circular(9),
         border: Border.all(
           color: borderColor,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
+            color: Colors.black.withValues(
+              alpha: 0.025,
+            ),
             blurRadius: 4,
-            offset: const Offset(0, 2),
+            offset:
+                const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize:
+            MainAxisSize.min,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Icon(
             icon,
@@ -972,14 +1294,16 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           Flexible(
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
+              alignment:
+                  Alignment.centerLeft,
               child: Text(
                 number,
                 maxLines: 1,
                 style: const TextStyle(
                   color: navy,
                   fontSize: 20,
-                  fontWeight: FontWeight.w900,
+                  fontWeight:
+                      FontWeight.w900,
                 ),
               ),
             ),
@@ -991,12 +1315,14 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             child: Text(
               label,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              overflow:
+                  TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.grey,
                 fontSize: 9,
                 height: 1.2,
-                fontWeight: FontWeight.w600,
+                fontWeight:
+                    FontWeight.w600,
               ),
             ),
           ),
@@ -1007,30 +1333,35 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   // ============================================================
   // QUICK STATUS
-  //
-  // Both rows had `SizedBox(height: 86, ...)`; replaced with
-  // `IntrinsicHeight` for the same reason as the sections above.
   // ============================================================
 
   Widget _buildQuickStatus() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Quick Status'),
+          _buildSectionTitle(
+            'Quick Status',
+          ),
 
           const SizedBox(height: 12),
 
           IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _buildQuickCard(
-                    icon: Icons.groups_rounded,
-                    title: 'Daily Attendance',
-                    onTap: _openAttendance,
+                    icon:
+                        Icons.groups_rounded,
+                    title:
+                        'Daily Attendance',
+                    onTap:
+                        _openAttendance,
                   ),
                 ),
 
@@ -1038,9 +1369,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
                 Expanded(
                   child: _buildQuickCard(
-                    icon: Icons.description_rounded,
+                    icon:
+                        Icons.description_rounded,
                     title: 'Reports',
-                    onTap: _openReports,
+                    onTap:
+                        _openReports,
                   ),
                 ),
               ],
@@ -1051,17 +1384,56 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _buildQuickCard(
-                    icon: Icons.history_rounded,
-                    title: 'Call History',
+                    icon:
+                        Icons.videocam_rounded,
+                    title:
+                        'Camera / Video',
+                    onTap:
+                        _openCamera,
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: _buildQuickCard(
+                    icon:
+                        Icons.business_rounded,
+                    title:
+                        'Institute Profile',
+                    onTap: () async {
+                      await Navigator.of(context)
+                          .pushNamed(
+                        AppRoutes.ngoProfile,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildQuickCard(
+                    icon:
+                        Icons.history_rounded,
+                    title:
+                        'Call History',
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) =>
-                          const CallHistoryScreen(),
+                              const CallHistoryScreen(),
                         ),
                       );
                     },
@@ -1092,28 +1464,38 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   }) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius:
+          BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius:
+            BorderRadius.circular(9),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 86),
+          constraints:
+              const BoxConstraints(
+            minHeight: 86,
+          ),
           decoration: BoxDecoration(
             color: cardBackground,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius:
+                BorderRadius.circular(9),
             border: Border.all(
               color: borderColor,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
+                color: Colors.black.withValues(
+                  alpha: 0.025,
+                ),
                 blurRadius: 4,
-                offset: const Offset(0, 2),
+                offset:
+                    const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
@@ -1124,18 +1506,22 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
               const SizedBox(height: 8),
 
               Padding(
-                padding: const EdgeInsets.symmetric(
+                padding:
+                    const EdgeInsets.symmetric(
                   horizontal: 4,
                 ),
                 child: Text(
                   title,
-                  textAlign: TextAlign.center,
+                  textAlign:
+                      TextAlign.center,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                      TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: navy,
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight:
+                        FontWeight.w700,
                   ),
                 ),
               ),
@@ -1150,15 +1536,331 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   // SECTION TITLE
   // ============================================================
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(
+    String title,
+  ) {
     return Text(
       title,
       maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      overflow:
+          TextOverflow.ellipsis,
       style: const TextStyle(
         color: navy,
         fontSize: 15,
         fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// NGO NOTIFICATION MODEL
+// ============================================================================
+
+enum _NgoNotificationType {
+  attendance,
+  reports,
+  camera,
+  notice,
+}
+
+class _NgoNotification {
+  final String id;
+  final String title;
+  final String message;
+  final IconData icon;
+  final Color iconColor;
+  final _NgoNotificationType type;
+
+  const _NgoNotification({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.icon,
+    required this.iconColor,
+    required this.type,
+  });
+}
+
+// ============================================================================
+// NGO NOTIFICATION SHEET
+// ============================================================================
+
+class _NgoNotificationSheet
+    extends StatelessWidget {
+  final List<_NgoNotification> notifications;
+  final ValueChanged<_NgoNotification>
+      onNotificationTap;
+  final VoidCallback onMarkAllRead;
+
+  const _NgoNotificationSheet({
+    required this.notifications,
+    required this.onNotificationTap,
+    required this.onMarkAllRead,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        constraints:
+            const BoxConstraints(
+          maxHeight: 560,
+        ),
+        margin:
+            const EdgeInsets.fromLTRB(
+          12,
+          0,
+          12,
+          12,
+        ),
+        decoration:
+            const BoxDecoration(
+          color: Colors.white,
+          borderRadius:
+              BorderRadius.vertical(
+            top: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize:
+              MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+
+            // ------------------------------------------------------
+            // HANDLE
+            // ------------------------------------------------------
+
+            Container(
+              width: 42,
+              height: 4,
+              decoration:
+                  BoxDecoration(
+                color:
+                    const Color(0xFFD1DEE7),
+                borderRadius:
+                    BorderRadius.circular(10),
+              ),
+            ),
+
+            // ------------------------------------------------------
+            // HEADER
+            // ------------------------------------------------------
+
+            Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(
+                20,
+                16,
+                12,
+                8,
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Notifications',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight:
+                            FontWeight.w700,
+                        color:
+                            Color(0xFF17324D),
+                      ),
+                    ),
+                  ),
+
+                  TextButton(
+                    onPressed:
+                        onMarkAllRead,
+                    child: const Text(
+                      'Mark all as read',
+                      style: TextStyle(
+                        color:
+                            Color(0xFF123E68),
+                        fontWeight:
+                            FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(
+              height: 1,
+              color:
+                  Color(0xFFE4EBF0),
+            ),
+
+            // ------------------------------------------------------
+            // NOTIFICATION LIST
+            // ------------------------------------------------------
+
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  16,
+                  12,
+                  16,
+                  18,
+                ),
+                itemCount:
+                    notifications.length,
+                separatorBuilder:
+                    (_, __) =>
+                        const SizedBox(
+                  height: 8,
+                ),
+                itemBuilder:
+                    (context, index) {
+                  final notification =
+                      notifications[index];
+
+                  return Material(
+                    color:
+                        const Color(
+                      0xFFF4F8FB,
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(
+                      14,
+                    ),
+                    child: InkWell(
+                      borderRadius:
+                          BorderRadius.circular(
+                        14,
+                      ),
+                      onTap: () =>
+                          onNotificationTap(
+                        notification,
+                      ),
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.all(
+                          13,
+                        ),
+                        child: Row(
+                          crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                          children: [
+                            // --------------------------------------
+                            // ICON
+                            // --------------------------------------
+
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration:
+                                  BoxDecoration(
+                                color:
+                                    notification
+                                        .iconColor
+                                        .withValues(
+                                  alpha: 0.10,
+                                ),
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  12,
+                                ),
+                              ),
+                              child: Icon(
+                                notification.icon,
+                                color:
+                                    notification
+                                        .iconColor,
+                                size: 21,
+                              ),
+                            ),
+
+                            const SizedBox(
+                              width: 12,
+                            ),
+
+                            // --------------------------------------
+                            // TEXT
+                            // --------------------------------------
+
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment
+                                        .start,
+                                children: [
+                                  Text(
+                                    notification
+                                        .title,
+                                    maxLines: 1,
+                                    overflow:
+                                        TextOverflow
+                                            .ellipsis,
+                                    style:
+                                        const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight:
+                                          FontWeight
+                                              .w700,
+                                      color:
+                                          Color(
+                                        0xFF17324D,
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    height: 4,
+                                  ),
+
+                                  Text(
+                                    notification
+                                        .message,
+                                    maxLines: 3,
+                                    overflow:
+                                        TextOverflow
+                                            .ellipsis,
+                                    style:
+                                        const TextStyle(
+                                      fontSize: 11,
+                                      height: 1.35,
+                                      color:
+                                          Color(
+                                        0xFF667788,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(
+                              width: 6,
+                            ),
+
+                            const Icon(
+                              Icons
+                                  .arrow_forward_ios_rounded,
+                              size: 13,
+                              color:
+                                  Color(
+                                0xFF8A9AAA,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

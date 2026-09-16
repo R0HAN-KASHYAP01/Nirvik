@@ -71,7 +71,6 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
   bool _notificationStorageLoaded = false;
 
-  bool _showNotificationHistory = false;
 
   // ============================================================
   // UNREAD NOTIFICATIONS
@@ -751,11 +750,9 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
   // SHOW NOTIFICATION HISTORY
   // ============================================================
 
-  void _showNotifications(
-    BuildContext context,
-  ) {
-    // Every time the sheet opens, start with unread view.
-    _showNotificationHistory = false;
+  void _showNotifications(BuildContext context) {
+    _NotificationFilter selectedFilter =
+        _NotificationFilter.unread;
 
     showModalBottomSheet<void>(
       context: context,
@@ -763,447 +760,237 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (
-            context,
-            modalSetState,
-          ) {
-            final unreadNotifications =
-                _unreadNotifications;
+          builder: (context, modalSetState) {
+            final now = DateTime.now();
+            final last30DaysCutoff =
+                now.subtract(const Duration(days: 30));
+            final todayCutoff =
+                now.subtract(const Duration(hours: 24));
 
-            final historyNotifications =
-                _last30DaysNotifications;
+            final todayNotifications = _notifications
+                .where((notification) =>
+                    !notification.createdAt.isBefore(todayCutoff))
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-            final notifications =
-                _showNotificationHistory
-                    ? historyNotifications
-                    : unreadNotifications;
+            final unreadNotifications = _notifications
+                .where((notification) =>
+                    !notification.createdAt.isBefore(last30DaysCutoff) &&
+                    notification.readAt == null)
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-            final unreadCount =
-                _unreadNotificationCount;
+            final allNotifications = _notifications
+                .where((notification) =>
+                    !notification.createdAt.isBefore(last30DaysCutoff))
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+            final todayCount = todayNotifications.length;
+            final unreadCount = unreadNotifications.length;
+            final allCount = allNotifications.length;
+
+            final List<_OfficialNotification> notifications;
+            switch (selectedFilter) {
+              case _NotificationFilter.today:
+                notifications = todayNotifications;
+                break;
+              case _NotificationFilter.unread:
+                notifications = unreadNotifications;
+                break;
+              case _NotificationFilter.all:
+                notifications = allNotifications;
+                break;
+            }
 
             return Container(
               constraints: BoxConstraints(
-                maxHeight:
-                    MediaQuery.sizeOf(context)
-                            .height *
-                        0.82,
+                maxHeight: MediaQuery.sizeOf(context).height * 0.82,
               ),
-              decoration:
-                  const BoxDecoration(
-                color:
-                    OfficialHomeScreen
-                        .background,
-                borderRadius:
-                    BorderRadius.vertical(
+              decoration: const BoxDecoration(
+                color: OfficialHomeScreen.background,
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(24),
                 ),
               ),
               child: SafeArea(
                 child: Column(
-                  mainAxisSize:
-                      MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SizedBox(
-                      height: 10,
-                    ),
-
-                    // ==================================================
-                    // HANDLE
-                    // ==================================================
-
+                    const SizedBox(height: 10),
                     Container(
                       width: 42,
                       height: 4,
-                      decoration:
-                          BoxDecoration(
-                        color:
-                            OfficialHomeScreen
-                                .borderColor,
-                        borderRadius:
-                            BorderRadius
-                                .circular(
-                          10,
-                        ),
+                      decoration: BoxDecoration(
+                        color: OfficialHomeScreen.borderColor,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-
-                    // ==================================================
-                    // HEADER
-                    // ==================================================
-
                     Padding(
-                      padding:
-                          const EdgeInsets
-                              .fromLTRB(
-                        18,
-                        15,
-                        14,
-                        4,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(18, 15, 14, 8),
                       child: Row(
                         children: [
                           const Expanded(
                             child: Text(
                               'Notifications',
-                              style:
-                                  TextStyle(
-                                color:
-                                    OfficialHomeScreen
-                                        .textDark,
+                              style: TextStyle(
+                                color: OfficialHomeScreen.textDark,
                                 fontSize: 20,
-                                fontWeight:
-                                    FontWeight
-                                        .w800,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
-
-                          if (unreadCount >
-                                  0 &&
-                              !_showNotificationHistory)
+                          if (unreadCount > 0)
                             TextButton(
-                              onPressed:
-                                  () async {
+                              onPressed: () async {
                                 await _markAllNotificationsAsRead();
-
-                                if (context
-                                    .mounted) {
-                                  modalSetState(
-                                    () {},
-                                  );
+                                if (context.mounted) {
+                                  modalSetState(() {});
                                 }
                               },
-                              child:
-                                  const Text(
+                              child: const Text(
                                 'Mark all read',
-                                style:
-                                    TextStyle(
-                                  color:
-                                      OfficialHomeScreen
-                                          .primaryBlue,
-                                  fontWeight:
-                                      FontWeight
-                                          .w700,
+                                style: TextStyle(
+                                  color: OfficialHomeScreen.primaryBlue,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
                         ],
                       ),
                     ),
-
-                    // ==================================================
-                    // HISTORY TOGGLE
-                    // ==================================================
-
                     Padding(
-                      padding:
-                          const EdgeInsets
-                              .fromLTRB(
-                        18,
-                        2,
-                        18,
-                        10,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
                       child: Row(
                         children: [
-                          Icon(
-                            _showNotificationHistory
-                                ? Icons
-                                    .history_rounded
-                                : Icons
-                                    .notifications_none_rounded,
-                            size: 15,
-                            color:
-                                OfficialHomeScreen
-                                    .textGrey,
-                          ),
-
-                          const SizedBox(
-                            width: 6,
-                          ),
-
                           Expanded(
-                            child: Text(
-                              _showNotificationHistory
-                                  ? 'Notification history'
-                                  : unreadCount >
-                                          0
-                                      ? '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}'
-                                      : 'No unread notifications',
-                              style:
-                                  const TextStyle(
-                                color:
-                                    OfficialHomeScreen
-                                        .textGrey,
-                                fontSize: 11,
-                              ),
+                            child: _NotificationFilterButton(
+                              label: 'Today',
+                              count: todayCount,
+                              icon: Icons.today_outlined,
+                              selected: selectedFilter ==
+                                  _NotificationFilter.today,
+                              onTap: () {
+                                modalSetState(() {
+                                  selectedFilter = _NotificationFilter.today;
+                                });
+                              },
                             ),
                           ),
-
-                          // ==================================================
-                          // LAST 30 DAYS BUTTON
-                          // ==================================================
-
-                          GestureDetector(
-                            onTap: () {
-                              modalSetState(
-                                () {
-                                  _showNotificationHistory =
-                                      !_showNotificationHistory;
-                                },
-                              );
-                            },
-                            child:
-                                AnimatedContainer(
-                              duration:
-                                  const Duration(
-                                milliseconds:
-                                    180,
-                              ),
-                              padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                horizontal:
-                                    10,
-                                vertical: 6,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color: _showNotificationHistory
-                                    ? OfficialHomeScreen
-                                        .primaryBlue
-                                    : OfficialHomeScreen
-                                        .softBlue,
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  20,
-                                ),
-                                border:
-                                    Border.all(
-                                  color:
-                                      OfficialHomeScreen
-                                          .primaryBlue
-                                          .withValues(
-                                    alpha: 0.15,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                _showNotificationHistory
-                                    ? 'Unread'
-                                    : 'Last 30 days',
-                                style:
-                                    TextStyle(
-                                  color:
-                                      _showNotificationHistory
-                                          ? Colors
-                                              .white
-                                          : OfficialHomeScreen
-                                              .primaryBlue,
-                                  fontSize: 10,
-                                  fontWeight:
-                                      FontWeight
-                                          .w700,
-                                ),
-                              ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: _NotificationFilterButton(
+                              label: 'Unread',
+                              count: unreadCount,
+                              icon: Icons.notifications_none_rounded,
+                              selected: selectedFilter ==
+                                  _NotificationFilter.unread,
+                              onTap: () {
+                                modalSetState(() {
+                                  selectedFilter = _NotificationFilter.unread;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: _NotificationFilterButton(
+                              label: 'All',
+                              count: allCount,
+                              icon: Icons.history_rounded,
+                              selected: selectedFilter ==
+                                  _NotificationFilter.all,
+                              onTap: () {
+                                modalSetState(() {
+                                  selectedFilter = _NotificationFilter.all;
+                                });
+                              },
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // ==================================================
-                    // HISTORY INFO
-                    // ==================================================
-
-                    if (_showNotificationHistory)
-                      const Padding(
-                        padding:
-                            EdgeInsets
-                                .fromLTRB(
-                          18,
-                          0,
-                          18,
-                          8,
-                        ),
-                        child: Align(
-                          alignment:
-                              Alignment
-                                  .centerLeft,
-                          child: Text(
-                            'Showing notifications from the last 30 days',
-                            style:
-                                TextStyle(
-                              color:
-                                  OfficialHomeScreen
-                                      .textGrey,
-                              fontSize: 10,
-                            ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          selectedFilter == _NotificationFilter.today
+                              ? 'Showing notifications from the last 24 hours'
+                              : selectedFilter == _NotificationFilter.unread
+                                  ? 'Showing unread notifications from the last 30 days'
+                                  : 'Showing all notifications from the last 30 days',
+                          style: const TextStyle(
+                            color: OfficialHomeScreen.textGrey,
+                            fontSize: 10,
                           ),
                         ),
                       ),
-
-                    // ==================================================
-                    // EMPTY STATE
-                    // ==================================================
-
+                    ),
                     if (notifications.isEmpty)
                       Padding(
-                        padding:
-                            const EdgeInsets
-                                .fromLTRB(
-                          20,
-                          45,
-                          20,
-                          55,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 45, 20, 55),
                         child: Column(
                           children: [
                             Icon(
-                              _showNotificationHistory
-                                  ? Icons
-                                      .history_toggle_off_rounded
-                                  : Icons
-                                      .notifications_none_rounded,
+                              selectedFilter == _NotificationFilter.today
+                                  ? Icons.today_outlined
+                                  : selectedFilter == _NotificationFilter.unread
+                                      ? Icons.notifications_none_rounded
+                                      : Icons.history_toggle_off_rounded,
                               size: 52,
-                              color:
-                                  const Color(
-                                0xFF9EAFBC,
-                              ),
+                              color: const Color(0xFF9EAFBC),
                             ),
-
-                            const SizedBox(
-                              height: 13,
-                            ),
-
+                            const SizedBox(height: 13),
                             Text(
-                              _showNotificationHistory
-                                  ? 'No notification history'
-                                  : 'No unread notifications',
-                              style:
-                                  const TextStyle(
-                                color:
-                                    OfficialHomeScreen
-                                        .textDark,
+                              selectedFilter == _NotificationFilter.today
+                                  ? 'No notifications today'
+                                  : selectedFilter == _NotificationFilter.unread
+                                      ? 'No unread notifications'
+                                      : 'No notification history',
+                              style: const TextStyle(
+                                color: OfficialHomeScreen.textDark,
                                 fontSize: 15,
-                                fontWeight:
-                                    FontWeight
-                                        .w700,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-
-                            const SizedBox(
-                              height: 5,
-                            ),
-
+                            const SizedBox(height: 5),
                             Text(
-                              _showNotificationHistory
-                                  ? 'There are no notifications from the last 30 days.'
-                                  : 'You are all caught up.',
-                              textAlign:
-                                  TextAlign
-                                      .center,
-                              style:
-                                  const TextStyle(
-                                color:
-                                    OfficialHomeScreen
-                                        .textGrey,
+                              selectedFilter == _NotificationFilter.today
+                                  ? 'There are no notifications from the last 24 hours.'
+                                  : selectedFilter == _NotificationFilter.unread
+                                      ? 'You are all caught up.'
+                                      : 'There are no notifications from the last 30 days.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: OfficialHomeScreen.textGrey,
                                 fontSize: 12,
                               ),
                             ),
-
-                            const SizedBox(
-                              height: 14,
-                            ),
-
-                            if (!_showNotificationHistory &&
-                                historyNotifications
-                                    .isNotEmpty)
-                              GestureDetector(
-                                onTap: () {
-                                  modalSetState(
-                                    () {
-                                      _showNotificationHistory =
-                                          true;
-                                    },
-                                  );
-                                },
-                                child:
-                                    const Text(
-                                  'View last 30 days',
-                                  style:
-                                      TextStyle(
-                                    color:
-                                        OfficialHomeScreen
-                                            .primaryBlue,
-                                    fontSize:
-                                        11,
-                                    fontWeight:
-                                        FontWeight
-                                            .w700,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                       )
                     else
-
-                      // ==================================================
-                      // NOTIFICATION LIST
-                      // ==================================================
-
                       Flexible(
-                        child:
-                            ListView.separated(
-                          padding:
-                              const EdgeInsets
-                                  .fromLTRB(
-                            14,
-                            3,
-                            14,
-                            20,
-                          ),
-                          itemCount:
-                              notifications
-                                  .length,
-                          separatorBuilder:
-                              (_, __) =>
-                                  const SizedBox(
-                            height: 8,
-                          ),
-                          itemBuilder:
-                              (
-                            context,
-                            index,
-                          ) {
-                            final notification =
-                                notifications[
-                                    index];
-
-                            final isRead =
-                                notification
-                                        .readAt !=
-                                    null;
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(14, 3, 14, 20),
+                          itemCount: notifications.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final notification = notifications[index];
+                            final isRead = notification.readAt != null;
 
                             return _NotificationTile(
-                              notification:
-                                  notification,
-                              isRead:
-                                  isRead,
-                              onTap:
-                                  () async {
+                              notification: notification,
+                              isRead: isRead,
+                              onTap: () async {
                                 await _handleNotificationTap(
                                   context,
                                   notification,
                                 );
-
-                                if (context
-                                    .mounted) {
-                                  modalSetState(
-                                    () {},
-                                  );
+                                if (context.mounted) {
+                                  modalSetState(() {});
                                 }
                               },
                             );
@@ -1623,6 +1410,16 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
       ),
     );
   }
+}
+
+// ============================================================
+// NOTIFICATION FILTER
+// ============================================================
+
+enum _NotificationFilter {
+  today,
+  unread,
+  all,
 }
 
 // ============================================================
@@ -2071,6 +1868,98 @@ class _AlertBanner
               color:
                   OfficialHomeScreen.navy,
               size: 17,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// NOTIFICATION FILTER BUTTON
+// ============================================================
+
+class _NotificationFilterButton extends StatelessWidget {
+  final String label;
+  final int count;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NotificationFilterButton({
+    required this.label,
+    required this.count,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected
+              ? OfficialHomeScreen.primaryBlue
+              : OfficialHomeScreen.softBlue,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? OfficialHomeScreen.primaryBlue
+                : OfficialHomeScreen.borderColor,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: selected
+                  ? Colors.white
+                  : OfficialHomeScreen.primaryBlue,
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected
+                      ? Colors.white
+                      : OfficialHomeScreen.textDark,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              constraints: const BoxConstraints(minWidth: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: selected
+                      ? Colors.white
+                      : OfficialHomeScreen.primaryBlue,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ],
         ),

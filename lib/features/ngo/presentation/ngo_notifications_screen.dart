@@ -48,11 +48,20 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
   String? _errorMessage;
 
-  StreamSubscription<List<NgoNotification>>? _notificationSubscription;
+  StreamSubscription<List<NgoNotification>>?
+      _notificationSubscription;
 
-  // false = Unread
-  // true  = Last 30 Days
-  bool _showHistory = false;
+  // ============================================================
+  // FILTER
+  // ============================================================
+  //
+  // Today  -> Last 24 hours
+  // Unread -> Unread notifications from last 30 days
+  // All    -> All notifications from last 30 days
+  //
+
+  _NotificationFilter _selectedFilter =
+      _NotificationFilter.today;
 
   // ============================================================
   // INIT
@@ -74,6 +83,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   void dispose() {
     _notificationSubscription?.cancel();
     _notificationService.disposeRealtime();
+
     super.dispose();
   }
 
@@ -105,7 +115,9 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
     try {
       final notifications =
-          await _notificationService.fetchNotifications(user.id);
+          await _notificationService.fetchNotifications(
+        user.id,
+      );
 
       if (!mounted) return;
 
@@ -158,15 +170,42 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   }
 
   // ============================================================
-  // UNREAD NOTIFICATIONS
+  // TODAY
+  // ============================================================
+
+  List<NgoNotification> get _todayNotifications {
+    final now = DateTime.now();
+
+    final twentyFourHoursAgo =
+        now.subtract(const Duration(hours: 24));
+
+    return _notifications.where((notification) {
+      final createdAt = notification.createdAt.toLocal();
+
+      return createdAt.isAfter(twentyFourHoursAgo) ||
+          createdAt.isAtSameMomentAs(twentyFourHoursAgo);
+    }).toList();
+  }
+
+  // ============================================================
+  // UNREAD
   // ============================================================
 
   List<NgoNotification> get _unreadNotifications {
-    return _notifications
-        .where(
-          (notification) => !notification.isRead,
-        )
-        .toList();
+    final now = DateTime.now();
+
+    final thirtyDaysAgo =
+        now.subtract(const Duration(days: 30));
+
+    return _notifications.where((notification) {
+      final createdAt = notification.createdAt.toLocal();
+
+      final withinThirtyDays =
+          createdAt.isAfter(thirtyDaysAgo) ||
+              createdAt.isAtSameMomentAs(thirtyDaysAgo);
+
+      return !notification.isRead && withinThirtyDays;
+    }).toList();
   }
 
   // ============================================================
@@ -176,14 +215,23 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   List<NgoNotification> get _last30DaysNotifications {
     final now = DateTime.now();
 
-    final thirtyDaysAgo = now.subtract(
-      const Duration(days: 30),
-    );
+    final thirtyDaysAgo =
+        now.subtract(const Duration(days: 30));
 
     return _notifications.where((notification) {
-      return notification.createdAt.isAfter(thirtyDaysAgo) ||
-          notification.createdAt.isAtSameMomentAs(thirtyDaysAgo);
+      final createdAt = notification.createdAt.toLocal();
+
+      return createdAt.isAfter(thirtyDaysAgo) ||
+          createdAt.isAtSameMomentAs(thirtyDaysAgo);
     }).toList();
+  }
+
+  // ============================================================
+  // ALL NOTIFICATIONS
+  // ============================================================
+
+  List<NgoNotification> get _allNotifications {
+    return _last30DaysNotifications;
   }
 
   // ============================================================
@@ -191,19 +239,42 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   // ============================================================
 
   List<NgoNotification> get _displayedNotifications {
-    if (_showHistory) {
-      return _last30DaysNotifications;
-    }
+    switch (_selectedFilter) {
+      case _NotificationFilter.today:
+        return _todayNotifications;
 
-    return _unreadNotifications;
+      case _NotificationFilter.unread:
+        return _unreadNotifications;
+
+      case _NotificationFilter.all:
+        return _allNotifications;
+    }
   }
 
   // ============================================================
-  // UNREAD COUNT
+  // TOTAL UNREAD COUNT
   // ============================================================
 
   int get _unreadCount {
-    return _unreadNotifications.length;
+    return _notifications
+        .where((notification) => !notification.isRead)
+        .length;
+  }
+
+  // ============================================================
+  // TODAY COUNT
+  // ============================================================
+
+  int get _todayCount {
+    return _todayNotifications.length;
+  }
+
+  // ============================================================
+  // ALL COUNT
+  // ============================================================
+
+  int get _allCount {
+    return _allNotifications.length;
   }
 
   // ============================================================
@@ -215,7 +286,10 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   ) async {
     if (notification.isRead) return;
 
+    // ----------------------------------------------------------
     // Optimistic UI update
+    // ----------------------------------------------------------
+
     setState(() {
       _notifications = _notifications.map((item) {
         if (item.id == notification.id) {
@@ -233,6 +307,10 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       }).toList();
     });
 
+    // ----------------------------------------------------------
+    // Update Supabase
+    // ----------------------------------------------------------
+
     try {
       await _notificationService.markAsRead(
         notification.id,
@@ -242,7 +320,6 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
         'Mark notification as read error: $error',
       );
 
-      // Refresh actual server state if update failed.
       await _loadNotifications();
     }
   }
@@ -268,6 +345,19 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       );
 
       await _loadNotifications();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'All notifications marked as read.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
     } catch (error) {
       debugPrint(
         'Mark all notifications as read error: $error',
@@ -375,9 +465,16 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   String _formatNotificationTime(
     DateTime dateTime,
   ) {
+    final localDateTime = dateTime.toLocal();
+
     final now = DateTime.now();
 
-    final difference = now.difference(dateTime);
+    final difference =
+        now.difference(localDateTime);
+
+    if (difference.isNegative) {
+      return 'Just now';
+    }
 
     if (difference.inSeconds < 60) {
       return 'Just now';
@@ -401,21 +498,20 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       return '$days day${days == 1 ? '' : 's'} ago';
     }
 
-    final local = dateTime.toLocal();
-
     final day =
-        local.day.toString().padLeft(2, '0');
+        localDateTime.day.toString().padLeft(2, '0');
 
     final month =
-        local.month.toString().padLeft(2, '0');
+        localDateTime.month.toString().padLeft(2, '0');
 
-    final year = local.year.toString();
+    final year =
+        localDateTime.year.toString();
 
     final hour =
-        local.hour.toString().padLeft(2, '0');
+        localDateTime.hour.toString().padLeft(2, '0');
 
     final minute =
-        local.minute.toString().padLeft(2, '0');
+        localDateTime.minute.toString().padLeft(2, '0');
 
     return '$day/$month/$year • $hour:$minute';
   }
@@ -449,13 +545,16 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       elevation: 0,
       centerTitle: false,
       titleSpacing: 18,
+
       title: Row(
         children: [
           const Icon(
             Icons.notifications_active_rounded,
             size: 24,
           ),
+
           const SizedBox(width: 9),
+
           const Text(
             'Notifications',
             style: TextStyle(
@@ -463,14 +562,17 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
               fontWeight: FontWeight.w800,
             ),
           ),
+
           if (_unreadCount > 0) ...[
             const SizedBox(width: 8),
+
             Container(
               constraints: const BoxConstraints(
                 minWidth: 21,
                 minHeight: 21,
               ),
-              padding: const EdgeInsets.symmetric(
+              padding:
+                  const EdgeInsets.symmetric(
                 horizontal: 5,
               ),
               decoration: const BoxDecoration(
@@ -493,6 +595,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
           ],
         ],
       ),
+
       actions: [
         if (_unreadCount > 0)
           Padding(
@@ -500,15 +603,15 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
               right: 8,
             ),
             child: TextButton(
-              onPressed:
-                  _isMarkingAllRead
-                      ? null
-                      : _markAllAsRead,
+              onPressed: _isMarkingAllRead
+                  ? null
+                  : _markAllAsRead,
               child: _isMarkingAllRead
                   ? const SizedBox(
                       width: 17,
                       height: 17,
-                      child: CircularProgressIndicator(
+                      child:
+                          CircularProgressIndicator(
                         strokeWidth: 2,
                         color: Colors.white,
                       ),
@@ -555,7 +658,8 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       return ListView(
         physics:
             const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(18),
+        padding:
+            const EdgeInsets.all(18),
         children: [
           const SizedBox(height: 90),
           _buildErrorState(),
@@ -566,17 +670,23 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
     return ListView(
       physics:
           const AlwaysScrollableScrollPhysics(),
+
       padding: const EdgeInsets.fromLTRB(
         18,
         16,
         18,
         24,
       ),
+
       children: [
         _buildIntroCard(),
+
         const SizedBox(height: 16),
+
         _buildFilterTabs(),
-        const SizedBox(height: 16),
+
+        const SizedBox(height: 18),
+
         _buildNotificationContent(),
       ],
     );
@@ -587,8 +697,20 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   // ============================================================
 
   Widget _buildIntroCard() {
+    String message;
+
+    if (_unreadCount == 0) {
+      message = 'You are all caught up.';
+    } else if (_unreadCount == 1) {
+      message = '1 unread notification requires your attention.';
+    } else {
+      message =
+          '$_unreadCount unread notifications require your attention.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(15),
+
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius:
@@ -608,41 +730,48 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
           ),
         ],
       ),
+
       child: Row(
         children: [
           Container(
             width: 46,
             height: 46,
+
             decoration: BoxDecoration(
               color: softBlueGrey,
               borderRadius:
                   BorderRadius.circular(13),
             ),
+
             child: const Icon(
               Icons.notifications_rounded,
               color: darkBlue,
               size: 25,
             ),
           ),
+
           const SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment:
                   CrossAxisAlignment.start,
+
               children: [
                 const Text(
                   'Notification Centre',
                   style: TextStyle(
                     color: textDark,
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
+                    fontWeight:
+                        FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
-                  _unreadCount == 0
-                      ? 'You are all caught up.'
-                      : '$_unreadCount unread notification${_unreadCount == 1 ? '' : 's'} require your attention.',
+                  message,
                   maxLines: 2,
                   overflow:
                       TextOverflow.ellipsis,
@@ -669,6 +798,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   Widget _buildFilterTabs() {
     return Container(
       padding: const EdgeInsets.all(4),
+
       decoration: BoxDecoration(
         color: softBlueGrey,
         borderRadius:
@@ -677,30 +807,56 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
           color: borderColor,
         ),
       ),
+
       child: Row(
         children: [
           Expanded(
             child: _buildFilterButton(
-              title: 'Unread',
-              count: _unreadCount,
-              selected: !_showHistory,
+              title: 'Today',
+              count: _todayCount,
+              selected:
+                  _selectedFilter ==
+                      _NotificationFilter.today,
               onTap: () {
                 setState(() {
-                  _showHistory = false;
+                  _selectedFilter =
+                      _NotificationFilter.today;
                 });
               },
             ),
           ),
+
           const SizedBox(width: 4),
+
           Expanded(
             child: _buildFilterButton(
-              title: 'Last 30 Days',
-              count:
-                  _last30DaysNotifications.length,
-              selected: _showHistory,
+              title: 'Unread',
+              count: _unreadCount,
+              selected:
+                  _selectedFilter ==
+                      _NotificationFilter.unread,
               onTap: () {
                 setState(() {
-                  _showHistory = true;
+                  _selectedFilter =
+                      _NotificationFilter.unread;
+                });
+              },
+            ),
+          ),
+
+          const SizedBox(width: 4),
+
+          Expanded(
+            child: _buildFilterButton(
+              title: 'All',
+              count: _allCount,
+              selected:
+                  _selectedFilter ==
+                      _NotificationFilter.all,
+              onTap: () {
+                setState(() {
+                  _selectedFilter =
+                      _NotificationFilter.all;
                 });
               },
             ),
@@ -722,26 +878,36 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   }) {
     return Material(
       color: Colors.transparent,
+
       borderRadius:
           BorderRadius.circular(9),
+
       child: InkWell(
         onTap: onTap,
+
         borderRadius:
             BorderRadius.circular(9),
+
         child: AnimatedContainer(
           duration:
-              const Duration(milliseconds: 180),
+              const Duration(
+            milliseconds: 180,
+          ),
+
           padding:
               const EdgeInsets.symmetric(
             vertical: 10,
-            horizontal: 8,
+            horizontal: 5,
           ),
+
           decoration: BoxDecoration(
             color: selected
                 ? Colors.white
                 : Colors.transparent,
+
             borderRadius:
                 BorderRadius.circular(9),
+
             boxShadow: selected
                 ? [
                     BoxShadow(
@@ -756,9 +922,11 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                   ]
                 : null,
           ),
+
           child: Row(
             mainAxisAlignment:
                 MainAxisAlignment.center,
+
             children: [
               Flexible(
                 child: Text(
@@ -766,49 +934,60 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                   maxLines: 1,
                   overflow:
                       TextOverflow.ellipsis,
+
                   style: TextStyle(
                     color: selected
                         ? navy
                         : textGrey,
+
                     fontSize: 11,
-                    fontWeight:
-                        selected
-                            ? FontWeight.w800
-                            : FontWeight.w600,
+
+                    fontWeight: selected
+                        ? FontWeight.w800
+                        : FontWeight.w600,
                   ),
                 ),
               ),
+
               if (count > 0) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
+
                 Container(
                   constraints:
                       const BoxConstraints(
                     minWidth: 18,
                     minHeight: 18,
                   ),
+
                   padding:
                       const EdgeInsets.symmetric(
                     horizontal: 4,
                   ),
+
                   decoration: BoxDecoration(
                     color: selected
                         ? darkBlue
                         : Colors.white,
+
                     borderRadius:
                         BorderRadius.circular(
                       10,
                     ),
                   ),
+
                   child: Center(
                     child: Text(
                       count > 99
                           ? '99+'
                           : '$count',
+
                       style: TextStyle(
                         color: selected
                             ? Colors.white
                             : navy,
+
                         fontSize: 9,
+
                         fontWeight:
                             FontWeight.w800,
                       ),
@@ -835,43 +1014,63 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       return _buildEmptyState();
     }
 
+    String heading;
+
+    switch (_selectedFilter) {
+      case _NotificationFilter.today:
+        heading = 'Today';
+
+      case _NotificationFilter.unread:
+        heading = 'Unread Notifications';
+
+      case _NotificationFilter.all:
+        heading = 'All Notifications';
+    }
+
     return Column(
       crossAxisAlignment:
           CrossAxisAlignment.start,
+
       children: [
         Row(
           children: [
             Expanded(
               child: Text(
-                _showHistory
-                    ? 'Last 30 Days'
-                    : 'Unread Notifications',
+                heading,
                 style: const TextStyle(
                   color: navy,
                   fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                  fontWeight:
+                      FontWeight.w800,
                 ),
               ),
             ),
+
             Text(
-              '${notifications.length} item${notifications.length == 1 ? '' : 's'}',
+              '${notifications.length} '
+              'item${notifications.length == 1 ? '' : 's'}',
+
               style: const TextStyle(
                 color: Colors.grey,
                 fontSize: 10,
-                fontWeight: FontWeight.w600,
+                fontWeight:
+                    FontWeight.w600,
               ),
             ),
           ],
         ),
+
         const SizedBox(height: 10),
+
         ...notifications.map(
-          (notification) =>
-              Padding(
+          (notification) => Padding(
             padding:
                 const EdgeInsets.only(
               bottom: 9,
             ),
-            child: _buildNotificationCard(
+
+            child:
+                _buildNotificationCard(
               notification,
             ),
           ),
@@ -897,30 +1096,41 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
     return Material(
       color: Colors.transparent,
+
       borderRadius:
           BorderRadius.circular(13),
+
       child: InkWell(
         onTap: () {
           _markAsRead(notification);
         },
+
         borderRadius:
             BorderRadius.circular(13),
+
         child: AnimatedContainer(
           duration:
-              const Duration(milliseconds: 180),
+              const Duration(
+            milliseconds: 180,
+          ),
+
           padding:
               const EdgeInsets.all(13),
+
           decoration: BoxDecoration(
             color: isUnread
                 ? Colors.white
                 : const Color(0xFFF4F8FB),
+
             borderRadius:
                 BorderRadius.circular(13),
+
             border: Border.all(
               color: isUnread
                   ? const Color(0xFFC8DCEB)
                   : borderColor,
             ),
+
             boxShadow: isUnread
                 ? [
                     BoxShadow(
@@ -935,55 +1145,66 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                   ]
                 : null,
           ),
+
           child: Row(
             crossAxisAlignment:
                 CrossAxisAlignment.start,
+
             children: [
               // ==================================================
-              // ICON
+              // ICON + UNREAD DOT
               // ==================================================
 
               Stack(
                 clipBehavior: Clip.none,
+
                 children: [
                   Container(
                     width: 43,
                     height: 43,
-                    decoration: BoxDecoration(
+
+                    decoration:
+                        BoxDecoration(
                       color:
                           iconColor.withValues(
                         alpha: 0.10,
                       ),
+
                       borderRadius:
                           BorderRadius.circular(
                         12,
                       ),
                     ),
+
                     child: Icon(
                       _getNotificationIcon(
                         notification.type,
                       ),
+
                       color: iconColor,
                       size: 22,
                     ),
                   ),
 
-                  // ----------------------------------------------
+                  // ------------------------------------------------
                   // RED UNREAD DOT
-                  // ----------------------------------------------
+                  // ------------------------------------------------
 
                   if (isUnread)
                     Positioned(
                       right: -2,
                       top: -2,
+
                       child: Container(
                         width: 11,
                         height: 11,
+
                         decoration:
                             BoxDecoration(
                           color: Colors.red,
                           shape:
                               BoxShape.circle,
+
                           border:
                               Border.all(
                             color:
@@ -1006,21 +1227,30 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                 child: Column(
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
+
                   children: [
+                    // ----------------------------------------------
+                    // TITLE + TIME
+                    // ----------------------------------------------
+
                     Row(
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
+
                       children: [
                         Expanded(
                           child: Text(
                             notification.title,
+
                             maxLines: 2,
+
                             overflow:
-                                TextOverflow
-                                    .ellipsis,
+                                TextOverflow.ellipsis,
+
                             style: TextStyle(
                               color: textDark,
                               fontSize: 13,
+
                               fontWeight:
                                   isUnread
                                       ? FontWeight.w800
@@ -1028,18 +1258,29 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                             ),
                           ),
                         ),
+
                         const SizedBox(width: 5),
-                        Text(
-                          _formatNotificationTime(
-                            notification
-                                .createdAt,
-                          ),
-                          style:
-                              const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 8,
-                            fontWeight:
-                                FontWeight.w600,
+
+                        Flexible(
+                          child: Text(
+                            _formatNotificationTime(
+                              notification
+                                  .createdAt,
+                            ),
+
+                            maxLines: 1,
+
+                            overflow:
+                                TextOverflow.ellipsis,
+
+                            style:
+                                const TextStyle(
+                              color:
+                                  Colors.grey,
+                              fontSize: 8,
+                              fontWeight:
+                                  FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -1047,11 +1288,18 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
                     const SizedBox(height: 5),
 
+                    // ----------------------------------------------
+                    // MESSAGE
+                    // ----------------------------------------------
+
                     Text(
                       notification.message,
+
                       maxLines: 4,
+
                       overflow:
                           TextOverflow.ellipsis,
+
                       style: const TextStyle(
                         color: textGrey,
                         fontSize: 11,
@@ -1063,11 +1311,15 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
                     const SizedBox(height: 8),
 
+                    // ----------------------------------------------
+                    // TYPE + STATUS
+                    // ----------------------------------------------
+
                     Row(
                       children: [
-                        // ----------------------------------------
+                        // ------------------------------------------
                         // TYPE
-                        // ----------------------------------------
+                        // ------------------------------------------
 
                         Container(
                           padding:
@@ -1076,20 +1328,24 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                             horizontal: 7,
                             vertical: 3,
                           ),
+
                           decoration:
                               BoxDecoration(
                             color:
                                 softBlueGrey,
+
                             borderRadius:
                                 BorderRadius
                                     .circular(
                               6,
                             ),
                           ),
+
                           child: Text(
                             _formatType(
                               notification.type,
                             ),
+
                             style:
                                 const TextStyle(
                               color: navy,
@@ -1102,9 +1358,9 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
                         const Spacer(),
 
-                        // ----------------------------------------
-                        // READ / UNREAD
-                        // ----------------------------------------
+                        // ------------------------------------------
+                        // UNREAD
+                        // ------------------------------------------
 
                         if (isUnread)
                           const Row(
@@ -1114,21 +1370,26 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                                 color: Colors.red,
                                 size: 6,
                               ),
+
                               SizedBox(width: 4),
+
                               Text(
                                 'Unread',
-                                style:
-                                    TextStyle(
+                                style: TextStyle(
                                   color:
                                       Colors.red,
                                   fontSize: 9,
                                   fontWeight:
-                                      FontWeight
-                                          .w700,
+                                      FontWeight.w700,
                                 ),
                               ),
                             ],
                           )
+
+                        // ------------------------------------------
+                        // READ
+                        // ------------------------------------------
+
                         else
                           const Row(
                             children: [
@@ -1139,17 +1400,17 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                                     Colors.grey,
                                 size: 12,
                               ),
+
                               SizedBox(width: 4),
+
                               Text(
                                 'Read',
-                                style:
-                                    TextStyle(
+                                style: TextStyle(
                                   color:
                                       Colors.grey,
                                   fontSize: 9,
                                   fontWeight:
-                                      FontWeight
-                                          .w600,
+                                      FontWeight.w600,
                                 ),
                               ),
                             ],
@@ -1170,7 +1431,9 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   // TYPE TEXT
   // ============================================================
 
-  String _formatType(String type) {
+  String _formatType(
+    String type,
+  ) {
     if (type.trim().isEmpty) {
       return 'System';
     }
@@ -1191,7 +1454,8 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
         )
         .map(
           (word) =>
-              '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
+              '${word[0].toUpperCase()}'
+              '${word.substring(1).toLowerCase()}',
         )
         .join(' ');
   }
@@ -1201,57 +1465,94 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   // ============================================================
 
   Widget _buildEmptyState() {
+    IconData icon;
+    String title;
+    String message;
+
+    switch (_selectedFilter) {
+      case _NotificationFilter.today:
+        icon = Icons.today_rounded;
+        title = 'No notifications today';
+        message =
+            'Notifications received during the last 24 hours will appear here.';
+        break;
+
+      case _NotificationFilter.unread:
+        icon = Icons.notifications_none_rounded;
+        title = 'No unread notifications';
+        message =
+            'You are all caught up. New notifications will appear here automatically.';
+        break;
+
+      case _NotificationFilter.all:
+        icon = Icons.history_rounded;
+        title = 'No notifications in the last 30 days';
+        message =
+            'Your notification history from the last 30 days will appear here.';
+        break;
+    }
+
     return Container(
       width: double.infinity,
+
       padding:
           const EdgeInsets.symmetric(
         horizontal: 20,
         vertical: 38,
       ),
+
       decoration: BoxDecoration(
         color: Colors.white,
+
         borderRadius:
             BorderRadius.circular(14),
+
         border: Border.all(
           color: borderColor,
         ),
       ),
+
       child: Column(
         children: [
           Container(
             width: 65,
             height: 65,
-            decoration: BoxDecoration(
+
+            decoration:
+                const BoxDecoration(
               color: softBlueGrey,
               shape: BoxShape.circle,
             ),
+
             child: Icon(
-              _showHistory
-                  ? Icons.history_rounded
-                  : Icons
-                      .notifications_none_rounded,
+              icon,
               color: darkBlue,
               size: 31,
             ),
           ),
+
           const SizedBox(height: 13),
+
           Text(
-            _showHistory
-                ? 'No notifications in the last 30 days'
-                : 'No unread notifications',
+            title,
+
             textAlign: TextAlign.center,
+
             style: const TextStyle(
               color: textDark,
               fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontWeight:
+                  FontWeight.w800,
             ),
           ),
+
           const SizedBox(height: 6),
+
           Text(
-            _showHistory
-                ? 'Your notification history from the last 30 days will appear here.'
-                : 'You are all caught up. New notifications will appear here automatically.',
+            message,
+
             textAlign: TextAlign.center,
+
             style: const TextStyle(
               color: textGrey,
               fontSize: 10,
@@ -1272,43 +1573,58 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   Widget _buildErrorState() {
     return Container(
       width: double.infinity,
+
       padding:
           const EdgeInsets.all(24),
+
       decoration: BoxDecoration(
         color: Colors.white,
+
         borderRadius:
             BorderRadius.circular(14),
+
         border: Border.all(
           color: borderColor,
         ),
       ),
+
       child: Column(
         children: [
           const Icon(
-            Icons
-                .cloud_off_rounded,
+            Icons.cloud_off_rounded,
             color: Colors.grey,
             size: 42,
           ),
+
           const SizedBox(height: 12),
+
           Text(
             _errorMessage ??
                 'Something went wrong.',
-            textAlign: TextAlign.center,
+
+            textAlign:
+                TextAlign.center,
+
             style: const TextStyle(
               color: textDark,
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight:
+                  FontWeight.w700,
             ),
           ),
+
           const SizedBox(height: 14),
+
           ElevatedButton.icon(
             onPressed: _loadNotifications,
-            style: ElevatedButton.styleFrom(
+
+            style:
+                ElevatedButton.styleFrom(
               backgroundColor: darkBlue,
               foregroundColor:
                   Colors.white,
               elevation: 0,
+
               shape:
                   RoundedRectangleBorder(
                 borderRadius:
@@ -1317,10 +1633,12 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                 ),
               ),
             ),
+
             icon: const Icon(
               Icons.refresh_rounded,
               size: 18,
             ),
+
             label: const Text(
               'Try Again',
               style: TextStyle(
@@ -1334,4 +1652,14 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       ),
     );
   }
+}
+
+// ================================================================
+// NOTIFICATION FILTER
+// ================================================================
+
+enum _NotificationFilter {
+  today,
+  unread,
+  all,
 }

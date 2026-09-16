@@ -61,7 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  String _getDashboardRoute(UserRole role) {
+    String _getDashboardRoute(UserRole role) {
     switch (role) {
       case UserRole.official:
         return AppRoutes.officialDashboard;
@@ -71,6 +71,12 @@ class _SplashScreenState extends State<SplashScreen>
 
       case UserRole.ngoInstitute:
         return AppRoutes.ngoDashboard;
+
+      case UserRole.stateAdmin:
+        return AppRoutes.stateAdminDashboard;
+
+      case UserRole.districtAdmin:
+        return AppRoutes.districtAdminDashboard;
     }
   }
 

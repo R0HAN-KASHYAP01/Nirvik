@@ -24,6 +24,16 @@ class CallPermission {
         return null;
       case UserRole.ngoInstitute:
         return null; // institutes never initiate calls
+
+      // TODO: state_admin / district_admin were added after this
+      // permission matrix was designed. They currently can't call or
+      // be called by anyone. Tell me the allowed pairings + the exact
+      // call_type strings your video_calls CHECK constraint accepts,
+      // and I'll fill these in correctly.
+      case UserRole.stateAdmin:
+        return null;
+      case UserRole.districtAdmin:
+        return null;
     }
   }
 }

@@ -1,3 +1,5 @@
+// lib/services/auth_service.dart
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -43,9 +45,23 @@ class AuthService {
       );
 
       if (user == null) {
+        await _client.auth.signOut();
         return const AuthResult.failure(
           'No profile found for this account.',
         );
+      }
+
+      // Mirror the same approval gate the web admin login enforces.
+      if (user.status != 'approved') {
+        await _client.auth.signOut();
+        final message = switch (user.status) {
+          'pending' =>
+            'Your registration is still under review by the admin.',
+          'rejected' =>
+            'Your registration was rejected. Please contact your administrator.',
+          _ => 'This account is not active.',
+        };
+        return AuthResult.failure(message);
       }
 
       return AuthResult.success(user);
@@ -73,6 +89,11 @@ class AuthService {
     }
   }
 
+  /// NOTE: registration now happens on the web app only (register/page.js).
+  /// This is left only so nothing else in the app that references it breaks
+  /// at compile time. It is not wired to any working table set — do not
+  /// use it for the 5 real roles without updating it to match
+  /// registrationConfig.js first.
   Future<AuthResult> signUp({
     required String fullName,
     required String email,
@@ -99,67 +120,11 @@ class AuthService {
       await _client.from('profiles').insert({
         'id': authUser.id,
         'full_name': fullName,
-        'phone': phone,
         'role': _roleToDb(role),
+        'status': 'pending',
       });
 
-      switch (role) {
-        case UserRole.official:
-          await _client.from('officials').insert({
-            'profile_id': authUser.id,
-            'department': department,
-            'designation': designation,
-          });
-          break;
-
-        case UserRole.inspector:
-          await _client.from('pmu_inspectors').insert({
-            'profile_id': authUser.id,
-            'department': department,
-            'designation': designation,
-          });
-          break;
-
-        case UserRole.ngoInstitute:
-          String? orgId;
-
-          final trimmedOrg = organizationName?.trim();
-
-          if (trimmedOrg != null && trimmedOrg.isNotEmpty) {
-            final existing = await _client
-                .from('organizations')
-                .select('id')
-                .eq('name', trimmedOrg)
-                .maybeSingle();
-
-            if (existing != null) {
-              orgId = existing['id'] as String;
-            } else {
-              final created = await _client
-                  .from('organizations')
-                  .insert({
-                    'name': trimmedOrg,
-                    'created_by': authUser.id,
-                  })
-                  .select('id')
-                  .single();
-
-              orgId = created['id'] as String;
-            }
-          }
-
-          await _client.from('ngo_institutes').insert({
-            'profile_id': authUser.id,
-            'organization_id': orgId,
-            'registration_number': registrationNumber,
-          });
-          break;
-      }
-
-      final user = await _loadFullProfile(
-        authUser.id,
-        email,
-      );
+      final user = await _loadFullProfile(authUser.id, email);
 
       return AuthResult.success(user);
     } on AuthException catch (e) {
@@ -179,11 +144,6 @@ class AuthService {
     }
   }
 
-  /// Restores the application user from the session persisted by Supabase.
-  ///
-  /// Supabase v2 exposes the restored startup session through
-  /// auth.currentSession. We use the session's user rather than relying
-  /// directly on auth.currentUser during application startup.
   Future<AuthResult> restoreSession() async {
     try {
       final session = _client.auth.currentSession;
@@ -204,6 +164,13 @@ class AuthService {
       if (user == null) {
         return const AuthResult.failure(
           'No profile found for this account.',
+        );
+      }
+
+      if (user.status != 'approved') {
+        await _client.auth.signOut();
+        return const AuthResult.failure(
+          'This account is not currently active.',
         );
       }
 
@@ -250,7 +217,7 @@ class AuthService {
 
       case UserRole.inspector:
         roleData = await _client
-            .from('pmu_inspectors')
+            .from('inspectors')
             .select()
             .eq('profile_id', id)
             .maybeSingle();
@@ -258,7 +225,23 @@ class AuthService {
 
       case UserRole.ngoInstitute:
         roleData = await _client
-            .from('ngo_institutes')
+            .from('institute_reps')
+            .select()
+            .eq('profile_id', id)
+            .maybeSingle();
+        break;
+
+      case UserRole.stateAdmin:
+        roleData = await _client
+            .from('state_administrators')
+            .select()
+            .eq('profile_id', id)
+            .maybeSingle();
+        break;
+
+      case UserRole.districtAdmin:
+        roleData = await _client
+            .from('district_administrators')
             .select()
             .eq('profile_id', id)
             .maybeSingle();
@@ -286,12 +269,14 @@ class AuthService {
     switch (role) {
       case UserRole.official:
         return 'official';
-
       case UserRole.inspector:
-        return 'pmu_inspector';
-
+        return 'inspector';
       case UserRole.ngoInstitute:
-        return 'ngo_institute';
+        return 'institute_rep';
+      case UserRole.stateAdmin:
+        return 'state_admin';
+      case UserRole.districtAdmin:
+        return 'district_admin';
     }
   }
 
@@ -299,17 +284,16 @@ class AuthService {
     switch (value) {
       case 'official':
         return UserRole.official;
-
-      case 'pmu_inspector':
+      case 'inspector':
         return UserRole.inspector;
-
-      case 'ngo_institute':
+      case 'institute_rep':
         return UserRole.ngoInstitute;
-
+      case 'state_admin':
+        return UserRole.stateAdmin;
+      case 'district_admin':
+        return UserRole.districtAdmin;
       default:
-        throw Exception(
-          'Unknown role: $value',
-        );
+        throw Exception('Unknown role: $value');
     }
   }
 }

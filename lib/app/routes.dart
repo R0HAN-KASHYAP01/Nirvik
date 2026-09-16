@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../screens/splash/splash_screen.dart';
-
+import '../features/state_admin/presentation/state_admin_dashboard_screen.dart';
+import '../features/district_admin/presentation/district_admin_dashboard_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/signup_screen.dart';
 import '../features/auth/presentation/role_selection_screen.dart';
@@ -49,7 +50,8 @@ class AppRoutes {
   static const String ngoAttendance = '/ngo-attendance';
   static const String ngoReports = '/ngo-reports';
   static const String ngoCamera = '/ngo-camera';
-
+    static const String stateAdminDashboard = '/state-admin-dashboard';
+  static const String districtAdminDashboard = '/district-admin-dashboard';
   static const String instituteMap = '/institute-map';
 
   static const String projectsPlaceholder = '/projects';
@@ -83,7 +85,17 @@ class AppRoutes {
 
         // Official CCTV opens actual CCTV monitoring page.
         cctvPlaceholder: (context) => const OfficialCctvScreen(),
+            // ============================================================
+        // STATE ADMIN
+        // ============================================================
 
+        stateAdminDashboard: (context) => const StateAdminDashboardScreen(),
+
+        // ============================================================
+        // DISTRICT ADMIN
+        // ============================================================
+
+        districtAdminDashboard: (context) => const DistrictAdminDashboardScreen(),
         // ============================================================
         // INSPECTOR
         // ============================================================

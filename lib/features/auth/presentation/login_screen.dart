@@ -54,6 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
         UserRole.official => AppRoutes.officialDashboard,
         UserRole.inspector => AppRoutes.inspectorDashboard,
         UserRole.ngoInstitute => AppRoutes.ngoDashboard,
+        UserRole.stateAdmin => AppRoutes.stateAdminDashboard,
+        UserRole.districtAdmin => AppRoutes.districtAdminDashboard,
       };
 
       Navigator.of(context).pushNamedAndRemoveUntil(destination, (route) => false);

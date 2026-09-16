@@ -1,7 +1,11 @@
+// lib/models/user.dart
+
 enum UserRole {
   official,
   inspector,
-  ngoInstitute,
+  ngoInstitute, // maps to DB role 'institute_rep'
+  stateAdmin,   // maps to DB role 'state_admin'
+  districtAdmin, // maps to DB role 'district_admin'
 }
 
 class AppUser {

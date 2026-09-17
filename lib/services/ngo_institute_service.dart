@@ -1,3 +1,4 @@
+// lib/services/ngo_institute_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/ngo_institute_profile.dart';
@@ -51,10 +52,31 @@ class NgoInstituteService {
     return null;
   }
 
+  /// Read-only lookup of the scheme this institute registered with.
+  /// Source of truth is institute_reps (set at registration, approved
+  /// by admin) — never ngo_institutes, which the self-service profile
+  /// screen must not write scheme data into.
+  Future<Map<String, String?>?> fetchRegisteredScheme(
+      String profileId,
+      ) async {
+    final data = await _client
+        .from('institute_reps')
+        .select('scheme_category, scheme_code')
+        .eq('profile_id', profileId)
+        .maybeSingle();
+
+    if (data == null) return null;
+
+    return {
+      'scheme_category': data['scheme_category'] as String?,
+      'scheme_code': data['scheme_code'] as String?,
+    };
+  }
+
   /// Insert-or-update in one call (profile_id is the primary key).
   Future<NgoInstituteProfile> upsertProfile(
-    NgoInstituteProfile profile,
-  ) async {
+      NgoInstituteProfile profile,
+      ) async {
     final data = await _client
         .from('ngo_institutes')
         .upsert(profile.toMap())
@@ -74,9 +96,9 @@ class NgoInstituteService {
     final rows = await _client
         .from('ngo_institutes')
         .select(
-          'profile_id, organization_id, scheme_type, address, '
+      'profile_id, organization_id, scheme_category, scheme_code, address, '
           'registration_number, latitude, longitude, organizations(name)',
-        )
+    )
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 

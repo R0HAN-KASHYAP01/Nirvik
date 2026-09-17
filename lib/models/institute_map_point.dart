@@ -1,16 +1,17 @@
-import 'ngo_institute_profile.dart';
+// lib/models/institute_map_point.dart
 
 /// Read-only data for displaying an institute on the map.
 /// Kept separate from [NgoInstituteProfile] because that model's `toMap()`
-/// is used for `upsert` into `ngo_institutes` — adding a joined org name
-/// to it would break that insert/update path.
+/// is used for `upsert` into `ngo_institutes` — adding joined fields to
+/// it would break that insert/update path.
 class InstituteMapPoint {
   final String profileId;
   final String? organizationId;
   final String name;
   final String? address;
   final String? registrationNumber;
-  final NgoSchemeType? schemeType;
+  final String? schemeCategory;
+  final String? schemeCode;
   final double latitude;
   final double longitude;
 
@@ -20,7 +21,8 @@ class InstituteMapPoint {
     required this.name,
     this.address,
     this.registrationNumber,
-    this.schemeType,
+    this.schemeCategory,
+    this.schemeCode,
     required this.latitude,
     required this.longitude,
   });
@@ -43,9 +45,8 @@ class InstituteMapPoint {
       name: (orgName != null && orgName.trim().isNotEmpty) ? orgName : 'Unnamed Institute',
       address: map['address'] as String?,
       registrationNumber: map['registration_number'] as String?,
-      schemeType: map['scheme_type'] != null
-          ? NgoSchemeTypeX.fromDb(map['scheme_type'] as String)
-          : null,
+      schemeCategory: map['scheme_category'] as String?,
+      schemeCode: map['scheme_code'] as String?,
       latitude: lat,
       longitude: lng,
     );

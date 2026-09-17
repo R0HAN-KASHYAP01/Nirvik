@@ -7,6 +7,7 @@ import '../../../services/ngo_institute_service.dart';
 import '../../../services/session_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../app/routes.dart';
+import '../../../utils/scheme_catalog.dart';
 
 class NgoProfileScreen extends StatefulWidget {
   const NgoProfileScreen({super.key});
@@ -21,7 +22,9 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
   final _registrationController = TextEditingController();
   final _addressController = TextEditingController();
 
-  NgoSchemeType? _selectedScheme;
+  String? _schemeCategory;
+  String? _schemeCode;
+  String? _organizationName;
 
   double? _latitude;
   double? _longitude;
@@ -69,6 +72,12 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
       final profile =
       await NgoInstituteService.instance.fetchProfile(user.id);
 
+      final scheme = await NgoInstituteService.instance
+          .fetchRegisteredScheme(user.id);
+
+      final orgName = await NgoInstituteService.instance
+          .fetchOrganizationName(user.id);
+
       if (!mounted) return;
 
       if (profile != null) {
@@ -79,11 +88,16 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
             profile.address ?? '';
 
         setState(() {
-          _selectedScheme = profile.schemeType;
           _latitude = profile.latitude;
           _longitude = profile.longitude;
         });
       }
+
+      setState(() {
+        _schemeCategory = scheme?['scheme_category'];
+        _schemeCode = scheme?['scheme_code'];
+        _organizationName = orgName;
+      });
     } catch (_) {
       // First-time institute ke liye profile na hona normal hai.
     } finally {
@@ -196,14 +210,7 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
       return;
     }
 
-    if (_selectedScheme == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a scheme.'),
-        ),
-      );
-      return;
-    }
+
 
     final user = SessionService.instance.currentUser;
 
@@ -225,7 +232,6 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
         _registrationController.text.trim().isEmpty
             ? null
             : _registrationController.text.trim(),
-        schemeType: _selectedScheme,
         address:
         _addressController.text.trim().isEmpty
             ? null
@@ -302,8 +308,8 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
   }
 
   String _instituteName() {
-    if (_selectedScheme != null) {
-      return _selectedScheme!.label;
+    if (_organizationName != null && _organizationName!.trim().isNotEmpty) {
+      return _organizationName!;
     }
 
     return 'NGO / Institute';
@@ -420,12 +426,12 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
               _buildSectionTitle(
                 'Scheme',
-                'Select the scheme applicable to your institute',
+                'Category and scheme this institute is registered under',
               ),
 
               const SizedBox(height: 10),
 
-              _buildSchemeDropdown(),
+              _buildSchemeDisplay(),
 
               const SizedBox(height: 26),
 
@@ -966,68 +972,65 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
   // SCHEME DROPDOWN
   // ============================================================
 
-  Widget _buildSchemeDropdown() {
+  Widget _buildSchemeDisplay() {
+    final hasScheme = _schemeCode != null && _schemeCode!.isNotEmpty;
+
     return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: lightBlue,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(
-          color: borderColor,
-        ),
+        border: Border.all(color: borderColor),
       ),
-      child: DropdownButtonFormField<NgoSchemeType>(
-        initialValue: _selectedScheme,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: primaryBlue,
-        ),
-        decoration: const InputDecoration(
-          prefixIcon: Icon(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
             Icons.account_balance_outlined,
             color: primaryBlue,
-            size: 20,
+            size: 21,
           ),
-          hintText: 'Select Scheme',
-          hintStyle: TextStyle(
-            fontSize: 12,
-            color: textGrey,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 9,
-            vertical: 4,
-          ),
-        ),
-        items: NgoSchemeType.values.map(
-              (scheme) {
-            return DropdownMenuItem<NgoSchemeType>(
-              value: scheme,
-              child: Text(
-                scheme.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: textDark,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasScheme ? categoryLabel(_schemeCategory) : 'Not set',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: textGrey,
+                  ),
                 ),
-              ),
-            );
-          },
-        ).toList(),
-        onChanged: (value) {
-          setState(() {
-            _selectedScheme = value;
-          });
-        },
-        validator: (value) {
-          if (value == null) {
-            return 'Please select a scheme';
-          }
-
-          return null;
-        },
+                const SizedBox(height: 2),
+                Text(
+                  hasScheme ? schemeLabel(_schemeCode) : 'No scheme on record',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Set at registration and approved by admin — not editable here.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: textGrey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

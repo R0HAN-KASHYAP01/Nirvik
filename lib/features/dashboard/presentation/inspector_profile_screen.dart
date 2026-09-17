@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/routes.dart';
+import '../../../utils/scheme_catalog.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/loading_state.dart';
 import '../../../core/widgets/status_badge.dart';
@@ -346,18 +347,15 @@ class _InspectorProfileScreenState
           const SizedBox(height: 16),
           _buildLocationCard(profile),
           const SizedBox(height: 16),
-          _buildAccountCard(),
+      _buildAccountCard(profile),
         ],
       ),
     );
   }
 
   Widget _buildProfileCard(
-    InspectorProfileData profile,
-  ) {
-    final email =
-        Supabase.instance.client.auth.currentUser?.email ?? '—';
-
+      InspectorProfileData profile,
+      ) {
     return Card(
       color: _cardBackground,
       elevation: 0,
@@ -390,7 +388,7 @@ class _InspectorProfileScreenState
                     Expanded(
                       child: Column(
                         crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        CrossAxisAlignment.start,
                         children: [
                           Text(
                             profile.fullName,
@@ -410,9 +408,9 @@ class _InspectorProfileScreenState
                             children: [
                               StatusBadge(
                                 label:
-                                    _statusLabel(profile.status),
+                                _statusLabel(profile.status),
                                 color:
-                                    _statusColor(profile.status),
+                                _statusColor(profile.status),
                               ),
                             ],
                           ),
@@ -432,30 +430,68 @@ class _InspectorProfileScreenState
             _InfoRow(
               icon: Icons.email_outlined,
               label: 'Email',
-              value: email,
+              value: profile.officialEmail,
             ),
 
-            if (profile.phone != null &&
-                profile.phone!.trim().isNotEmpty)
-              _InfoRow(
-                icon: Icons.phone_outlined,
-                label: 'Phone',
-                value: profile.phone!,
-              ),
+            _InfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Phone',
+              value: profile.mobileNumber,
+            ),
+
+            _InfoRow(
+              icon: Icons.badge_outlined,
+              label: 'Inspector ID',
+              value: profile.inspectorId,
+            ),
 
             _InfoRow(
               icon: Icons.apartment_outlined,
+              label: 'PMU Unit',
+              value: profile.pmuUnitName,
+            ),
+
+            _InfoRow(
+              icon: Icons.work_outline,
+              label: 'Designation',
+              value: profile.designation,
+            ),
+
+            _InfoRow(
+              icon: Icons.account_balance_outlined,
               label: 'Department',
               value: profile.department,
             ),
 
-            if (profile.designation != null &&
-                profile.designation!.trim().isNotEmpty)
-              _InfoRow(
-                icon: Icons.work_outline,
-                label: 'Designation',
-                value: profile.designation!,
-              ),
+            _InfoRow(
+              icon: Icons.map_outlined,
+              label: 'State',
+              value: profile.state,
+            ),
+
+            _InfoRow(
+              icon: Icons.location_city_outlined,
+              label: 'District',
+              value: profile.district,
+            ),
+
+            _InfoRow(
+              icon: Icons.explore_outlined,
+              label: 'Assigned Region',
+              value: profile.assignedRegion,
+            ),
+
+            _InfoRow(
+              icon: Icons.category_outlined,
+              label: 'Category',
+              value: categoryLabel(profile.schemeCategory),
+            ),
+
+            _InfoRow(
+              icon: Icons.assignment_outlined,
+              label: 'Scheme',
+              value: schemeLabel(profile.schemeCode),
+            ),
 
             _InfoRow(
               icon: Icons.calendar_today_outlined,
@@ -571,9 +607,8 @@ class _InspectorProfileScreenState
     );
   }
 
-  Widget _buildAccountCard() {
-    final email =
-        Supabase.instance.client.auth.currentUser?.email ?? '—';
+  Widget _buildAccountCard(InspectorProfileData profile) {
+    final email = profile.officialEmail;
 
     return Card(
       color: _cardBackground,

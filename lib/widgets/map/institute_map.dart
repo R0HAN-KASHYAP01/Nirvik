@@ -9,7 +9,7 @@ import '../../core/widgets/status_badge.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_state.dart';
 import '../../models/institute_map_point.dart';
-import '../../models/ngo_institute_profile.dart'; // needed for the NgoSchemeTypeX.label extension
+import '../../utils/scheme_catalog.dart';
 import '../../services/ngo_institute_service.dart';
 import '../../utils/geo_utils.dart';
 
@@ -575,9 +575,9 @@ class _InstituteDetailsSheet extends StatelessWidget {
                   ),
                 ],
               ),
-            if (showScheme && institute.schemeType != null) ...[
+            if (showScheme && institute.schemeCode != null) ...[
               const SizedBox(height: 12),
-              StatusBadge(label: institute.schemeType!.label, color: AppColors.secondary),
+              StatusBadge(label: schemeLabel(institute.schemeCode), color: AppColors.secondary),
             ],
             if (institute.registrationNumber != null && institute.registrationNumber!.trim().isNotEmpty) ...[
               const SizedBox(height: 12),

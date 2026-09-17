@@ -1,5 +1,5 @@
 // FILE: lib/features/ngo/presentation/attendance_screen.dart
-
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -56,23 +56,56 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _loadingAiAttendance = true;
   String? _aiAttendanceError;
   bool _aiBlockedBySubmission = false;
-
   Map<String, dynamic>? _aiSummary;
   Map<String, dynamic>? _aiRoleStatistics;
   Map<String, dynamic>? _aiLatestSession;
 
+  // Live AI monitoring state.
+  Map<String, dynamic>? _aiStatus;
+  int _aiCurrentCount = 0;
+  bool _aiMonitoringRunning = false;
+  bool _aiMonitoringLoopAlive = false;
+  String? _aiCurrentSessionId;
+
+  // True while the current AI session is being finalized and a new
+  // monitoring session is being started.
+  bool _aiRestarting = false;
+
+  Timer? _aiPollingTimer;
+
   // Number of most-recent days to show inline under "Recent Submissions".
   static const int _recentDaysWindow = 3;
-
-  @override
+    @override
   void initState() {
     super.initState();
 
-    _loadHistory().then((_) => _loadAiAttendance());
+    _loadHistory().then((_) async {
+      await _loadAiAttendance();
+
+      if (_hasSubmittedToday) {
+        try {
+          final current =
+              await _aiAttendanceService.getCurrentAiAttendance();
+
+          if (current['running'] != true) {
+            await _aiAttendanceService.startAiAttendance();
+          }
+
+          await _loadLiveAiAttendance();
+        } catch (_) {
+          // Keep the Attendance screen usable if the AI backend or
+          // camera is temporarily unavailable.
+        }
+      }
+
+      _startAiPolling();
+    });
   }
 
-  @override
+    @override
   void dispose() {
+    _stopAiPolling();
+
     _beneficiaryCountController.dispose();
     _staffCountController.dispose();
 
@@ -221,9 +254,106 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
+    // ============================================================
+  // LIVE AI ATTENDANCE
+  // ============================================================
+
+  /// Fetch the current AI monitoring state and live attendance count.
+  ///
+  /// FastAPI:
+  /// GET /api/v1/attendance/ai/status
+  /// GET /api/v1/attendance/ai/current
+  Future<void> _loadLiveAiAttendance() async {
+    try {
+      final results = await Future.wait([
+        _aiAttendanceService.getAiAttendanceStatus(),
+        _aiAttendanceService.getCurrentAiAttendance(),
+      ]);
+
+      if (!mounted) return;
+
+      final status = results[0];
+      final current = results[1];
+
+      setState(() {
+        _aiStatus = status;
+        _aiCurrentCount =
+            _toInt(current['active_count']);
+
+        _aiMonitoringRunning =
+            current['running'] == true;
+
+        _aiMonitoringLoopAlive =
+            current['loop_alive'] == true;
+
+        _aiCurrentSessionId =
+            current['session_id']?.toString();
+      });
+    } catch (_) {
+      // Keep the last known live value if a single polling
+      // request temporarily fails.
+    }
+  }
+
+  /// Finalize the current AI session and immediately start a new one after submission.
+  Future<void> _restartAiMonitoringAfterSubmission() async {
+    if (!_hasSubmittedToday || !mounted) {
+      await _loadAiAttendance();
+      return;
+    }
+
+    setState(() {
+      _aiRestarting = true;
+      _aiCurrentCount = 0;
+    });
+    _showSuccess('AI Monitoring Restarting...');
+    try {
+      final result = await _aiAttendanceService.restartAiAttendance();
+      if (!mounted) return;
+
+      if (result['success'] != true) {
+        _showError(
+          result['message']?.toString() ?? 'Failed to restart AI attendance.',
+        );
+        return;
+      }
+
+      await _loadLiveAiAttendance();
+      await _loadAiAttendance();
+    } catch (e) {
+      if (!mounted) return;
+      _showError('AI monitoring restart failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _aiRestarting = false;
+        });
+      }
+    }
+  }
+
+  /// Start polling the FastAPI AI attendance endpoints.
+  void _startAiPolling() {
+    _aiPollingTimer?.cancel();
+
+    _loadLiveAiAttendance();
+
+    _aiPollingTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _loadLiveAiAttendance(),
+    );
+  }
+
+  /// Stop live AI polling.
+  void _stopAiPolling() {
+    _aiPollingTimer?.cancel();
+    _aiPollingTimer = null;
+  }
+
   Future<void> _refreshAll() async {
     await _loadHistory();
     await _loadAiAttendance();
+    await _loadLiveAiAttendance();
   }
 
   // ============================================================
@@ -333,7 +463,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
 
       await _loadHistory();
-      await _loadAiAttendance();
+
+      if (_hasSubmittedToday) {
+        await _restartAiMonitoringAfterSubmission();
+      } else {
+        await _loadAiAttendance();
+      }
     } catch (_) {
       if (!mounted) return;
 
@@ -945,10 +1080,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               children: [
                 Expanded(
                   child: _buildAiStatCard(
-                    title: 'Tracked',
-                    value: '$totalTracked',
-                    icon: Icons.people_outline,
-                  ),
+  title: 'AI Attendance',
+  value: _aiRestarting ? '0' : '$_aiCurrentCount',
+  icon: Icons.people_outline,
+),
                 ),
 
                 const SizedBox(width: 10),
@@ -986,6 +1121,89 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     value: '$unknown',
                     icon: Icons.help_outline,
                   ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+                    // ======================================================
+          // LIVE MONITORING STATUS
+          // ======================================================
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColors.border,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      _aiMonitoringRunning &&
+                              _aiMonitoringLoopAlive
+                          ? Icons.circle
+                          : Icons.circle_outlined,
+                      size: 12,
+                      color:
+                          _aiMonitoringRunning &&
+                                  _aiMonitoringLoopAlive
+                              ? AppColors.success
+                              : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'AI Monitoring Status',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _aiRestarting
+                          ? 'RESTARTING'
+                          : (_aiMonitoringRunning &&
+                                  _aiMonitoringLoopAlive
+                              ? 'LIVE'
+                              : 'INACTIVE'),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color:
+                            _aiRestarting
+                                ? AppColors.warning
+                                : (_aiMonitoringRunning &&
+                                        _aiMonitoringLoopAlive
+                                    ? AppColors.success
+                                    : AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildInfoRow(
+                  'Current AI attendance',
+                  _aiRestarting ? '0' : '$_aiCurrentCount',
+                ),
+
+                const SizedBox(height: 8),
+
+                _buildInfoRow(
+                  'Session',
+                  _aiCurrentSessionId ?? 'No active session',
                 ),
               ],
             ),

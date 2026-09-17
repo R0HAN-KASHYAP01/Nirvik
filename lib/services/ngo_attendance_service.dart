@@ -159,4 +159,19 @@ class NgoAttendanceService {
     final records = await fetchToday(profileId);
     return records.isNotEmpty;
   }
-}
+
+ Future<bool> hasSubmittedWithinLast24h(String profileId, AttendanceType type) async {
+    final cutoff = DateTime.now().toUtc().subtract(const Duration(hours: 24));
+
+    final rows = await _client
+        .from('ngo_attendance')
+        .select()
+        .eq('profile_id', profileId)
+        .eq('attendance_type', type == AttendanceType.beneficiary ? 'beneficiary' : 'staff')
+        .gte('submitted_at', cutoff.toIso8601String())
+        .limit(1);
+
+    return (rows as List).isNotEmpty;
+  }
+
+} 

@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -19,6 +20,10 @@ class AiAttendanceService {
 
   /// Request timeout used for API calls.
   static const Duration requestTimeout = Duration(seconds: 10);
+
+  // ---------------------------------------------------------------------------
+  // ATTENDANCE HISTORY / ANALYTICS
+  // ---------------------------------------------------------------------------
 
   /// Fetch the overall attendance summary.
   ///
@@ -60,7 +65,9 @@ class AiAttendanceService {
   ///
   /// Endpoint:
   /// GET /api/v1/attendance/{sessionId}
-  Future<Map<String, dynamic>> getAttendanceSession(String sessionId) async {
+  Future<Map<String, dynamic>> getAttendanceSession(
+    String sessionId,
+  ) async {
     final uri = Uri.parse('$baseUrl/api/v1/attendance/$sessionId');
 
     final response = await http.get(uri).timeout(requestTimeout);
@@ -85,6 +92,117 @@ class AiAttendanceService {
     return _handleResponse(response);
   }
 
+  // ---------------------------------------------------------------------------
+  // LIVE AI ATTENDANCE MONITORING
+  // ---------------------------------------------------------------------------
+
+  /// Start a new AI attendance monitoring session.
+  ///
+  /// Endpoint:
+  /// POST /api/v1/attendance/ai/start
+  ///
+  /// The FastAPI backend starts:
+  /// Phone Camera
+  ///     ↓
+  /// YOLO Detection
+  ///     ↓
+  /// ByteTrack Tracking
+  ///     ↓
+  /// Attendance Engine
+  Future<Map<String, dynamic>> startAiAttendance() async {
+    final uri = Uri.parse('$baseUrl/api/v1/attendance/ai/start');
+
+    final response = await http
+        .post(uri)
+        .timeout(requestTimeout);
+
+    return _handleResponse(response);
+  }
+
+  /// Stop and finalize the current AI attendance session.
+  ///
+  /// Endpoint:
+  /// POST /api/v1/attendance/ai/stop
+  ///
+  /// The current session is finalized and saved by FastAPI.
+  Future<Map<String, dynamic>> stopAiAttendance() async {
+    final uri = Uri.parse('$baseUrl/api/v1/attendance/ai/stop');
+
+    final response = await http
+        .post(uri)
+        .timeout(requestTimeout);
+
+    return _handleResponse(response);
+  }
+
+  /// Finalize the current AI attendance session and
+  /// immediately start a completely new session.
+  ///
+  /// Endpoint:
+  /// POST /api/v1/attendance/ai/restart
+  ///
+  /// Previous session:
+  ///     finalized + saved
+  ///
+  /// New session:
+  ///     started immediately
+  ///
+  /// This is useful after manual attendance submission.
+  Future<Map<String, dynamic>> restartAiAttendance() async {
+    final uri = Uri.parse('$baseUrl/api/v1/attendance/ai/restart');
+
+    final response = await http
+        .post(uri)
+        .timeout(requestTimeout);
+
+    return _handleResponse(response);
+  }
+
+  /// Get the current AI attendance monitoring status.
+  ///
+  /// Endpoint:
+  /// GET /api/v1/attendance/ai/status
+  ///
+  /// Returns information such as:
+  /// - running
+  /// - loop_alive
+  /// - session_id
+  /// - session_started_at
+  /// - frame_count
+  /// - active_count
+  Future<Map<String, dynamic>> getAiAttendanceStatus() async {
+    final uri = Uri.parse('$baseUrl/api/v1/attendance/ai/status');
+
+    final response = await http.get(uri).timeout(requestTimeout);
+
+    return _handleResponse(response);
+  }
+
+  /// Get the current AI attendance count.
+  ///
+  /// Endpoint:
+  /// GET /api/v1/attendance/ai/current
+  ///
+  /// Example response:
+  /// {
+  ///   "success": true,
+  ///   "active_count": 2,
+  ///   "running": true,
+  ///   "loop_alive": true,
+  ///   "session_id": "20260916_143046_610665"
+  /// }
+  Future<Map<String, dynamic>> getCurrentAiAttendance() async {
+    final uri = Uri.parse('$baseUrl/api/v1/attendance/ai/current');
+
+    final response = await http.get(uri).timeout(requestTimeout);
+
+    return _handleResponse(response);
+  }
+
+  // ---------------------------------------------------------------------------
+  // RISK ENGINE
+  // ---------------------------------------------------------------------------
+
   /// Calculate project risk using the AI risk engine.
   ///
   /// Endpoint:
@@ -107,7 +225,8 @@ class AiAttendanceService {
   Future<Map<String, dynamic>> calculateProjectRisk({
     Map<String, dynamic>? attendance,
     Map<String, dynamic>? project,
-    List<Map<String, dynamic>> inspections = const <Map<String, dynamic>>[],
+    List<Map<String, dynamic>> inspections =
+        const <Map<String, dynamic>>[],
   }) async {
     final uri = Uri.parse('$baseUrl/api/v1/risk/calculate');
 
@@ -120,13 +239,19 @@ class AiAttendanceService {
     final response = await http
         .post(
           uri,
-          headers: <String, String>{'Content-Type': 'application/json'},
+          headers: <String, String>{
+            'Content-Type': 'application/json',
+          },
           body: jsonEncode(body),
         )
         .timeout(requestTimeout);
 
     return _handleResponse(response);
   }
+
+  // ---------------------------------------------------------------------------
+  // HEALTH CHECKS
+  // ---------------------------------------------------------------------------
 
   /// Check whether the AI backend is running.
   ///
@@ -172,6 +297,10 @@ class AiAttendanceService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // RESPONSE HANDLING
+  // ---------------------------------------------------------------------------
+
   /// Handle common HTTP API responses.
   Map<String, dynamic> _handleResponse(http.Response response) {
     final dynamic decodedBody;
@@ -202,7 +331,10 @@ class AiAttendanceService {
       message = decodedBody['detail'].toString();
     }
 
-    throw AiAttendanceApiException(message, response.statusCode);
+    throw AiAttendanceApiException(
+      message,
+      response.statusCode,
+    );
   }
 }
 
@@ -212,7 +344,10 @@ class AiAttendanceApiException implements Exception {
   final String message;
   final int statusCode;
 
-  const AiAttendanceApiException(this.message, this.statusCode);
+  const AiAttendanceApiException(
+    this.message,
+    this.statusCode,
+  );
 
   @override
   String toString() {

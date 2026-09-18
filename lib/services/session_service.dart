@@ -25,6 +25,9 @@ class SessionService {
         department: user.department,
         designation: user.designation,
         registrationNumber: user.registrationNumber,
+        organizationId: user.organizationId,  // fixing pre-existing drop
+        district: user.district,
+        state: user.state,
       );
     }
   }

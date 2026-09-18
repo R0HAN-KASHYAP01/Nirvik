@@ -256,10 +256,10 @@ class AuthService {
       status: profile['status'] as String,
       department: roleData?['department'] as String?,
       designation: roleData?['designation'] as String?,
-      registrationNumber:
-          roleData?['registration_number'] as String?,
-      organizationId:
-          roleData?['organization_id'] as String?,
+      registrationNumber: roleData?['registration_number'] as String?,
+      organizationId: roleData?['organization_id'] as String?,
+      district: roleData?['district'] as String?,   // NEW
+      state: roleData?['state'] as String?,          // NEW
     );
   }
 

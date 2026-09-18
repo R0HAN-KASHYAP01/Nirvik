@@ -1,4 +1,5 @@
 // FILE: lib/features/ngo/presentation/attendance_screen.dart
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -30,12 +31,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final _staffFormKey = GlobalKey<FormState>();
 
   final _beneficiaryCountController =
-  TextEditingController(text: '45');
+      TextEditingController(text: '45');
 
   final _staffCountController =
-  TextEditingController(text: '10');
+      TextEditingController(text: '10');
 
-  final AiAttendanceService _aiAttendanceService = AiAttendanceService();
+  final AiAttendanceService _aiAttendanceService =
+      AiAttendanceService();
 
   Uint8List? _beneficiaryVideoBytes;
   String? _beneficiaryVideoName;
@@ -56,53 +58,77 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _loadingAiAttendance = true;
   String? _aiAttendanceError;
   bool _aiBlockedBySubmission = false;
+
   Map<String, dynamic>? _aiSummary;
   Map<String, dynamic>? _aiRoleStatistics;
   Map<String, dynamic>? _aiLatestSession;
 
-  // Live AI monitoring state.
-  Map<String, dynamic>? _aiStatus;
+  // ============================================================
+  // LIVE AI MONITORING STATE
+  // ============================================================
+
   int _aiCurrentCount = 0;
   bool _aiMonitoringRunning = false;
   bool _aiMonitoringLoopAlive = false;
   String? _aiCurrentSessionId;
 
-  // True while the current AI session is being finalized and a new
-  // monitoring session is being started.
-  bool _aiRestarting = false;
-
   Timer? _aiPollingTimer;
 
-  // Number of most-recent days to show inline under "Recent Submissions".
+  // Number of most-recent days to show inline under
+  // "Recent Submissions".
   static const int _recentDaysWindow = 3;
-    @override
+
+  @override
   void initState() {
     super.initState();
 
-    _loadHistory().then((_) async {
-      await _loadAiAttendance();
-
-      if (_hasSubmittedToday) {
-        try {
-          final current =
-              await _aiAttendanceService.getCurrentAiAttendance();
-
-          if (current['running'] != true) {
-            await _aiAttendanceService.startAiAttendance();
-          }
-
-          await _loadLiveAiAttendance();
-        } catch (_) {
-          // Keep the Attendance screen usable if the AI backend or
-          // camera is temporarily unavailable.
-        }
-      }
-
-      _startAiPolling();
-    });
+    _initializeAttendanceScreen();
   }
 
-    @override
+  Future<void> _initializeAttendanceScreen() async {
+    await _loadHistory();
+
+    if (!mounted) return;
+
+    await _loadAiAttendance();
+
+    if (!mounted) return;
+
+    /*
+     * If today's beneficiary and staff attendance have already
+     * been submitted, make sure AI monitoring is running.
+     *
+     * IMPORTANT:
+     * This only happens when the Attendance screen is initialized.
+     *
+     * Manual attendance submission itself NEVER restarts or resets
+     * the current AI session.
+     */
+    if (_hasSubmittedToday) {
+      try {
+        final current =
+            await _aiAttendanceService.getCurrentAiAttendance();
+
+        final running = current['running'] == true;
+        final loopAlive = current['loop_alive'] == true;
+
+        if (!running || !loopAlive) {
+          await _aiAttendanceService.startAiAttendance();
+        }
+
+        await _loadLiveAiAttendance();
+      } catch (_) {
+        // Keep the Attendance screen usable if the AI backend
+        // or camera is temporarily unavailable.
+      }
+    }
+
+    if (!mounted) return;
+
+    _startAiPolling();
+  }
+
+  @override
   void dispose() {
     _stopAiPolling();
 
@@ -137,7 +163,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     try {
       final records =
-      await NgoAttendanceService.instance.fetchHistory(user.id);
+          await NgoAttendanceService.instance.fetchHistory(user.id);
 
       if (!mounted) return;
 
@@ -155,20 +181,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // ============================================================
-  // RECENT (LAST N DAYS) HISTORY
-  //
-  // Filters _history down to records whose date falls within the
-  // last `_recentDaysWindow` calendar days (inclusive of today).
-  // Comparison is done on the date component only, ignoring time.
+  // RECENT HISTORY
   // ============================================================
 
   List<AttendanceRecord> get _recentHistory {
-    if (_history.isEmpty) return _history;
+    if (_history.isEmpty) {
+      return _history;
+    }
 
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final cutoff =
-    today.subtract(const Duration(days: _recentDaysWindow - 1));
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final cutoff = today.subtract(
+      const Duration(
+        days: _recentDaysWindow - 1,
+      ),
+    );
 
     return _history.where((record) {
       final recordDate = DateTime(
@@ -182,20 +215,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // ============================================================
-  // AI ATTENDANCE
-  //
-  // The AI monitoring panel should only unlock once the institute
-  // has submitted BOTH beneficiary and staff manual attendance for
-  // today. Checking for "any" record submitted today is not enough,
-  // since either type alone would incorrectly unlock the section.
+  // TODAY'S SUBMISSION CHECK
   // ============================================================
 
   bool _isSubmittedToday(AttendanceType type) {
     final now = DateTime.now();
 
     return _history.any(
-          (record) =>
-      record.type == type &&
+      (record) =>
+          record.type == type &&
           record.date.year == now.year &&
           record.date.month == now.month &&
           record.date.day == now.day,
@@ -207,6 +235,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         _isSubmittedToday(AttendanceType.staff);
   }
 
+  // ============================================================
+  // AI ATTENDANCE HISTORY
+  // ============================================================
+
   Future<void> _loadAiAttendance() async {
     if (!mounted) return;
 
@@ -215,7 +247,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         _loadingAiAttendance = false;
         _aiBlockedBySubmission = true;
         _aiAttendanceError =
-        "Submit today's beneficiary and staff attendance first to use AI attendance monitoring.";
+            "Submit today's beneficiary and staff attendance first "
+            "to use AI attendance monitoring.";
       });
 
       return;
@@ -249,90 +282,77 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         _loadingAiAttendance = false;
         _aiBlockedBySubmission = false;
         _aiAttendanceError =
-        'Unable to connect to the AI attendance server.';
+            'Unable to connect to the AI attendance server.';
       });
     }
   }
 
-    // ============================================================
+  // ============================================================
   // LIVE AI ATTENDANCE
   // ============================================================
 
-  /// Fetch the current AI monitoring state and live attendance count.
+  /// Fetches the current AI monitoring state and live attendance.
   ///
-  /// FastAPI:
+  /// FastAPI endpoints:
+  ///
   /// GET /api/v1/attendance/ai/status
   /// GET /api/v1/attendance/ai/current
   Future<void> _loadLiveAiAttendance() async {
     try {
-      final results = await Future.wait([
-        _aiAttendanceService.getAiAttendanceStatus(),
-        _aiAttendanceService.getCurrentAiAttendance(),
-      ]);
+      /*
+       * The current endpoint already contains:
+       *
+       * active_count
+       * running
+       * loop_alive
+       * session_id
+       *
+       * Therefore it is sufficient for the live UI.
+       */
+      final current =
+          await _aiAttendanceService.getCurrentAiAttendance();
 
       if (!mounted) return;
 
-      final status = results[0];
-      final current = results[1];
+      final running = current['running'] == true;
+      final loopAlive = current['loop_alive'] == true;
+
+      /*
+       * A valid live state requires BOTH:
+       *
+       * running == true
+       * loop_alive == true
+       *
+       * If the backend is inactive, show zero because there is
+       * no currently active AI monitoring session.
+       */
+      final isLive = running && loopAlive;
 
       setState(() {
-        _aiStatus = status;
-        _aiCurrentCount =
-            _toInt(current['active_count']);
+        _aiMonitoringRunning = running;
+        _aiMonitoringLoopAlive = loopAlive;
 
-        _aiMonitoringRunning =
-            current['running'] == true;
+        _aiCurrentCount = isLive
+            ? _toInt(current['active_count'])
+            : 0;
 
-        _aiMonitoringLoopAlive =
-            current['loop_alive'] == true;
-
-        _aiCurrentSessionId =
-            current['session_id']?.toString();
+        _aiCurrentSessionId = isLive
+            ? current['session_id']?.toString()
+            : null;
       });
     } catch (_) {
-      // Keep the last known live value if a single polling
-      // request temporarily fails.
+      /*
+       * Keep the last known value if a polling request
+       * temporarily fails.
+       */
     }
   }
 
-  /// Finalize the current AI session and immediately start a new one after submission.
-  Future<void> _restartAiMonitoringAfterSubmission() async {
-    if (!_hasSubmittedToday || !mounted) {
-      await _loadAiAttendance();
-      return;
-    }
+  // ============================================================
+  // AI POLLING
+  // ============================================================
 
-    setState(() {
-      _aiRestarting = true;
-      _aiCurrentCount = 0;
-    });
-    _showSuccess('AI Monitoring Restarting...');
-    try {
-      final result = await _aiAttendanceService.restartAiAttendance();
-      if (!mounted) return;
-
-      if (result['success'] != true) {
-        _showError(
-          result['message']?.toString() ?? 'Failed to restart AI attendance.',
-        );
-        return;
-      }
-
-      await _loadLiveAiAttendance();
-      await _loadAiAttendance();
-    } catch (e) {
-      if (!mounted) return;
-      _showError('AI monitoring restart failed: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _aiRestarting = false;
-        });
-      }
-    }
-  }
-
-  /// Start polling the FastAPI AI attendance endpoints.
+  /// Starts polling the FastAPI AI attendance endpoint.
   void _startAiPolling() {
     _aiPollingTimer?.cancel();
 
@@ -340,19 +360,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     _aiPollingTimer = Timer.periodic(
       const Duration(seconds: 2),
-      (_) => _loadLiveAiAttendance(),
+      (_) {
+        _loadLiveAiAttendance();
+      },
     );
   }
 
-  /// Stop live AI polling.
+  /// Stops live AI polling.
   void _stopAiPolling() {
     _aiPollingTimer?.cancel();
     _aiPollingTimer = null;
   }
 
+  // ============================================================
+  // REFRESH
+  // ============================================================
+
   Future<void> _refreshAll() async {
     await _loadHistory();
+
+    if (!mounted) return;
+
     await _loadAiAttendance();
+
+    if (!mounted) return;
+
     await _loadLiveAiAttendance();
   }
 
@@ -360,18 +392,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // VIDEO PICKER
   // ============================================================
 
-  Future<void> _pickVideo({required bool isBeneficiary}) async {
+  Future<void> _pickVideo({
+    required bool isBeneficiary,
+  }) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.video,
       withData: true,
     );
 
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
 
     final file = result.files.first;
     final bytes = file.bytes;
 
-    if (bytes == null || bytes.isEmpty) return;
+    if (bytes == null || bytes.isEmpty) {
+      return;
+    }
+
+    if (!mounted) return;
 
     setState(() {
       if (isBeneficiary) {
@@ -388,18 +428,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // MANUAL ATTENDANCE SUBMISSION
   // ============================================================
 
-  Future<void> _submit({required bool isBeneficiary}) async {
+  Future<void> _submit({
+    required bool isBeneficiary,
+  }) async {
     final user = SessionService.instance.currentUser;
 
     if (user == null) {
-      _showError('User session not found. Please login again.');
+      _showError(
+        'User session not found. Please login again.',
+      );
       return;
     }
 
-    final formKey =
-    isBeneficiary ? _beneficiaryFormKey : _staffFormKey;
+    final formKey = isBeneficiary
+        ? _beneficiaryFormKey
+        : _staffFormKey;
 
-    if (!formKey.currentState!.validate()) return;
+    if (formKey.currentState == null ||
+        !formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!mounted) return;
 
     setState(() {
       if (isBeneficiary) {
@@ -430,7 +480,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
       if (bytes != null && name != null) {
         videoPath =
-        await NgoStorageService.instance.uploadFile(
+            await NgoStorageService.instance.uploadFile(
           folder: 'attendance',
           fileName: name,
           bytes: bytes,
@@ -459,26 +509,53 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       });
 
       _showSuccess(
-        '${isBeneficiary ? 'Beneficiary' : 'Staff'} attendance submitted.',
+        '${isBeneficiary ? 'Beneficiary' : 'Staff'} '
+        'attendance submitted.',
       );
+
+      // ========================================================
+      // IMPORTANT:
+      //
+      // Manual attendance submission does NOT:
+      //
+      // - stop AI monitoring
+      // - reset AI attendance
+      // - create a new AI session
+      // - call restartAiAttendance()
+      //
+      // The current AI monitoring session continues running.
+      // ========================================================
 
       await _loadHistory();
 
-      if (_hasSubmittedToday) {
-        await _restartAiMonitoringAfterSubmission();
-      } else {
-        await _loadAiAttendance();
-      }
+      if (!mounted) return;
+
+      /*
+       * Refresh historical AI information only.
+       *
+       * This does NOT affect the currently running AI session.
+       */
+      await _loadAiAttendance();
+
+      if (!mounted) return;
+
+      /*
+       * Refresh the live AI state.
+       *
+       * If AI was already running, its current count and
+       * current session ID are preserved.
+       */
+      await _loadLiveAiAttendance();
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
         if (isBeneficiary) {
           _beneficiaryError =
-          'Could not submit attendance. Please try again.';
+              'Could not submit attendance. Please try again.';
         } else {
           _staffError =
-          'Could not submit attendance. Please try again.';
+              'Could not submit attendance. Please try again.';
         }
       });
     } finally {
@@ -605,32 +682,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // ============================================================
-  // EXTRACT ROLE DATA
-  //
-  // The role-statistics endpoint returns:
-  //
-  // {
-  //   "statistics": [
-  //     {
-  //       "role": "Staff",
-  //       "people": 7,
-  //       "observed_seconds": 460.57,
-  //       "percentage_of_people": 20.59
-  //     }
-  //   ]
-  // }
-  // ============================================================
-  // ============================================================
   // DATE HELPERS
   // ============================================================
 
-  /// Returns true only if [isoString] parses to a date matching
-  /// today's calendar date (year/month/day) in local time.
+  /// Returns true only if [isoString] represents today's
+  /// calendar date in local time.
   bool _isToday(String? isoString) {
-    if (isoString == null || isoString.isEmpty) return false;
+    if (isoString == null || isoString.isEmpty) {
+      return false;
+    }
 
     final parsed = DateTime.tryParse(isoString);
-    if (parsed == null) return false;
+
+    if (parsed == null) {
+      return false;
+    }
 
     final local = parsed.toLocal();
     final now = DateTime.now();
@@ -639,6 +705,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         local.month == now.month &&
         local.day == now.day;
   }
+
+  // ============================================================
+  // ROLE DATA
+  // ============================================================
+
   Map<String, dynamic> _getRoleData(String role) {
     final data = _aiRoleStatistics;
 
@@ -656,7 +727,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       if (item is Map) {
         final itemRole = item['role']?.toString();
 
-        if (itemRole?.toLowerCase() == role.toLowerCase()) {
+        if (itemRole != null &&
+            itemRole.toLowerCase() == role.toLowerCase()) {
           return Map<String, dynamic>.from(item);
         }
       }
@@ -664,12 +736,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return {};
   }
-
-  // ============================================================
-  // ROLE COUNT
-  //
-  // The API uses the "people" field for each role.
-  // ============================================================
 
   int _getRoleCount(String role) {
     final data = _getRoleData(role);
@@ -699,7 +765,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               const Text(
-                "Submit today's headcount for beneficiaries and staff separately.",
+                "Submit today's headcount for beneficiaries "
+                "and staff separately.",
                 style: TextStyle(
                   fontSize: 12.5,
                   color: AppColors.textSecondary,
@@ -722,12 +789,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 title: 'Beneficiary Attendance',
                 icon: Icons.diversity_3_outlined,
                 formKey: _beneficiaryFormKey,
-                countController: _beneficiaryCountController,
+                countController:
+                    _beneficiaryCountController,
                 videoName: _beneficiaryVideoName,
-                onPickVideo: () =>
-                    _pickVideo(isBeneficiary: true),
-                onSubmit: () =>
-                    _submit(isBeneficiary: true),
+                onPickVideo: () {
+                  _pickVideo(
+                    isBeneficiary: true,
+                  );
+                },
+                onSubmit: () {
+                  _submit(
+                    isBeneficiary: true,
+                  );
+                },
                 isSubmitting: _submittingBeneficiary,
                 error: _beneficiaryError,
               ),
@@ -738,12 +812,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 title: 'Staff Attendance',
                 icon: Icons.badge_outlined,
                 formKey: _staffFormKey,
-                countController: _staffCountController,
+                countController:
+                    _staffCountController,
                 videoName: _staffVideoName,
-                onPickVideo: () =>
-                    _pickVideo(isBeneficiary: false),
-                onSubmit: () =>
-                    _submit(isBeneficiary: false),
+                onPickVideo: () {
+                  _pickVideo(
+                    isBeneficiary: false,
+                  );
+                },
+                onSubmit: () {
+                  _submit(
+                    isBeneficiary: false,
+                  );
+                },
                 isSubmitting: _submittingStaff,
                 error: _staffError,
               ),
@@ -768,23 +849,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
               if (_loadingHistory)
                 const LoadingState(
-                  message: 'Loading attendance history...',
+                  message:
+                      'Loading attendance history...',
                 )
               else if (_history.isEmpty)
                 const EmptyState(
                   icon: Icons.event_busy_outlined,
-                  title: 'No attendance submitted yet',
-                  message: 'Submitted records will appear here.',
+                  title:
+                      'No attendance submitted yet',
+                  message:
+                      'Submitted records will appear here.',
                 )
               else if (_recentHistory.isEmpty)
                 const EmptyState(
                   icon: Icons.event_busy_outlined,
-                  title: 'No submissions in the last 3 days',
-                  message: 'Tap "View all" to see older records.',
+                  title:
+                      'No submissions in the last 3 days',
+                  message:
+                      'Tap "View all" to see older records.',
                 )
               else
                 ..._recentHistory.map(
-                      (record) => _buildHistoryRow(record),
+                  (record) =>
+                      _buildHistoryRow(record),
                 ),
             ],
           ),
@@ -794,34 +881,41 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // ============================================================
-  // HISTORY SECTION HEADER (title + "View all" button)
+  // HISTORY SECTION HEADER
   // ============================================================
 
   Widget _buildHistorySectionHeader() {
-    final hasOlderRecords = _history.length > _recentHistory.length;
+    final hasOlderRecords =
+        _history.length > _recentHistory.length;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment:
+          CrossAxisAlignment.center,
       children: [
         const Expanded(
           child: SectionHeader(
             title: 'Recent Submissions',
           ),
         ),
-
         if (hasOlderRecords)
           TextButton(
             onPressed: _showAllHistory,
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: const Size(0, 0),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding:
+                  const EdgeInsets.symmetric(
+                horizontal: 8,
+              ),
+              minimumSize:
+                  const Size(0, 0),
+              tapTargetSize:
+                  MaterialTapTargetSize.shrinkWrap,
             ),
             child: const Text(
               'View all',
               style: TextStyle(
                 fontSize: 12.5,
-                fontWeight: FontWeight.w600,
+                fontWeight:
+                    FontWeight.w600,
                 color: AppColors.primary,
               ),
             ),
@@ -831,7 +925,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // ============================================================
-  // "VIEW ALL" — FULL HISTORY BOTTOM SHEET
+  // VIEW ALL HISTORY
   // ============================================================
 
   void _showAllHistory() {
@@ -845,26 +939,45 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           minChildSize: 0.4,
           maxChildSize: 0.95,
           expand: false,
-          builder: (context, scrollController) {
+          builder: (
+            context,
+            scrollController,
+          ) {
             return Container(
-              decoration: const BoxDecoration(
+              decoration:
+                  const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(
+                borderRadius:
+                    BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
               ),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              padding:
+                  const EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                20,
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch,
                 children: [
                   Center(
                     child: Container(
                       width: 36,
                       height: 4,
-                      margin: const EdgeInsets.only(bottom: 14),
+                      margin:
+                          const EdgeInsets.only(
+                        bottom: 14,
+                      ),
                       decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2),
+                        color:
+                            AppColors.border,
+                        borderRadius:
+                            BorderRadius.circular(
+                          2,
+                        ),
                       ),
                     ),
                   ),
@@ -875,18 +988,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         child: Text(
                           'All Submissions',
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          overflow:
+                              TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            fontWeight:
+                                FontWeight.w700,
+                            color:
+                                AppColors
+                                    .textPrimary,
                           ),
                         ),
                       ),
 
                       IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                        ),
+                        onPressed: () {
+                          Navigator.of(
+                            context,
+                          ).pop();
+                        },
                         splashRadius: 20,
                       ),
                     ],
@@ -897,17 +1020,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   Expanded(
                     child: _history.isEmpty
                         ? const EmptyState(
-                      icon: Icons.event_busy_outlined,
-                      title: 'No attendance submitted yet',
-                      message:
-                      'Submitted records will appear here.',
-                    )
+                            icon:
+                                Icons.event_busy_outlined,
+                            title:
+                                'No attendance submitted yet',
+                            message:
+                                'Submitted records will '
+                                'appear here.',
+                          )
                         : ListView.builder(
-                      controller: scrollController,
-                      itemCount: _history.length,
-                      itemBuilder: (context, index) =>
-                          _buildHistoryRow(_history[index]),
-                    ),
+                            controller:
+                                scrollController,
+                            itemCount:
+                                _history.length,
+                            itemBuilder:
+                                (context, index) {
+                              return _buildHistoryRow(
+                                _history[index],
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),
@@ -925,17 +1057,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget _buildAiAttendanceSection() {
     if (_loadingAiAttendance) {
       return AppCard(
-        padding: const EdgeInsets.all(18),
+        padding:
+            const EdgeInsets.all(18),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize:
+              MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             _buildAiSectionHeader(),
 
             const SizedBox(height: 18),
 
             const LoadingState(
-              message: 'Loading AI attendance...',
+              message:
+                  'Loading AI attendance...',
             ),
           ],
         ),
@@ -944,10 +1080,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     if (_aiAttendanceError != null) {
       return AppCard(
-        padding: const EdgeInsets.all(18),
+        padding:
+            const EdgeInsets.all(18),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize:
+              MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             _buildAiSectionHeader(),
 
@@ -955,23 +1094,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(10),
+              padding:
+                  const EdgeInsets.all(14),
+              decoration:
+                  BoxDecoration(
+                color:
+                    AppColors.background,
+                borderRadius:
+                    BorderRadius.circular(
+                  10,
+                ),
                 border: Border.all(
-                  color: AppColors.border,
+                  color:
+                      AppColors.border,
                 ),
               ),
               child: Row(
                 crossAxisAlignment:
-                CrossAxisAlignment.start,
+                    CrossAxisAlignment.start,
                 children: [
                   Icon(
                     _aiBlockedBySubmission
                         ? Icons.lock_outline
-                        : Icons.cloud_off_outlined,
-                    color: AppColors.warning,
+                        : Icons
+                            .cloud_off_outlined,
+                    color:
+                        AppColors.warning,
                   ),
 
                   const SizedBox(width: 12),
@@ -979,9 +1127,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   Expanded(
                     child: Text(
                       _aiAttendanceError!,
-                      style: const TextStyle(
+                      style:
+                          const TextStyle(
                         fontSize: 12.5,
-                        color: AppColors.textSecondary,
+                        color: AppColors
+                            .textSecondary,
                       ),
                     ),
                   ),
@@ -993,9 +1143,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               const SizedBox(height: 14),
 
               SecondaryButton(
-                label: 'Retry AI Connection',
+                label:
+                    'Retry AI Connection',
                 icon: Icons.refresh,
-                onPressed: _loadAiAttendance,
+                onPressed:
+                    _loadAiAttendance,
               ),
             ],
           ],
@@ -1003,87 +1155,111 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
     }
 
-        final summary = _aiSummary ?? {};
-    final rawLatest = _aiLatestSession ?? {};
+    final summary = _aiSummary ?? {};
+    final rawLatest =
+        _aiLatestSession ?? {};
 
     final latestIsToday = _isToday(
-      rawLatest['session_started_at']?.toString(),
+      rawLatest['session_started_at']
+          ?.toString(),
     );
 
-    // If the most recent AI session wasn't from today, don't
-    // present it as today's attendance.
-    final latest = latestIsToday ? rawLatest : <String, dynamic>{};
+    /*
+     * Do not show yesterday's/latest historical
+     * session as today's latest session.
+     */
+    final latest = latestIsToday
+        ? rawLatest
+        : <String, dynamic>{};
 
     // ==========================================================
     // SUMMARY DATA
     // ==========================================================
 
     final totalTracked =
-    _toInt(summary['total_tracked']);
+        _toInt(summary['total_tracked']);
 
     final sessionCount =
-    _toInt(summary['total_sessions']);
+        _toInt(summary['total_sessions']);
 
     final observedSeconds =
-    _toDouble(summary['total_observed_seconds']);
+        _toDouble(
+      summary['total_observed_seconds'],
+    );
 
     // ==========================================================
     // ROLE DATA
     // ==========================================================
 
     final staff =
-    _getRoleCount('Staff');
+        _getRoleCount('Staff');
 
     final beneficiary =
-    _getRoleCount('Beneficiary');
+        _getRoleCount('Beneficiary');
 
     final unknown =
-    _getRoleCount('Unknown');
+        _getRoleCount('Unknown');
 
     final roleTotal =
         staff + beneficiary + unknown;
 
     final distributionTotal =
-    roleTotal > 0 ? roleTotal : totalTracked;
+        roleTotal > 0
+            ? roleTotal
+            : totalTracked;
+
+    final isLive =
+        _aiMonitoringRunning &&
+            _aiMonitoringLoopAlive;
+
+    // ==========================================================
+    // UI
+    // ==========================================================
 
     return AppCard(
-      padding: const EdgeInsets.all(18),
+      padding:
+          const EdgeInsets.all(18),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize:
+            MainAxisSize.min,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           _buildAiSectionHeader(),
 
           const SizedBox(height: 6),
 
           const Text(
-            'Live data received from the Sentinal AI attendance backend.',
+            'Live data received from the Sentinal AI '
+            'attendance backend.',
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color:
+                  AppColors.textSecondary,
             ),
           ),
 
           const SizedBox(height: 18),
 
-          // ======================================================
+          // ====================================================
           // TOP STATISTICS
-          //
-          // Uses IntrinsicHeight so the two stat cards in each row
-          // stay the same height as each other even though their
-          // content (large numbers, scaled fonts) can vary.
-          // ======================================================
+          // ====================================================
 
           IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _buildAiStatCard(
-  title: 'AI Attendance',
-  value: _aiRestarting ? '0' : '$_aiCurrentCount',
-  icon: Icons.people_outline,
-),
+                    title:
+                        'AI Attendance',
+                    value: isLive
+                        ? '$_aiCurrentCount'
+                        : '0',
+                    icon:
+                        Icons.people_outline,
+                  ),
                 ),
 
                 const SizedBox(width: 10),
@@ -1092,7 +1268,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   child: _buildAiStatCard(
                     title: 'Staff',
                     value: '$staff',
-                    icon: Icons.badge_outlined,
+                    icon:
+                        Icons.badge_outlined,
                   ),
                 ),
               ],
@@ -1103,13 +1280,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _buildAiStatCard(
-                    title: 'Beneficiary',
-                    value: '$beneficiary',
-                    icon: Icons.diversity_3_outlined,
+                    title:
+                        'Beneficiary',
+                    value:
+                        '$beneficiary',
+                    icon: Icons
+                        .diversity_3_outlined,
                   ),
                 ),
 
@@ -1118,8 +1299,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Expanded(
                   child: _buildAiStatCard(
                     title: 'Unknown',
-                    value: '$unknown',
-                    icon: Icons.help_outline,
+                    value:
+                        '$unknown',
+                    icon:
+                        Icons.help_outline,
                   ),
                 ),
               ],
@@ -1128,65 +1311,77 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           const SizedBox(height: 18),
 
-                    // ======================================================
+          // ====================================================
           // LIVE MONITORING STATUS
-          // ======================================================
+          // ====================================================
 
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(10),
+            padding:
+                const EdgeInsets.all(14),
+            decoration:
+                BoxDecoration(
+              color:
+                  AppColors.background,
+              borderRadius:
+                  BorderRadius.circular(
+                10,
+              ),
               border: Border.all(
-                color: AppColors.border,
+                color:
+                    AppColors.border,
               ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Icon(
-                      _aiMonitoringRunning &&
-                              _aiMonitoringLoopAlive
+                      isLive
                           ? Icons.circle
-                          : Icons.circle_outlined,
+                          : Icons
+                              .circle_outlined,
                       size: 12,
-                      color:
-                          _aiMonitoringRunning &&
-                                  _aiMonitoringLoopAlive
-                              ? AppColors.success
-                              : AppColors.textSecondary,
+                      color: isLive
+                          ? AppColors
+                              .success
+                          : AppColors
+                              .textSecondary,
                     ),
+
                     const SizedBox(width: 8),
+
                     const Expanded(
                       child: Text(
                         'AI Monitoring Status',
-                        style: TextStyle(
+                        style:
+                            TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          fontWeight:
+                              FontWeight.w600,
+                          color:
+                              AppColors
+                                  .textPrimary,
                         ),
                       ),
                     ),
+
                     Text(
-                      _aiRestarting
-                          ? 'RESTARTING'
-                          : (_aiMonitoringRunning &&
-                                  _aiMonitoringLoopAlive
-                              ? 'LIVE'
-                              : 'INACTIVE'),
-                      style: TextStyle(
+                      isLive
+                          ? 'LIVE'
+                          : 'INACTIVE',
+                      style:
+                          TextStyle(
                         fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color:
-                            _aiRestarting
-                                ? AppColors.warning
-                                : (_aiMonitoringRunning &&
-                                        _aiMonitoringLoopAlive
-                                    ? AppColors.success
-                                    : AppColors.textSecondary),
+                        fontWeight:
+                            FontWeight.w700,
+                        color: isLive
+                            ? AppColors
+                                .success
+                            : AppColors
+                                .textSecondary,
                       ),
                     ),
                   ],
@@ -1196,14 +1391,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
                 _buildInfoRow(
                   'Current AI attendance',
-                  _aiRestarting ? '0' : '$_aiCurrentCount',
+                  isLive
+                      ? '$_aiCurrentCount'
+                      : '0',
                 ),
 
                 const SizedBox(height: 8),
 
                 _buildInfoRow(
                   'Session',
-                  _aiCurrentSessionId ?? 'No active session',
+                  _aiCurrentSessionId ??
+                      'No active session',
                 ),
               ],
             ),
@@ -1211,33 +1409,46 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           const SizedBox(height: 18),
 
-          // ======================================================
+          // ====================================================
           // SESSION INFORMATION
-          // ======================================================
+          // ====================================================
 
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(10),
+            padding:
+                const EdgeInsets.all(14),
+            decoration:
+                BoxDecoration(
+              color:
+                  AppColors.background,
+              borderRadius:
+                  BorderRadius.circular(
+                10,
+              ),
               border: Border.all(
-                color: AppColors.border,
+                color:
+                    AppColors.border,
               ),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+                  MainAxisSize.min,
               crossAxisAlignment:
-              CrossAxisAlignment.start,
+                  CrossAxisAlignment.start,
               children: [
                 const Text(
                   'AI Session Information',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  overflow:
+                      TextOverflow.ellipsis,
+                  style:
+                      TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        AppColors
+                            .textPrimary,
                   ),
                 ),
 
@@ -1260,26 +1471,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           const SizedBox(height: 18),
 
-          // ======================================================
+          // ====================================================
           // LATEST AI SESSION
-          // ======================================================
+          // ====================================================
 
-          _buildLatestSessionCard(latest),
+          _buildLatestSessionCard(
+            latest,
+          ),
 
           const SizedBox(height: 18),
 
-          // ======================================================
+          // ====================================================
           // ROLE DISTRIBUTION
-          // ======================================================
+          // ====================================================
 
           const Text(
             'Role Distribution',
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            overflow:
+                TextOverflow.ellipsis,
+            style:
+                TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              fontWeight:
+                  FontWeight.w600,
+              color:
+                  AppColors.textPrimary,
             ),
           ),
 
@@ -1289,7 +1506,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             label: 'Staff',
             value: staff,
             total: distributionTotal,
-            icon: Icons.badge_outlined,
+            icon:
+                Icons.badge_outlined,
           ),
 
           const SizedBox(height: 10),
@@ -1298,7 +1516,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             label: 'Beneficiary',
             value: beneficiary,
             total: distributionTotal,
-            icon: Icons.diversity_3_outlined,
+            icon: Icons
+                .diversity_3_outlined,
           ),
 
           const SizedBox(height: 10),
@@ -1307,7 +1526,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             label: 'Unknown',
             value: unknown,
             total: distributionTotal,
-            icon: Icons.help_outline,
+            icon:
+                Icons.help_outline,
           ),
 
           const SizedBox(height: 14),
@@ -1315,23 +1535,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           const Text(
             'Role statistics received from the AI API.',
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            overflow:
+                TextOverflow.ellipsis,
+            style:
+                TextStyle(
               fontSize: 11,
-              color: AppColors.textSecondary,
+              color:
+                  AppColors
+                      .textSecondary,
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // ======================================================
-          // REFRESH
-          // ======================================================
-
           SecondaryButton(
-            label: 'Refresh AI Attendance',
+            label:
+                'Refresh AI Attendance',
             icon: Icons.refresh,
-            onPressed: _loadAiAttendance,
+            onPressed:
+                _loadAiAttendance,
           ),
         ],
       ),
@@ -1343,83 +1565,125 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // ============================================================
 
   Widget _buildLatestSessionCard(
-      Map<String, dynamic> latest,
-      ) {
+    Map<String, dynamic> latest,
+  ) {
     if (latest.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(10),
+        padding:
+            const EdgeInsets.all(14),
+        decoration:
+            BoxDecoration(
+          color:
+              AppColors.background,
+          borderRadius:
+              BorderRadius.circular(
+            10,
+          ),
           border: Border.all(
-            color: AppColors.border,
+            color:
+                AppColors.border,
           ),
         ),
-                child: const Text(
+        child: const Text(
           'No camera-based attendance recorded today. '
-          'Run the camera pipeline to update today\'s AI attendance.',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          'Run the camera pipeline to update today\'s '
+          'AI attendance.',
+          maxLines: 3,
+          overflow:
+              TextOverflow.ellipsis,
+          style:
+              TextStyle(
             fontSize: 12,
-            color: AppColors.textSecondary,
+            color:
+                AppColors
+                    .textSecondary,
           ),
         ),
       );
     }
 
     final sessionId =
-        latest['session_id']?.toString() ?? 'Unknown';
+        latest['session_id']
+                ?.toString() ??
+            'Unknown';
 
     final tracked =
-    _toInt(latest['total_tracked']);
+        _toInt(
+      latest['total_tracked'],
+    );
 
     final staff =
-    _toInt(latest['staff']);
+        _toInt(
+      latest['staff'],
+    );
 
     final beneficiary =
-    _toInt(latest['beneficiary']);
+        _toInt(
+      latest['beneficiary'],
+    );
 
     final unknown =
-    _toInt(latest['unknown']);
+        _toInt(
+      latest['unknown'],
+    );
 
     final startedAt =
-        latest['session_started_at']?.toString() ?? 'Unknown';
+        latest['session_started_at']
+                ?.toString() ??
+            'Unknown';
 
     final endedAt =
-        latest['session_ended_at']?.toString() ?? 'Unknown';
+        latest['session_ended_at']
+                ?.toString() ??
+            'Unknown';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
+      padding:
+          const EdgeInsets.all(14),
+      decoration:
+          BoxDecoration(
+        color:
+            AppColors.background,
+        borderRadius:
+            BorderRadius.circular(
+          10,
+        ),
         border: Border.all(
-          color: AppColors.border,
+          color:
+              AppColors.border,
         ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize:
+            MainAxisSize.min,
         crossAxisAlignment:
-        CrossAxisAlignment.start,
+            CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
                 width: 34,
                 height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(
+                decoration:
+                    BoxDecoration(
+                  color: AppColors
+                      .primary
+                      .withValues(
                     alpha: 0.10,
                   ),
                   borderRadius:
-                  BorderRadius.circular(9),
+                      BorderRadius.circular(
+                    9,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.video_camera_back_outlined,
-                  color: AppColors.primary,
+                child:
+                    const Icon(
+                  Icons
+                      .video_camera_back_outlined,
+                  color:
+                      AppColors.primary,
                   size: 19,
                 ),
               ),
@@ -1430,11 +1694,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 child: Text(
                   'Latest AI Session',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  overflow:
+                      TextOverflow.ellipsis,
+                  style:
+                      TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        AppColors
+                            .textPrimary,
                   ),
                 ),
               ),
@@ -1442,25 +1711,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               const SizedBox(width: 8),
 
               Container(
-                padding: const EdgeInsets.symmetric(
+                padding:
+                    const EdgeInsets
+                        .symmetric(
                   horizontal: 7,
                   vertical: 4,
                 ),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(
+                decoration:
+                    BoxDecoration(
+                  color: AppColors
+                      .secondary
+                      .withValues(
                     alpha: 0.10,
                   ),
                   borderRadius:
-                  BorderRadius.circular(12),
+                      BorderRadius.circular(
+                    12,
+                  ),
                 ),
-                child: const Text(
+                child:
+                    const Text(
                   'LATEST',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  overflow:
+                      TextOverflow.ellipsis,
+                  style:
+                      TextStyle(
                     fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.secondary,
+                    fontWeight:
+                        FontWeight.w700,
+                    color:
+                        AppColors.secondary,
                   ),
                 ),
               ),
@@ -1532,18 +1813,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildAiSectionHeader() {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment:
+          CrossAxisAlignment.center,
       children: [
         Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(10),
+          decoration:
+              BoxDecoration(
+            color: AppColors
+                .primary
+                .withValues(
+              alpha: 0.10,
+            ),
+            borderRadius:
+                BorderRadius.circular(
+              10,
+            ),
           ),
           child: const Icon(
             Icons.smart_toy_outlined,
-            color: AppColors.primary,
+            color:
+                AppColors.primary,
             size: 22,
           ),
         ),
@@ -1552,18 +1843,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
         Expanded(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+                MainAxisSize.min,
             crossAxisAlignment:
-            CrossAxisAlignment.start,
+                CrossAxisAlignment.start,
             children: const [
               Text(
                 'AI Attendance Monitoring',
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                overflow:
+                    TextOverflow.ellipsis,
+                style:
+                    TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  fontWeight:
+                      FontWeight.w600,
+                  color:
+                      AppColors
+                          .textPrimary,
                 ),
               ),
 
@@ -1572,10 +1869,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Text(
                 'YOLO + ByteTrack + Attendance Engine',
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                overflow:
+                    TextOverflow.ellipsis,
+                style:
+                    TextStyle(
                   fontSize: 11.5,
-                  color: AppColors.textSecondary,
+                  color:
+                      AppColors
+                          .textSecondary,
                 ),
               ),
             ],
@@ -1585,22 +1886,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         const SizedBox(width: 8),
 
         Container(
-          padding: const EdgeInsets.symmetric(
+          padding:
+              const EdgeInsets
+                  .symmetric(
             horizontal: 8,
             vertical: 5,
           ),
-          decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(20),
+          decoration:
+              BoxDecoration(
+            color: AppColors
+                .warning
+                .withValues(
+              alpha: 0.10,
+            ),
+            borderRadius:
+                BorderRadius.circular(
+              20,
+            ),
           ),
-          child: const Text(
+          child:
+              const Text(
             'AI',
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            overflow:
+                TextOverflow.ellipsis,
+            style:
+                TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: AppColors.warning,
+              fontWeight:
+                  FontWeight.w700,
+              color:
+                  AppColors.warning,
             ),
           ),
         ),
@@ -1610,11 +1926,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   // ============================================================
   // AI STAT CARD
-  //
-  // The numeric value can grow arbitrarily (large headcounts) and
-  // the device font scale can be larger than 1.0, so the value is
-  // wrapped in Flexible + FittedBox to shrink instead of
-  // overflowing, and the title is capped to one line.
   // ============================================================
 
   Widget _buildAiStatCard({
@@ -1624,42 +1935,58 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
+      padding:
+          const EdgeInsets.all(13),
+      decoration:
+          BoxDecoration(
+        color:
+            AppColors.background,
+        borderRadius:
+            BorderRadius.circular(
+          10,
+        ),
         border: Border.all(
-          color: AppColors.border,
+          color:
+              AppColors.border,
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment:
+            CrossAxisAlignment.center,
         children: [
           Icon(
             icon,
             size: 20,
-            color: AppColors.primary,
+            color:
+                AppColors.primary,
           ),
 
           const SizedBox(width: 9),
 
           Expanded(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+                  MainAxisSize.min,
               crossAxisAlignment:
-              CrossAxisAlignment.start,
+                  CrossAxisAlignment.start,
               children: [
                 Flexible(
                   child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
+                    fit:
+                        BoxFit.scaleDown,
+                    alignment:
+                        Alignment.centerLeft,
                     child: Text(
                       value,
                       maxLines: 1,
-                      style: const TextStyle(
+                      style:
+                          const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        fontWeight:
+                            FontWeight.bold,
+                        color:
+                            AppColors
+                                .textPrimary,
                       ),
                     ),
                   ),
@@ -1670,10 +1997,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Text(
                   title,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  overflow:
+                      TextOverflow.ellipsis,
+                  style:
+                      const TextStyle(
                     fontSize: 10.5,
-                    color: AppColors.textSecondary,
+                    color:
+                        AppColors
+                            .textSecondary,
                   ),
                 ),
               ],
@@ -1689,20 +2020,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // ============================================================
 
   Widget _buildInfoRow(
-      String label,
-      String value,
-      ) {
+    String label,
+    String value,
+  ) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Text(
             label,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            overflow:
+                TextOverflow.ellipsis,
+            style:
+                const TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color:
+                  AppColors
+                      .textSecondary,
             ),
           ),
         ),
@@ -1712,13 +2048,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         Flexible(
           child: Text(
             value,
-            textAlign: TextAlign.right,
+            textAlign:
+                TextAlign.right,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            overflow:
+                TextOverflow.ellipsis,
+            style:
+                const TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              fontWeight:
+                  FontWeight.w600,
+              color:
+                  AppColors
+                      .textPrimary,
             ),
           ),
         ),
@@ -1736,22 +2078,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     required int total,
     required IconData icon,
   }) {
-    final ratio = total > 0
-        ? (value / total).clamp(0.0, 1.0)
-        : 0.0;
+    final double ratio =
+        total > 0
+            ? (value / total)
+                .clamp(0.0, 1.0)
+                .toDouble()
+            : 0.0;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize:
+          MainAxisSize.min,
       crossAxisAlignment:
-      CrossAxisAlignment.start,
+          CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment:
+              CrossAxisAlignment.center,
           children: [
             Icon(
               icon,
               size: 17,
-              color: AppColors.secondary,
+              color:
+                  AppColors.secondary,
             ),
 
             const SizedBox(width: 8),
@@ -1760,10 +2108,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               child: Text(
                 label,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                overflow:
+                    TextOverflow.ellipsis,
+                style:
+                    const TextStyle(
                   fontSize: 12,
-                  color: AppColors.textPrimary,
+                  color:
+                      AppColors
+                          .textPrimary,
                 ),
               ),
             ),
@@ -1772,15 +2124,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
             Flexible(
               child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
+                fit:
+                    BoxFit.scaleDown,
+                alignment:
+                    Alignment.centerRight,
                 child: Text(
                   '$value',
                   maxLines: 1,
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        AppColors
+                            .textPrimary,
                   ),
                 ),
               ),
@@ -1791,13 +2149,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         const SizedBox(height: 6),
 
         ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: LinearProgressIndicator(
+          borderRadius:
+              BorderRadius.circular(
+            10,
+          ),
+          child:
+              LinearProgressIndicator(
             value: ratio,
             minHeight: 6,
-            backgroundColor: AppColors.background,
+            backgroundColor:
+                AppColors.background,
             valueColor:
-            const AlwaysStoppedAnimation<Color>(
+                const AlwaysStoppedAnimation<
+                    Color>(
               AppColors.primary,
             ),
           ),
@@ -1814,7 +2178,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     required String title,
     required IconData icon,
     required GlobalKey<FormState> formKey,
-    required TextEditingController countController,
+    required TextEditingController
+        countController,
     required String? videoName,
     required VoidCallback onPickVideo,
     required VoidCallback onSubmit,
@@ -1822,20 +2187,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     required String? error,
   }) {
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      padding:
+          const EdgeInsets.all(16),
       child: Form(
         key: formKey,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min,
           crossAxisAlignment:
-          CrossAxisAlignment.stretch,
+              CrossAxisAlignment.stretch,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Icon(
                   icon,
-                  color: AppColors.primary,
+                  color:
+                      AppColors.primary,
                   size: 22,
                 ),
 
@@ -1845,10 +2214,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   child: Text(
                     title,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1858,10 +2230,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             const SizedBox(height: 14),
 
             AppTextField(
-              label: 'Number present today',
-              controller: countController,
-              keyboardType: TextInputType.number,
-              validator: _countValidator,
+              label:
+                  'Number present today',
+              controller:
+                  countController,
+              keyboardType:
+                  TextInputType.number,
+              validator:
+                  _countValidator,
             ),
 
             const SizedBox(height: 12),
@@ -1869,8 +2245,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             SecondaryButton(
               label: videoName ??
                   'Attach video evidence (optional)',
-              icon: Icons.videocam_outlined,
-              onPressed: onPickVideo,
+              icon:
+                  Icons.videocam_outlined,
+              onPressed:
+                  onPickVideo,
             ),
 
             if (error != null) ...[
@@ -1879,9 +2257,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Text(
                 error,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.error,
+                overflow:
+                    TextOverflow.ellipsis,
+                style:
+                    const TextStyle(
+                  color:
+                      AppColors.error,
                   fontSize: 12,
                 ),
               ),
@@ -1893,8 +2274,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               label: isSubmitting
                   ? 'Submitting...'
                   : 'Submit',
-              onPressed:
-              isSubmitting ? () {} : onSubmit,
+              onPressed: isSubmitting
+                  ? () {}
+                  : onSubmit,
             ),
           ],
         ),
@@ -1907,28 +2289,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // ============================================================
 
   Widget _buildHistoryRow(
-      AttendanceRecord record,
-      ) {
+    AttendanceRecord record,
+  ) {
     final dateStr =
         '${record.date.day.toString().padLeft(2, '0')}/'
         '${record.date.month.toString().padLeft(2, '0')}/'
         '${record.date.year}';
 
     final isBeneficiary =
-        record.type == AttendanceType.beneficiary;
+        record.type ==
+            AttendanceType.beneficiary;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding:
+          const EdgeInsets.only(
+        bottom: 10,
+      ),
       child: AppCard(
-        padding: const EdgeInsets.all(14),
+        padding:
+            const EdgeInsets.all(14),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment:
+              CrossAxisAlignment.center,
           children: [
             Icon(
               isBeneficiary
-                  ? Icons.diversity_3_outlined
-                  : Icons.badge_outlined,
-              color: AppColors.secondary,
+                  ? Icons
+                      .diversity_3_outlined
+                  : Icons
+                      .badge_outlined,
+              color:
+                  AppColors.secondary,
               size: 20,
             ),
 
@@ -1936,29 +2327,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
             Expanded(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize:
+                    MainAxisSize.min,
                 crossAxisAlignment:
-                CrossAxisAlignment.start,
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     isBeneficiary
                         ? 'Beneficiary Attendance'
                         : 'Staff Attendance',
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          FontWeight.w600,
                     ),
                   ),
 
                   Text(
                     dateStr,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(
                       fontSize: 11.5,
-                      color: AppColors.textSecondary,
+                      color:
+                          AppColors
+                              .textSecondary,
                     ),
                   ),
                 ],
@@ -1968,17 +2367,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             const SizedBox(width: 8),
 
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 64),
+              constraints:
+                  const BoxConstraints(
+                maxWidth: 64,
+              ),
               child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
+                fit:
+                    BoxFit.scaleDown,
+                alignment:
+                    Alignment.centerRight,
                 child: Text(
                   '${record.presentCount}',
                   maxLines: 1,
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                    fontWeight:
+                        FontWeight.bold,
+                    color:
+                        AppColors.primary,
                   ),
                 ),
               ),

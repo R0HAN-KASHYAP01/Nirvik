@@ -18,6 +18,8 @@ class AppUser {
   final String? designation;
   final String? registrationNumber;
   final String? organizationId;
+  final String? district; // district_administrators.district (e.g. "Ghaziabad")
+  final String? state;    // district_administrators.state (e.g. "Up")
 
   const AppUser({
     required this.id,
@@ -29,5 +31,7 @@ class AppUser {
     this.designation,
     this.registrationNumber,
     this.organizationId,
+    this.district,
+    this.state,
   });
 }

@@ -4,6 +4,9 @@ import '../models/user.dart';
 /// Encodes who is allowed to initiate a call to whom, and the exact
 /// `video_calls.call_type` string Postgres' CHECK constraint requires
 /// for that pairing.
+///
+/// 'district_admin_to_inspector' is allowed by the constraint update in
+/// supabase/district_admin_inspectors.sql.
 class CallPermission {
   CallPermission._();
 
@@ -27,6 +30,7 @@ class CallPermission {
       case UserRole.stateAdmin:
         return null;
       case UserRole.districtAdmin:
+        if (to == UserRole.inspector) return 'district_admin_to_inspector';
         return null;
     }
   }

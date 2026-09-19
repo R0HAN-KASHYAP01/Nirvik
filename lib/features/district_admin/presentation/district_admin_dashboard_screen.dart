@@ -2,20 +2,16 @@
 //
 // District Administrator dashboard.
 //
-// IMPORTANT — why several cards are locked instead of showing data:
-// `ngo_institutes` (and therefore `pmu_assignments`, which joins to it)
-// has no `district` column today, while `district_administrators.district`
-// does. There is currently no column anywhere to filter projects,
-// inspections, or inspectors by district. Rendering those lists unscoped
-// would violate the hard requirement that a District Admin must never see
-// another district's data, so — following the same pattern this codebase
-// already uses for `AppRoutes.inspectionsPlaceholder` / `rvcPlaceholder`
-// (ModulePlaceholderScreen) — those sections report the gap honestly
-// instead of faking or silently leaking cross-district data.
+// Institutes: opens InstituteCategoryScreen (category -> scheme ->
+// institutes). That flow reads `institute_reps`, which has its own
+// state / district / scheme_category / scheme_code columns, and is scoped
+// to the admin's own district + state both in the app and by RLS
+// (see district_admin_institutes_rls.sql).
 //
-// Once `ngo_institutes.district` (and any `pmu_assignments` equivalent)
-// exists, each locked card below has a single TODO marking exactly where
-// to add the real repository call.
+// Still locked: project / inspection / map / inspector cards. Those depend
+// on `ngo_institutes` and `pmu_assignments`, which have no district column
+// of their own, so rendering them unscoped would leak other districts'
+// data. Each locked card reports that honestly instead of faking data.
 //
 // Video calling: `CallPermission.callTypeFor` returns null for every
 // pairing involving districtAdmin (see lib/utils/call_permission.dart) —
@@ -60,9 +56,7 @@ class DistrictAdminDashboardScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '$feature is not available yet — it needs a district field on '
-          'the institute records first, which has not been added to the '
-          'database.',
+          '$feature is not available yet for the district dashboard.',
         ),
         duration: const Duration(seconds: 4),
       ),
@@ -79,6 +73,10 @@ class DistrictAdminDashboardScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
     );
+  }
+
+  void _openInstitutes(BuildContext context) {
+    Navigator.of(context).pushNamed(AppRoutes.districtInstitutes);
   }
 
   @override
@@ -134,10 +132,10 @@ class DistrictAdminDashboardScreen extends StatelessWidget {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'District-level filtering for projects, inspections, '
-                        'the map and inspectors is pending a database update '
-                        '(a district field on institute records). Locked '
-                        'cards below will activate once that is added.',
+                        'Institutes are available for your district. '
+                            'District-level filtering for projects, inspections, '
+                            'the map and inspectors is still pending, so those '
+                            'cards stay locked.',
                         style: TextStyle(fontSize: 11.5, color: _textGrey),
                       ),
                     ),
@@ -148,7 +146,7 @@ class DistrictAdminDashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               // ==========================================================
-              // PROJECT / RISK STATS — locked pending district column
+              // PROJECT / RISK STATS — locked (no district scoping yet)
               // ==========================================================
               const SectionHeader(title: 'District Overview'),
               const SizedBox(height: 8),
@@ -224,26 +222,20 @@ class DistrictAdminDashboardScreen extends StatelessWidget {
               const SizedBox(height: 18),
 
               // ==========================================================
-              // SCHEME / DIVISION — locked pending district column
+              // INSTITUTES — category -> scheme -> institutes
               // ==========================================================
-              const SectionHeader(title: 'Schemes & Divisions'),
+              const SectionHeader(title: 'Institutes'),
               const SizedBox(height: 8),
-              Opacity(
-                opacity: 0.55,
-                child: QuickActionCard(
-                  icon: Icons.category_outlined,
-                  label: 'View by Scheme / Division',
-                  onTap: () => _showPendingSetupMessage(
-                    context,
-                    'Scheme / Division grouping',
-                  ),
-                ),
+              QuickActionCard(
+                icon: Icons.apartment_outlined,
+                label: 'Institutes',
+                onTap: () => _openInstitutes(context),
               ),
 
               const SizedBox(height: 18),
 
               // ==========================================================
-              // MAP — locked pending district column
+              // MAP — locked (no district scoping yet)
               // ==========================================================
               const SectionHeader(title: 'District Map'),
               const SizedBox(height: 8),
@@ -285,8 +277,8 @@ class DistrictAdminDashboardScreen extends StatelessWidget {
               const SizedBox(height: 6),
               const Text(
                 'Incoming calls can be received and joined. Starting a new '
-                'call is not yet enabled for this role — see '
-                'CallPermission.callTypeFor in call_permission.dart.',
+                    'call is not yet enabled for this role — see '
+                    'CallPermission.callTypeFor in call_permission.dart.',
                 style: TextStyle(fontSize: 11, color: _textGrey),
               ),
             ],

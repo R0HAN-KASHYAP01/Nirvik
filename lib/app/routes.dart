@@ -6,6 +6,7 @@ import '../features/district_admin/presentation/district_admin_dashboard_screen.
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/signup_screen.dart';
 import '../features/auth/presentation/role_selection_screen.dart';
+import '../features/district_admin/presentation/institute_category_screen.dart';
 
 import '../features/ngo/presentation/ngo_shell_screen.dart';
 
@@ -41,6 +42,7 @@ class AppRoutes {
 
   static const String officialDashboard = '/official-dashboard';
   static const String inspectorDashboard = '/inspector-dashboard';
+  static const String districtInstitutes = '/district-institutes';
 
   static const String inspectorProfile = '/inspector-profile';
   static const String officialProfile = '/official-profile';
@@ -96,6 +98,7 @@ class AppRoutes {
         // ============================================================
 
         districtAdminDashboard: (context) => const DistrictAdminDashboardScreen(),
+        districtInstitutes: (context) => const InstituteCategoryScreen(),
         // ============================================================
         // INSPECTOR
         // ============================================================

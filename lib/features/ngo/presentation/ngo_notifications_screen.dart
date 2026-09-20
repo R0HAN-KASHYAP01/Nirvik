@@ -19,16 +19,25 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
   // COLORS
   // ============================================================
 
-  static const Color navy = Color(0xFF123E68);
-  static const Color darkBlue = Color(0xFF0D4778);
-  static const Color background = Color(0xFFEAF1F6);
-  static const Color cardBackground = Color(0xFFE4EDF3);
-  static const Color softBlueGrey = Color(0xFFDCE8F0);
-  static const Color green = Color(0xFF159447);
-  static const Color orange = Color(0xFFF5A623);
-  static const Color borderColor = Color(0xFFD3E0E8);
-  static const Color textDark = Color(0xFF17324D);
-  static const Color textGrey = Color(0xFF667788);
+  static const Color navy = Color(0xFF174A7E); // Primary Navy Blue
+  static const Color darkBlue = Color(0xFF123A63); // Dark Navy
+  static const Color background = Color(0xFFF7F8FA);
+  static const Color cardBackground = Color(0xFFFFFFFF); // Surface/White
+  static const Color softBlueGrey = Color(0xFFEAF2F9); // Light Blue
+  static const Color green = Color(0xFF2E7D5B); // Success
+  static const Color orange = Color(0xFFB7791F); // Warning
+  static const Color red = Color(0xFFC0392B); // Danger
+  static const Color redLight = Color(0xFFFCEBE9); // Danger Background
+  static const Color info = Color(0xFF2468A8);
+  static const Color borderColor = Color(0xFFD5D9DE);
+  static const Color textDark = Color(0xFF202124); // Primary Text
+  static const Color textGrey = Color(0xFF5F6368); // Secondary Text
+
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [navy, darkBlue],
+  );
 
   // ============================================================
   // SERVICE
@@ -447,7 +456,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
       case 'warning':
       case 'alert':
       case 'risk':
-        return Colors.redAccent;
+        return orange;
 
       case 'inspection':
         return orange;
@@ -540,7 +549,10 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: darkBlue,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: primaryGradient),
+      ),
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: false,
@@ -576,7 +588,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                 horizontal: 5,
               ),
               decoration: const BoxDecoration(
-                color: Colors.red,
+                color: red,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -1120,14 +1132,14 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
           decoration: BoxDecoration(
             color: isUnread
                 ? Colors.white
-                : const Color(0xFFF4F8FB),
+                : background,
 
             borderRadius:
                 BorderRadius.circular(13),
 
             border: Border.all(
               color: isUnread
-                  ? const Color(0xFFC8DCEB)
+                  ? const Color(0xFFBFD9EC)
                   : borderColor,
             ),
 
@@ -1201,7 +1213,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
 
                         decoration:
                             BoxDecoration(
-                          color: Colors.red,
+                          color: red,
                           shape:
                               BoxShape.circle,
 
@@ -1367,7 +1379,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                             children: [
                               Icon(
                                 Icons.circle,
-                                color: Colors.red,
+                                color: red,
                                 size: 6,
                               ),
 
@@ -1377,7 +1389,7 @@ class _NgoNotificationsScreenState extends State<NgoNotificationsScreen> {
                                 'Unread',
                                 style: TextStyle(
                                   color:
-                                      Colors.red,
+                                      red,
                                   fontSize: 9,
                                   fontWeight:
                                       FontWeight.w700,

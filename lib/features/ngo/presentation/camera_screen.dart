@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:mjpeg_view/mjpeg_view.dart';
 
-import '../../../app/theme.dart';
 import '../../../services/session_service.dart';
 import '../../../services/ngo_storage_service.dart';
 import '../../../services/ngo_camera_service.dart';
@@ -36,6 +35,47 @@ class _CameraScreenState extends State<CameraScreen> {
   List<NgoCameraFeed> _feeds = [];
 
   int _selectedTab = 0;
+
+  // ============================================================
+  // COLOR PALETTE — Government of India / SIH theme
+  // ============================================================
+
+  static const Color _navy = Color(0xFF174A7E); // Primary Navy Blue
+  static const Color _darkNavy = Color(0xFF123A63); // Dark Navy
+  static const Color _background = Color(0xFFF7F8FA);
+  static const Color _lightBlue = Color(0xFFEAF2F9);
+  static const Color _border = Color(0xFFD5D9DE);
+  static const Color _textSecondary = Color(0xFF5F6368);
+  static const Color _success = Color(0xFF2E7D5B);
+  static const Color _danger = Color(0xFFC0392B);
+
+  // Muted navy tint for disabled buttons — kept close to the primary
+  // rather than a generic grey, so disabled state still reads as
+  // "brand" rather than "broken".
+  static const Color _disabledPrimary = Color(0xFFB7C4D1);
+
+  // ---------- Gradients ----------
+  // Subtle, professional gradients from closely related shades of
+  // the palette above — used only for the header, primary actions,
+  // the active tab, and the live-status badge.
+
+  static const LinearGradient _primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF174A7E), Color(0xFF123A63)],
+  );
+
+  static const LinearGradient _lightBlueGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF4F8FC), Color(0xFFEAF2F9)],
+  );
+
+  static const LinearGradient _successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF2FAF6), Color(0xFFEAF5EF)],
+  );
 
   @override
   void initState() {
@@ -421,8 +461,9 @@ class _CameraScreenState extends State<CameraScreen> {
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: _navy,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: _disabledPrimary,
                     ),
                     child: Text(
                       saving ? 'Saving...' : 'Save',
@@ -489,7 +530,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   Navigator.of(dialogContext).pop(true);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: _danger,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Remove'),
@@ -644,14 +685,19 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF4F8FC),
+      backgroundColor: _background,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor:
-            AppColors.primary,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         centerTitle: true,
+        // Subtle primary gradient header, matching the rest of the
+        // app's navy chrome.
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: _primaryGradient,
+          ),
+        ),
         title: const Text(
           'Camera / Video Access',
           style: TextStyle(
@@ -662,23 +708,29 @@ class _CameraScreenState extends State<CameraScreen> {
         ),
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadFeeds,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              14,
-              14,
-              14,
-              28,
+        child: Container(
+          // Very subtle blue-tinted backdrop for the whole screen.
+          decoration: const BoxDecoration(
+            gradient: _lightBlueGradient,
+          ),
+          child: RefreshIndicator(
+            onRefresh: _loadFeeds,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                14,
+                14,
+                14,
+                28,
+              ),
+              children: [
+                _buildTabs(),
+                const SizedBox(height: 14),
+                if (_selectedTab == 0)
+                  _buildLiveFeeds()
+                else
+                  _buildUploadSection(),
+              ],
             ),
-            children: [
-              _buildTabs(),
-              const SizedBox(height: 14),
-              if (_selectedTab == 0)
-                _buildLiveFeeds()
-              else
-                _buildUploadSection(),
-            ],
           ),
         ),
       ),
@@ -691,8 +743,7 @@ class _CameraScreenState extends State<CameraScreen> {
       padding:
           const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color:
-            const Color(0xFFE6EEF6),
+        color: _lightBlue,
         borderRadius:
             BorderRadius.circular(22),
       ),
@@ -738,9 +789,8 @@ class _CameraScreenState extends State<CameraScreen> {
             const Duration(milliseconds: 180),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary
-              : Colors.transparent,
+          gradient: selected ? _primaryGradient : null,
+          color: selected ? null : Colors.transparent,
           borderRadius:
               BorderRadius.circular(19),
         ),
@@ -752,7 +802,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 FontWeight.w700,
             color: selected
                 ? Colors.white
-                : const Color(0xFF526477),
+                : _textSecondary,
           ),
         ),
       ),
@@ -780,7 +830,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF173C61),
+                  color: _navy,
                 ),
               ),
             ),
@@ -790,30 +840,12 @@ class _CameraScreenState extends State<CameraScreen> {
             SizedBox(
               width: 125,
               height: 38,
-              child: ElevatedButton.icon(
-                onPressed: _showAddLiveLinkDialog,
-                icon: const Icon(
-                  Icons.add,
-                  size: 17,
-                ),
-                label: const Text(
-                  'Add Camera',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                ),
+              child: _buildGradientButton(
+                onTap: _showAddLiveLinkDialog,
+                icon: Icons.add,
+                label: 'Add Camera',
+                borderRadius: 9,
+                fontSize: 11,
               ),
             ),
           ],
@@ -846,6 +878,60 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
+  // ============================================================
+  // GRADIENT BUTTON HELPER
+  //
+  // Small navy-gradient CTA used for the primary "Add Camera" and
+  // "Upload Video" actions, matching the header's brand gradient
+  // instead of a flat fill.
+  // ============================================================
+
+  Widget _buildGradientButton({
+    required VoidCallback onTap,
+    required IconData icon,
+    required String label,
+    double borderRadius = 10,
+    double fontSize = 12,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _primaryGradient,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(borderRadius),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 17, color: Colors.white),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyLiveState() {
     return Container(
       padding:
@@ -855,8 +941,7 @@ class _CameraScreenState extends State<CameraScreen> {
         borderRadius:
             BorderRadius.circular(14),
         border: Border.all(
-          color:
-              const Color(0xFFE0E8F0),
+          color: _border,
         ),
       ),
       child: Column(
@@ -865,15 +950,13 @@ class _CameraScreenState extends State<CameraScreen> {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color:
-                  const Color(0xFFE8F1FA),
+              color: _lightBlue,
               borderRadius:
                   BorderRadius.circular(18),
             ),
             child: const Icon(
               Icons.videocam_outlined,
-              color:
-                  AppColors.primary,
+              color: _navy,
               size: 30,
             ),
           ),
@@ -884,8 +967,7 @@ class _CameraScreenState extends State<CameraScreen> {
               fontSize: 15,
               fontWeight:
                   FontWeight.w700,
-              color:
-                  Color(0xFF16385C),
+              color: _darkNavy,
             ),
           ),
           const SizedBox(height: 5),
@@ -894,38 +976,19 @@ class _CameraScreenState extends State<CameraScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11.5,
-              color:
-                  AppColors.textSecondary,
+              color: _textSecondary,
             ),
           ),
           const SizedBox(height: 15),
           SizedBox(
             width: 150,
             height: 40,
-            child: ElevatedButton.icon(
-              onPressed: _showAddLiveLinkDialog,
-              icon: const Icon(
-                Icons.add,
-                size: 17,
-              ),
-              label: const Text(
-                'Add Camera',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape:
-                    RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(
-                    10,
-                  ),
-                ),
-              ),
+            child: _buildGradientButton(
+              onTap: _showAddLiveLinkDialog,
+              icon: Icons.add,
+              label: 'Add Camera',
+              borderRadius: 10,
+              fontSize: 12,
             ),
           ),
         ],
@@ -1043,18 +1106,22 @@ class _CameraScreenState extends State<CameraScreen> {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF173C61),
+                          color: _navy,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
+                    // "LIVE" status badge — soft success gradient
+                    // rather than a flat fill, as this is the kind
+                    // of small but important status indicator the
+                    // gradient guidance calls out.
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 7,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE3F6EB),
+                        gradient: _successGradient,
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: const Row(
@@ -1063,7 +1130,7 @@ class _CameraScreenState extends State<CameraScreen> {
                           Icon(
                             Icons.circle,
                             size: 6,
-                            color: Color(0xFF27A76B),
+                            color: _success,
                           ),
                           SizedBox(width: 4),
                           Text(
@@ -1071,7 +1138,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             style: TextStyle(
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF27A76B),
+                              color: _success,
                             ),
                           ),
                         ],
@@ -1130,7 +1197,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         },
                         icon: const Icon(
                           Icons.delete_outline,
-                          color: Colors.red,
+                          color: _danger,
                           size: 21,
                         ),
                       ),
@@ -1172,8 +1239,7 @@ class _CameraScreenState extends State<CameraScreen> {
             children: [
               Icon(
                 Icons.video_library_rounded,
-                color:
-                    AppColors.primary,
+                color: _navy,
                 size: 21,
               ),
               SizedBox(width: 8),
@@ -1183,8 +1249,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   fontSize: 15,
                   fontWeight:
                       FontWeight.w800,
-                  color:
-                      Color(0xFF173C61),
+                  color: _navy,
                 ),
               ),
             ],
@@ -1196,8 +1261,7 @@ class _CameraScreenState extends State<CameraScreen> {
               fontSize: 11,
               fontWeight:
                   FontWeight.w700,
-              color:
-                  Color(0xFF43566B),
+              color: _navy,
             ),
           ),
           const SizedBox(height: 6),
@@ -1207,12 +1271,10 @@ class _CameraScreenState extends State<CameraScreen> {
               hintText: 'e.g. Main Hall Recording',
               hintStyle: const TextStyle(
                 fontSize: 12,
-                color:
-                    Color(0xFF9BA8B5),
+                color: _textSecondary,
               ),
               filled: true,
-              fillColor:
-                  const Color(0xFFF7FAFD),
+              fillColor: _background,
               contentPadding:
                   const EdgeInsets
                       .symmetric(
@@ -1225,10 +1287,8 @@ class _CameraScreenState extends State<CameraScreen> {
                     BorderRadius.circular(
                   9,
                 ),
-                borderSide:
-                    const BorderSide(
-                  color:
-                      Color(0xFFDCE5ED),
+                borderSide: const BorderSide(
+                  color: _border,
                 ),
               ),
             ),
@@ -1248,15 +1308,13 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
               decoration:
                   BoxDecoration(
-                color:
-                    const Color(0xFFF0F6FB),
+                color: _lightBlue,
                 borderRadius:
                     BorderRadius.circular(
                   10,
                 ),
                 border: Border.all(
-                  color:
-                      const Color(0xFFD5E2ED),
+                  color: _border,
                 ),
               ),
               child: Column(
@@ -1264,8 +1322,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   const Icon(
                     Icons
                         .cloud_upload_outlined,
-                    color:
-                        AppColors.primary,
+                    color: _navy,
                     size: 32,
                   ),
                   const SizedBox(
@@ -1276,13 +1333,11 @@ class _CameraScreenState extends State<CameraScreen> {
                         'Select video file',
                     textAlign:
                         TextAlign.center,
-                    style:
-                        const TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight:
                           FontWeight.w700,
-                      color:
-                          Color(0xFF274C70),
+                      color: _navy,
                     ),
                   ),
                   const SizedBox(
@@ -1290,11 +1345,9 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   const Text(
                     'Tap here to choose a video',
-                    style:
-                        TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
-                      color:
-                          AppColors.textSecondary,
+                      color: _textSecondary,
                     ),
                   ),
                 ],
@@ -1305,10 +1358,8 @@ class _CameraScreenState extends State<CameraScreen> {
             const SizedBox(height: 8),
             Text(
               _uploadError!,
-              style:
-                  const TextStyle(
-                color:
-                    AppColors.error,
+              style: const TextStyle(
+                color: _danger,
                 fontSize: 11,
               ),
             ),
@@ -1317,31 +1368,29 @@ class _CameraScreenState extends State<CameraScreen> {
           SizedBox(
             width: double.infinity,
             height: 42,
-            child: ElevatedButton(
-              onPressed: _submittingUpload
-                  ? null
-                  : _submitUpload,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                disabledBackgroundColor: const Color(0xFF9BB5CC),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
-                ),
-              ),
-              child: Text(
-                _submittingUpload
-                    ? 'Uploading...'
-                    : 'Upload Video',
-                style:
-                    const TextStyle(
-                  fontSize: 12,
-                  fontWeight:
-                      FontWeight.w700,
-                ),
-              ),
-            ),
+            child: _submittingUpload
+                ? Container(
+                    decoration: BoxDecoration(
+                      color: _disabledPrimary,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'Uploading...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                : _buildGradientButton(
+                    onTap: _submitUpload,
+                    icon: Icons.cloud_upload_rounded,
+                    label: 'Upload Video',
+                    borderRadius: 9,
+                    fontSize: 12,
+                  ),
           ),
         ],
       ),
@@ -1420,7 +1469,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       child: Text(
                         _linkError!,
                         style: const TextStyle(
-                          color: AppColors.error,
+                          color: _danger,
                           fontSize: 11,
                         ),
                       ),
@@ -1447,8 +1496,9 @@ class _CameraScreenState extends State<CameraScreen> {
                     ? null
                     : _submitLiveLink,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: _navy,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: _disabledPrimary,
                 ),
                 child: Text(
                   _submittingLink

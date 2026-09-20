@@ -72,13 +72,13 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
   Color _riskColor(String riskLevel) {
     switch (riskLevel.toLowerCase()) {
       case 'high':
-        return Colors.red;
+        return const Color(0xFFC0392B);
       case 'medium':
-        return Colors.orange;
+        return const Color(0xFFB7791F);
       case 'low':
-        return Colors.green;
+        return const Color(0xFF2E7D5B);
       default:
-        return Colors.grey;
+        return const Color(0xFF5F6368);
     }
   }
 
@@ -95,8 +95,23 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         title: const Text('Inspection History'),
+        backgroundColor: const Color(0xFF174A7E),
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF174A7E),
+                Color(0xFF123A63),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _buildBody(),
     );
@@ -105,7 +120,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(color: Color(0xFF174A7E)),
       );
     }
 
@@ -119,6 +134,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
               const Icon(
                 Icons.error_outline,
                 size: 48,
+                color: Color(0xFFC0392B),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -127,16 +143,22 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
+                  color: Color(0xFF202124),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF5F6368)),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _loadHistory,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF174A7E),
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Retry'),
               ),
             ],
@@ -147,6 +169,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
 
     if (_inspections.isEmpty) {
       return RefreshIndicator(
+        color: const Color(0xFF174A7E),
         onRefresh: _loadHistory,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -155,6 +178,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
             Icon(
               Icons.history,
               size: 64,
+              color: Color(0xFF5F6368),
             ),
             SizedBox(height: 20),
             Center(
@@ -163,6 +187,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
+                  color: Color(0xFF202124),
                 ),
               ),
             ),
@@ -171,6 +196,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
               child: Text(
                 'Completed inspections will appear here.',
                 textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF5F6368)),
               ),
             ),
           ],
@@ -179,6 +205,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
     }
 
     return RefreshIndicator(
+      color: const Color(0xFF174A7E),
       onRefresh: _loadHistory,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -209,6 +236,12 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
 
           return Card(
             margin: const EdgeInsets.only(bottom: 14),
+            color: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFD5D9DE)),
+            ),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
@@ -227,6 +260,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
+                              color: Color(0xFF202124),
                             ),
                           ),
                         ),
@@ -283,6 +317,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                         'View Details →',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
+                          color: Color(0xFF174A7E),
                         ),
                       ),
                     ),
@@ -327,6 +362,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: const Color(0xFFF7F8FA),
       builder: (context) {
         return SafeArea(
           child: SingleChildScrollView(
@@ -344,6 +380,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
+                    color: Color(0xFF202124),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -398,6 +435,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                       remarks,
                       style: const TextStyle(
                         height: 1.5,
+                        color: Color(0xFF202124),
                       ),
                     ),
                   ],
@@ -410,6 +448,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                       summary,
                       style: const TextStyle(
                         height: 1.5,
+                        color: Color(0xFF202124),
                       ),
                     ),
                   ],
@@ -441,18 +480,21 @@ class _InfoRow extends StatelessWidget {
         Icon(
           icon,
           size: 18,
+          color: const Color(0xFF5F6368),
         ),
         const SizedBox(width: 10),
         Text(
           '$label: ',
           style: const TextStyle(
             fontWeight: FontWeight.w600,
+            color: Color(0xFF202124),
           ),
         ),
         Expanded(
           child: Text(
             value,
             overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF5F6368)),
           ),
         ),
       ],
@@ -475,9 +517,10 @@ class _DetailSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).dividerColor,
+          color: const Color(0xFFD5D9DE),
         ),
       ),
       child: Column(
@@ -488,6 +531,7 @@ class _DetailSection extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
+              color: Color(0xFF174A7E),
             ),
           ),
           const SizedBox(height: 12),
@@ -520,11 +564,15 @@ class _DetailRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
+                color: Color(0xFF202124),
               ),
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(
+              value,
+              style: const TextStyle(color: Color(0xFF5F6368)),
+            ),
           ),
         ],
       ),

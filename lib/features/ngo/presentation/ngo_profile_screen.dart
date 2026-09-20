@@ -35,15 +35,24 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
 
   String? _locationError;
 
-  static const Color primaryBlue = Color(0xFF0B4A7F);
-  static const Color darkBlue = Color(0xFF083B66);
-  static const Color lightBlue = Color(0xFFEAF3FA);
-  static const Color background = Color(0xFFF4F8FB);
-  static const Color textDark = Color(0xFF243447);
-  static const Color textGrey = Color(0xFF687684);
-  static const Color borderColor = Color(0xFFD9E2EA);
-  static const Color green = Color(0xFF2AA876);
-  static const Color greenLight = Color(0xFFE4F6EE);
+  static const Color primaryBlue = Color(0xFF174A7E); // Primary Navy Blue
+  static const Color darkBlue = Color(0xFF123A63); // Dark Navy
+  static const Color lightBlue = Color(0xFFEAF2F9); // Light Blue
+  static const Color background = Color(0xFFF7F8FA);
+  static const Color textDark = Color(0xFF202124); // Primary Text
+  static const Color textGrey = Color(0xFF5F6368); // Secondary Text
+  static const Color borderColor = Color(0xFFD5D9DE);
+  static const Color green = Color(0xFF2E7D5B); // Success
+  static const Color greenLight = Color(0xFFEAF5EF); // Success Background
+  static const Color red = Color(0xFFC0392B); // Danger
+  static const Color redLight = Color(0xFFFCEBE9); // Danger Background
+  static const Color redBorder = Color(0xFFF3C6C2);
+
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryBlue, darkBlue],
+  );
 
   @override
   void initState() {
@@ -376,7 +385,10 @@ debugPrint('========================================');
       // Profile page ka apna bottom navigation nahi hai.
       // Sirf top AppBar rahega.
       appBar: AppBar(
-        backgroundColor: darkBlue,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: primaryGradient),
+        ),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -524,14 +536,7 @@ debugPrint('========================================');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0B4A7F),
-            Color(0xFF083B66),
-          ],
-        ),
+        gradient: primaryGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -815,7 +820,7 @@ debugPrint('========================================');
               vertical: 10,
             ),
             side: const BorderSide(
-              color: Color(0xFFC7DCEA),
+              color: Color(0xFFC9DCEC),
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -858,19 +863,19 @@ debugPrint('========================================');
     return Container(
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
+        color: redLight,
         borderRadius: BorderRadius.circular(9),
         border: Border.all(
-          color: Colors.red.shade100,
+          color: redBorder,
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          const Icon(
             Icons.error_outline_rounded,
             size: 18,
-            color: Colors.red.shade700,
+            color: red,
           ),
 
           const SizedBox(width: 8),
@@ -880,9 +885,9 @@ debugPrint('========================================');
               _locationError!,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11.5,
-                color: Colors.red.shade700,
+                color: red,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -909,7 +914,7 @@ debugPrint('========================================');
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: hasLocation
-              ? const Color(0xFFBFE8D4)
+              ? const Color(0xFFBFE0CE)
               : borderColor,
         ),
       ),
@@ -1150,13 +1155,13 @@ debugPrint('========================================');
           onPressed: _handleLogout,
           style: OutlinedButton.styleFrom(
             backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFFD64545),
+            foregroundColor: red,
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 10,
             ),
             side: const BorderSide(
-              color: Color(0xFFE3B8B8),
+              color: redBorder,
             ),
             elevation: 0,
             shape: RoundedRectangleBorder(

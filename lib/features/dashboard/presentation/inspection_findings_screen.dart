@@ -177,13 +177,13 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
   Color _severityColor(String severity) {
     switch (severity.toLowerCase()) {
       case 'high':
-        return Colors.red;
+        return const Color(0xFFC0392B);
       case 'medium':
-        return Colors.orange;
+        return const Color(0xFFB7791F);
       case 'low':
-        return Colors.green;
+        return const Color(0xFF2E7D5B);
       default:
-        return Colors.blueGrey;
+        return const Color(0xFF5F6368);
     }
   }
 
@@ -194,7 +194,7 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
         children: [
           Text(
             widget.assignment.displayName,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
           ),
           const SizedBox(height: 8),
           Row(
@@ -202,13 +202,13 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
               const Icon(
                 Icons.location_on_outlined,
                 size: 16,
-                color: Colors.black54,
+                color: Color(0xFF5F6368),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   widget.assignment.displayLocation,
-                  style: const TextStyle(color: Colors.black54),
+                  style: const TextStyle(color: Color(0xFF5F6368)),
                 ),
               ),
             ],
@@ -219,13 +219,16 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
   }
 
   Widget _buildFindingForm() {
+    const borderColor = Color(0xFFD5D9DE);
+    const focusColor = Color(0xFF174A7E);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Add Finding',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -234,7 +237,9 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
             decoration: const InputDecoration(
               labelText: 'Finding Title',
               hintText: 'Enter a short title',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: focusColor, width: 1.5)),
             ),
           ),
           const SizedBox(height: 14),
@@ -242,7 +247,9 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
             initialValue: _selectedCategory,
             decoration: const InputDecoration(
               labelText: 'Category',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: focusColor, width: 1.5)),
             ),
             items: _categories.map((category) {
               return DropdownMenuItem<String>(
@@ -265,7 +272,9 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
             initialValue: _selectedSeverity,
             decoration: const InputDecoration(
               labelText: 'Severity',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: focusColor, width: 1.5)),
             ),
             items: _severities.map((severity) {
               return DropdownMenuItem<String>(
@@ -291,7 +300,9 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
             decoration: const InputDecoration(
               labelText: 'Description',
               hintText: 'Describe the issue found during inspection',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: focusColor, width: 1.5)),
             ),
           ),
           const SizedBox(height: 14),
@@ -302,7 +313,9 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
             decoration: const InputDecoration(
               labelText: 'Recommendation',
               hintText: 'Enter the recommended corrective action',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: focusColor, width: 1.5)),
             ),
           ),
           const SizedBox(height: 16),
@@ -324,7 +337,7 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(color: Color(0xFF174A7E)),
         ),
       );
     }
@@ -333,21 +346,21 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
       return AppCard(
         child: Column(
           children: [
-            Icon(
+            const Icon(
               Icons.fact_check_outlined,
               size: 42,
-              color: Colors.grey.shade500,
+              color: Color(0xFF5F6368),
             ),
             const SizedBox(height: 10),
             const Text(
               'No findings added yet.',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF202124)),
             ),
             const SizedBox(height: 4),
             const Text(
               'Add a finding using the form above.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(color: Color(0xFF5F6368)),
             ),
           ],
         ),
@@ -359,7 +372,7 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
       children: [
         const Text(
           'Saved Findings',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
         ),
         const SizedBox(height: 10),
         ..._findings.map(_buildFindingCard),
@@ -401,6 +414,7 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
+                      color: Color(0xFF202124),
                     ),
                   ),
                 ),
@@ -420,30 +434,33 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
               category,
               style: const TextStyle(
                 fontSize: 12,
-                color: Colors.black54,
+                color: Color(0xFF5F6368),
                 fontWeight: FontWeight.w600,
               ),
             ),
             if (description != null && description.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(description),
+              Text(
+                description,
+                style: const TextStyle(color: Color(0xFF202124)),
+              ),
             ],
             if (recommendation != null && recommendation.isNotEmpty) ...[
               const SizedBox(height: 10),
               const Text(
                 'Recommendation',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF174A7E)),
               ),
               const SizedBox(height: 4),
               Text(
                 recommendation,
-                style: const TextStyle(color: Colors.black87),
+                style: const TextStyle(color: Color(0xFF202124)),
               ),
             ],
             const SizedBox(height: 10),
             Text(
               'Status: ${status.toUpperCase()}',
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF5F6368)),
             ),
           ],
         ),
@@ -454,7 +471,24 @@ class _InspectionFindingsScreenState extends State<InspectionFindingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inspection Findings')),
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        title: const Text('Inspection Findings'),
+        backgroundColor: const Color(0xFF174A7E),
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF174A7E),
+                Color(0xFF123A63),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -47,24 +47,74 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   DateTime _reportDate = DateTime.now();
 
-  static const Color navy = Color(0xFF123E68);
-  static const Color darkBlue = Color(0xFF0D4778);
-  static const Color blue = Color(0xFF1769AA);
+  // ============================================================
+  // COLOR PALETTE — Government of India / SIH theme
+  // ============================================================
 
-  static const Color background = Color(0xFFF4F8FB);
-  static const Color lightBlue = Color(0xFFEAF4FB);
+  static const Color navy = Color(0xFF174A7E); // Primary Navy Blue
+  static const Color darkBlue = Color(0xFF123A63); // Dark Navy
+  static const Color blue = Color(0xFF2468A8); // Info
 
-  static const Color green = Color(0xFF159447);
-  static const Color lightGreen = Color(0xFFE5F7ED);
+  static const Color background = Color(0xFFF7F8FA);
+  static const Color lightBlue = Color(0xFFEAF2F9);
+  static const Color surfaceWhite = Color(0xFFFFFFFF); // Surface / White
 
-  static const Color red = Color(0xFFD94141);
-  static const Color lightRed = Color(0xFFFDE8E8);
+  static const Color green = Color(0xFF2E7D5B); // Success
+  static const Color lightGreen = Color(0xFFEAF5EF); // Success Background
 
-  static const Color orange = Color(0xFFF5A623);
-  static const Color lightOrange = Color(0xFFFFF3DE);
+  static const Color red = Color(0xFFC0392B); // Danger
+  static const Color lightRed = Color(0xFFFCEBE9); // Danger Background
 
-  static const Color greyText = Color(0xFF6B7785);
-  static const Color borderColor = Color(0xFFDDE6ED);
+  static const Color orange = Color(0xFFB7791F); // Warning
+  static const Color lightOrange = Color(0xFFFFF4DC); // Warning Background
+
+  static const Color info = Color(0xFF2468A8); // Info
+  static const Color lightInfo = Color(0xFFEAF3FB); // Info Background
+
+  static const Color textPrimary = Color(0xFF202124); // Primary Text
+  static const Color greyText = Color(0xFF5F6368); // Secondary Text
+  static const Color borderColor = Color(0xFFD5D9DE); // Border
+
+  // ---------- Gradients ----------
+  // Subtle, professional gradients built from closely related shades
+  // of the palette above. Used selectively for headers, primary
+  // actions, and highlighted / status areas — never bright or flashy.
+
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF174A7E), Color(0xFF123A63)],
+  );
+
+  static const LinearGradient lightBlueGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF4F8FC), Color(0xFFEAF2F9)],
+  );
+
+  static const LinearGradient successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF2FAF6), Color(0xFFEAF5EF)],
+  );
+
+  static const LinearGradient warningGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFFF9EC), Color(0xFFFFF4DC)],
+  );
+
+  static const LinearGradient dangerGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFDF1F0), Color(0xFFFCEBE9)],
+  );
+
+  static const LinearGradient infoGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF3F9FD), Color(0xFFEAF3FB)],
+  );
 
   @override
   void initState() {
@@ -499,10 +549,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: darkBlue,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        // Subtle primary gradient header — the main brand surface.
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: primaryGradient,
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded,
@@ -523,34 +579,40 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadReports,
-          color: darkBlue,
-          backgroundColor: Colors.white,
-          child: ListView(
-            physics:
-            const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              14,
-              10,
-              14,
-              24,
+        child: Container(
+          // Very subtle blue-tinted backdrop for the whole screen.
+          decoration: const BoxDecoration(
+            gradient: lightBlueGradient,
+          ),
+          child: RefreshIndicator(
+            onRefresh: _loadReports,
+            color: darkBlue,
+            backgroundColor: Colors.white,
+            child: ListView(
+              physics:
+              const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                14,
+                10,
+                14,
+                24,
+              ),
+              children: [
+                _buildSearchBar(),
+
+                const SizedBox(height: 10),
+
+                _buildFilterRow(),
+
+                const SizedBox(height: 14),
+
+                _buildSubmitButton(),
+
+                const SizedBox(height: 18),
+
+                _buildRecentReports(),
+              ],
             ),
-            children: [
-              _buildSearchBar(),
-
-              const SizedBox(height: 10),
-
-              _buildFilterRow(),
-
-              const SizedBox(height: 14),
-
-              _buildSubmitButton(),
-
-              const SizedBox(height: 18),
-
-              _buildRecentReports(),
-            ],
           ),
         ),
       ),
@@ -878,6 +940,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // height can comfortably lay out with the icon, which is exactly
   // the kind of thing that overflows on a real device but not an
   // emulator at 1.0x scale.
+  //
+  // Now uses the primary navy gradient to read as the screen's main
+  // call to action.
   // ============================================================
 
   Widget _buildSubmitButton() {
@@ -885,31 +950,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
       constraints: const BoxConstraints(minHeight: 42),
       child: SizedBox(
         width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _showSubmitReportDialog,
-          icon: const Icon(
-            Icons.add_rounded,
-            size: 20,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: primaryGradient,
+            borderRadius: BorderRadius.circular(8),
           ),
-          label: const Text(
-            'Submit a New Report',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: darkBlue,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 10,
-            ),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
               borderRadius: BorderRadius.circular(8),
+              onTap: _showSubmitReportDialog,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.add_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Submit a New Report',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -1221,6 +1301,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // ============================================================
   // STATUS BADGE
+  //
+  // Uses a soft success gradient rather than a flat fill, since a
+  // "Submitted" badge is exactly the kind of small, important
+  // status indicator the gradient guidance calls out.
   // ============================================================
 
   Widget _buildStatusBadge() {
@@ -1230,7 +1314,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         vertical: 3,
       ),
       decoration: BoxDecoration(
-        color: lightGreen,
+        gradient: successGradient,
         borderRadius: BorderRadius.circular(5),
       ),
       child: const Row(
@@ -1511,6 +1595,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  // ============================================================
+  // ATTACHMENT INFO
+  //
+  // Uses the soft info gradient — this is a highlighted card the
+  // user should notice, not plain body content.
+  // ============================================================
+
   Widget _buildAttachmentInfo(
       String path,
       ) {
@@ -1519,7 +1610,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: lightBlue,
+        gradient: infoGradient,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -2183,64 +2274,83 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           child: SizedBox(
                             width:
                             double.infinity,
-                            child:
-                            ElevatedButton(
-                              onPressed:
-                              _isSubmitting
-                                  ? null
-                                  : _handleSubmit,
-                              style:
-                              ElevatedButton
-                                  .styleFrom(
-                                backgroundColor:
-                                darkBlue,
-                                foregroundColor:
-                                Colors.white,
-                                padding:
-                                const EdgeInsets
-                                    .symmetric(
-                                  horizontal:
-                                  14,
-                                  vertical: 10,
+                            child: Container(
+                              decoration:
+                              BoxDecoration(
+                                gradient:
+                                primaryGradient,
+                                borderRadius:
+                                BorderRadius
+                                    .circular(
+                                  7,
                                 ),
-                                elevation: 0,
-                                shape:
-                                RoundedRectangleBorder(
+                              ),
+                              child: Material(
+                                color: Colors
+                                    .transparent,
+                                borderRadius:
+                                BorderRadius
+                                    .circular(
+                                  7,
+                                ),
+                                child: InkWell(
                                   borderRadius:
                                   BorderRadius
                                       .circular(
                                     7,
                                   ),
-                                ),
-                              ),
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child:
-                                CircularProgressIndicator(
-                                  strokeWidth:
-                                  2.2,
-                                  valueColor:
-                                  AlwaysStoppedAnimation<
-                                      Color>(
-                                    Colors.white,
+                                  onTap:
+                                  _isSubmitting
+                                      ? null
+                                      : _handleSubmit,
+                                  child: Padding(
+                                    padding:
+                                    const EdgeInsets
+                                        .symmetric(
+                                      horizontal:
+                                      14,
+                                      vertical: 10,
+                                    ),
+                                    child: Center(
+                                      child:
+                                      _isSubmitting
+                                          ? const SizedBox(
+                                        height:
+                                        20,
+                                        width:
+                                        20,
+                                        child:
+                                        CircularProgressIndicator(
+                                          strokeWidth:
+                                          2.2,
+                                          valueColor:
+                                          AlwaysStoppedAnimation<
+                                              Color>(
+                                            Colors
+                                                .white,
+                                          ),
+                                        ),
+                                      )
+                                          : const Text(
+                                        'Submit Report',
+                                        maxLines:
+                                        1,
+                                        overflow:
+                                        TextOverflow
+                                            .ellipsis,
+                                        style:
+                                        TextStyle(
+                                          color: Colors
+                                              .white,
+                                          fontSize:
+                                          12,
+                                          fontWeight:
+                                          FontWeight
+                                              .w800,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              )
-                                  : const Text(
-                                'Submit Report',
-                                maxLines: 1,
-                                overflow:
-                                TextOverflow
-                                    .ellipsis,
-                                style:
-                                TextStyle(
-                                  fontSize:
-                                  12,
-                                  fontWeight:
-                                  FontWeight
-                                      .w800,
                                 ),
                               ),
                             ),

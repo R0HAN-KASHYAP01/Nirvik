@@ -11,6 +11,40 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'state_institute_list_screen.dart';
 
+// ---------- NIRIKSHA UI COLOR SYSTEM ----------
+const Color _kPrimaryBlue = Color(0xFF084482);
+const Color _kPrimaryMedium = Color(0xFF0B5AA0);
+const Color _kPrimaryDark = Color(0xFF063A77);
+const Color _kPrimaryLight = Color(0xFFEAF4FD);
+
+const Color _kCardBackground = Color(0xFFFFFFFF);
+const Color _kBorder = Color(0xFFDCE8F2);
+const Color _kBorderMedium = Color(0xFFC8D9E8);
+
+const Color _kTextPrimary = Color(0xFF173B63);
+const Color _kTextGrey = Color(0xFF5F7285);
+const Color _kTextMuted = Color(0xFF8191A1);
+
+const LinearGradient _kPrimaryGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [_kPrimaryMedium, _kPrimaryBlue, _kPrimaryDark],
+  stops: [0.0, 0.55, 1.0],
+);
+
+const LinearGradient _kBackgroundGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFF7FAFD), Color(0xFFEFF7FD), Color(0xFFEAF4FD)],
+  stops: [0.0, 0.5, 1.0],
+);
+
+const LinearGradient _kCardGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFFFFFFF), Color(0xFFFBFDFF)],
+);
+
 class StateInstituteSchemeListScreen extends StatefulWidget {
   final String categoryKey; // e.g. 'educational'
   final String categoryTitle; // e.g. 'Educational'
@@ -32,10 +66,6 @@ class StateInstituteSchemeListScreen extends StatefulWidget {
 
 class _StateInstituteSchemeListScreenState
     extends State<StateInstituteSchemeListScreen> {
-  static const Color _background = Color(0xFFEAF2F8);
-  static const Color _border = Color(0xFFD1DEE7);
-  static const Color _textGrey = Color(0xFF667788);
-
   late Future<List<Map<String, dynamic>>> _future;
 
   @override
@@ -58,80 +88,125 @@ class _StateInstituteSchemeListScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
-      appBar: AppBar(title: Text(widget.categoryTitle)),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _Message(
-              icon: Icons.error_outline,
-              text: 'Could not load schemes.\n${snapshot.error}',
-              actionLabel: 'Retry',
-              onAction: _retry,
-            );
-          }
-          final schemes = snapshot.data ?? const [];
-          if (schemes.isEmpty) {
-            return const _Message(
-              icon: Icons.inbox_outlined,
-              text: 'No schemes found in this category.',
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-            itemCount: schemes.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final s = schemes[i];
-              final code = s['code'] as String;
-              final label = (s['label'] as String?) ?? code;
-              return Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => StateInstituteListScreen(
-                        categoryKey: widget.categoryKey,
-                        schemeCode: code,
-                        schemeLabel: label,
-                        adminState: widget.adminState,
-                        selectedDistrict: widget.selectedDistrict,
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text(widget.categoryTitle),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        titleTextStyle: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: _kPrimaryGradient),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: _kBackgroundGradient),
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(color: _kPrimaryBlue),
+              );
+            }
+            if (snapshot.hasError) {
+              return _Message(
+                icon: Icons.error_outline,
+                text: 'Could not load schemes.\n${snapshot.error}',
+                actionLabel: 'Retry',
+                onAction: _retry,
+              );
+            }
+            final schemes = snapshot.data ?? const [];
+            if (schemes.isEmpty) {
+              return const _Message(
+                icon: Icons.inbox_outlined,
+                text: 'No schemes found in this category.',
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+              itemCount: schemes.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final s = schemes[i];
+                final code = s['code'] as String;
+                final label = (s['label'] as String?) ?? code;
+                return Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: _kCardGradient,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _kBorder),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _kPrimaryBlue.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => StateInstituteListScreen(
+                            categoryKey: widget.categoryKey,
+                            schemeCode: code,
+                            schemeLabel: label,
+                            adminState: widget.adminState,
+                            selectedDistrict: widget.selectedDistrict,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: _kPrimaryLight,
+                                borderRadius: BorderRadius.circular(9),
+                                border: Border.all(color: _kBorderMedium),
+                              ),
+                              child: const Icon(
+                                Icons.description_outlined,
+                                color: _kPrimaryBlue,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                label,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kTextPrimary,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right,
+                                color: _kTextMuted),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _border),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right, color: _textGrey),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -158,16 +233,27 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: const Color(0xFF667788)),
+            Icon(icon, size: 40, color: _kTextMuted),
             const SizedBox(height: 10),
             Text(
               text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF667788)),
+              style: const TextStyle(color: _kTextGrey),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 12),
-              OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
+              OutlinedButton(
+                onPressed: onAction,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kPrimaryBlue,
+                  side: const BorderSide(color: _kBorderMedium),
+                  backgroundColor: _kCardBackground,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(actionLabel!),
+              ),
             ],
           ],
         ),

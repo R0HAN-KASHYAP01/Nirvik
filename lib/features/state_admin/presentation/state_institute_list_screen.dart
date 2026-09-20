@@ -15,10 +15,43 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const Color _kBackground = Color(0xFFEAF2F8);
-const Color _kBorder = Color(0xFFD1DEE7);
-const Color _kTextGrey = Color(0xFF667788);
-const Color _kPrimaryBlue = Color(0xFF14568A);
+// ---------- NIRIKSHA UI COLOR SYSTEM ----------
+const Color _kPrimaryBlue = Color(0xFF084482);
+const Color _kPrimaryMedium = Color(0xFF0B5AA0);
+const Color _kPrimaryDark = Color(0xFF063A77);
+const Color _kPrimaryLight = Color(0xFFEAF4FD);
+
+const Color _kCardBackground = Color(0xFFFFFFFF);
+const Color _kBorder = Color(0xFFDCE8F2);
+const Color _kBorderMedium = Color(0xFFC8D9E8);
+
+const Color _kTextPrimary = Color(0xFF173B63);
+const Color _kTextGrey = Color(0xFF5F7285);
+const Color _kTextMuted = Color(0xFF8191A1);
+
+/// Deep government blue — app bars, primary elements.
+const LinearGradient _kPrimaryGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [_kPrimaryMedium, _kPrimaryBlue, _kPrimaryDark],
+  stops: [0.0, 0.55, 1.0],
+);
+
+/// Soft blue-tinted screen background instead of a flat colour.
+const LinearGradient _kBackgroundGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFF7FAFD), Color(0xFFEFF7FD), Color(0xFFEAF4FD)],
+  stops: [0.0, 0.5, 1.0],
+);
+
+/// Almost-white cards with a very subtle gradient.
+const LinearGradient _kCardGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFFFFFFF), Color(0xFFFBFDFF)],
+);
+
 const String _kAllDistricts = 'All Districts';
 
 class StateInstituteListScreen extends StatefulWidget {
@@ -103,60 +136,80 @@ class _StateInstituteListScreenState extends State<StateInstituteListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackground,
-      appBar: AppBar(title: Text(widget.schemeLabel)),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _Message(
-              icon: Icons.error_outline,
-              text:
-                  'Could not load institutes.\n${_friendly(snapshot.error!)}',
-              actionLabel: 'Retry',
-              onAction: _retry,
-            );
-          }
-          final institutes = snapshot.data ?? const [];
-          if (institutes.isEmpty) {
-            return _Message(
-              icon: Icons.apartment_outlined,
-              text: 'No approved institutes found for this scheme in '
-                  '$_scopeLabel.',
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async {
-              final next = _load();
-              setState(() => _future = next);
-              await next;
-            },
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-              itemCount: institutes.length + 1,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, i) {
-                if (i == 0) {
-                  return Text(
-                    '${institutes.length} institute'
-                    '${institutes.length == 1 ? '' : 's'} · '
-                    '$_scopeLabel',
-                    style: const TextStyle(fontSize: 12, color: _kTextGrey),
-                  );
-                }
-                final inst = institutes[i - 1];
-                return _InstituteCard(
-                  data: inst,
-                  onTap: () => _showDetails(context, inst),
-                );
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: false,
+      appBar: AppBar(
+        title: Text(widget.schemeLabel),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        titleTextStyle: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: _kPrimaryGradient),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: _kBackgroundGradient),
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(color: _kPrimaryBlue),
+              );
+            }
+            if (snapshot.hasError) {
+              return _Message(
+                icon: Icons.error_outline,
+                text:
+                    'Could not load institutes.\n${_friendly(snapshot.error!)}',
+                actionLabel: 'Retry',
+                onAction: _retry,
+              );
+            }
+            final institutes = snapshot.data ?? const [];
+            if (institutes.isEmpty) {
+              return _Message(
+                icon: Icons.apartment_outlined,
+                text: 'No approved institutes found for this scheme in '
+                    '$_scopeLabel.',
+              );
+            }
+            return RefreshIndicator(
+              color: _kPrimaryBlue,
+              onRefresh: () async {
+                final next = _load();
+                setState(() => _future = next);
+                await next;
               },
-            ),
-          );
-        },
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                itemCount: institutes.length + 1,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, i) {
+                  if (i == 0) {
+                    return Text(
+                      '${institutes.length} institute'
+                      '${institutes.length == 1 ? '' : 's'} · '
+                      '$_scopeLabel',
+                      style: const TextStyle(fontSize: 12, color: _kTextGrey),
+                    );
+                  }
+                  final inst = institutes[i - 1];
+                  return _InstituteCard(
+                    data: inst,
+                    onTap: () => _showDetails(context, inst),
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -171,6 +224,10 @@ class _StateInstituteListScreenState extends State<StateInstituteListScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: _kCardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
       builder: (_) => SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -180,10 +237,14 @@ class _StateInstituteListScreenState extends State<StateInstituteListScreen> {
             children: [
               Text(
                 v('organization_name'),
-                style:
-                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _kTextPrimary,
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              const Divider(color: _kBorder, height: 16),
               _DetailRow('Scheme', widget.schemeLabel),
               _DetailRow('Type', v('organization_type')),
               _DetailRow('Registration No.', v('registration_number')),
@@ -216,91 +277,109 @@ class _InstituteCard extends StatelessWidget {
     final type = (data['organization_type'] as String?) ?? '';
     final district = (data['district'] as String?) ?? '';
     final address = (data['complete_address'] as String?) ?? '';
-    final accent = Theme.of(context).colorScheme.primary;
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _kBorder),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: _kCardGradient,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _kBorder),
+          boxShadow: [
+            BoxShadow(
+              color: _kPrimaryBlue.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: _kPrimaryLight,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: _kBorderMedium),
+                  ),
+                  child: const Icon(
+                    Icons.apartment_outlined,
+                    color: _kPrimaryBlue,
+                    size: 20,
+                  ),
                 ),
-                child: Icon(Icons.apartment_outlined, color: accent, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        // Only worth tagging each card with its district
-                        // when the list can span more than one (i.e. "All
-                        // Districts" was chosen back in step 1).
-                        if (district.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _kPrimaryBlue.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
                             child: Text(
-                              district,
+                              name,
                               style: const TextStyle(
-                                fontSize: 10,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: _kPrimaryBlue,
+                                color: _kTextPrimary,
                               ),
                             ),
                           ),
+                          // Only worth tagging each card with its district
+                          // when the list can span more than one (i.e. "All
+                          // Districts" was chosen back in step 1).
+                          if (district.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _kPrimaryLight,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: _kBorderMedium),
+                              ),
+                              child: Text(
+                                district,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kPrimaryBlue,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (type.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          type,
+                          style: const TextStyle(
+                              fontSize: 12, color: _kTextGrey),
+                        ),
                       ],
-                    ),
-                    if (type.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        type,
-                        style: const TextStyle(
-                            fontSize: 12, color: _kTextGrey),
-                      ),
+                      if (address.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          address,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11.5, color: _kTextMuted),
+                        ),
+                      ],
                     ],
-                    if (address.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        address,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 11.5, color: _kTextGrey),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: _kTextGrey),
-            ],
+                const Icon(Icons.chevron_right, color: _kTextMuted),
+              ],
+            ),
           ),
         ),
       ),
@@ -329,7 +408,10 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 13)),
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, color: _kTextPrimary),
+            ),
           ),
         ],
       ),
@@ -358,7 +440,7 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: _kTextGrey),
+            Icon(icon, size: 40, color: _kTextMuted),
             const SizedBox(height: 10),
             Text(
               text,
@@ -367,7 +449,18 @@ class _Message extends StatelessWidget {
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 12),
-              OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
+              OutlinedButton(
+                onPressed: onAction,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kPrimaryBlue,
+                  side: const BorderSide(color: _kBorderMedium),
+                  backgroundColor: _kCardBackground,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(actionLabel!),
+              ),
             ],
           ],
         ),

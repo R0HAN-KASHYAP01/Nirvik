@@ -52,17 +52,51 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   Timer? _autoReloadTimer;
 
   // ============================================================
-  // COLORS
+  // COLORS — SIH / Government of India theme
   // ============================================================
 
-  static const Color navy = Color(0xFF123E68);
-  static const Color darkBlue = Color(0xFF0D4778);
-  static const Color background = Color(0xFFEAF1F6);
-  static const Color cardBackground = Color(0xFFE4EDF3);
-  static const Color softBlueGrey = Color(0xFFDCE8F0);
-  static const Color green = Color(0xFF159447);
-  static const Color orange = Color(0xFFF5A623);
-  static const Color borderColor = Color(0xFFD3E0E8);
+  // Brand / navy
+  static const Color primaryNavy = Color(0xFF174A7E);
+  static const Color darkNavy = Color(0xFF123A63);
+  static const Color lightBlue = Color(0xFFEAF2F9);
+
+  // Neutrals
+  static const Color background = Color(0xFFF7F8FA);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color borderColor = Color(0xFFD5D9DE);
+  static const Color textPrimary = Color(0xFF202124);
+  static const Color textSecondary = Color(0xFF5F6368);
+
+  // Status colors
+  static const Color success = Color(0xFF2E7D5B);
+  static const Color successBg = Color(0xFFEAF5EF);
+  static const Color warning = Color(0xFFB7791F);
+  static const Color warningBg = Color(0xFFFFF4DC);
+  static const Color danger = Color(0xFFC0392B);
+  static const Color dangerBg = Color(0xFFFCEBE9);
+  static const Color info = Color(0xFF2468A8);
+  static const Color infoBg = Color(0xFFEAF3FB);
+
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryNavy, darkNavy],
+  );
+
+  static const LinearGradient lightBlueGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF4F8FC), lightBlue],
+  );
+
+  static LinearGradient _tintedGradient(Color base) {
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [surface, base],
+    );
+  }
 
   // ============================================================
   // INIT
@@ -419,8 +453,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         bottom: false,
         child: RefreshIndicator(
           onRefresh: _loadDashboardData,
-          color: darkBlue,
-          backgroundColor: Colors.white,
+          color: darkNavy,
+          backgroundColor: surface,
           child: ListView(
             physics:
                 const AlwaysScrollableScrollPhysics(),
@@ -473,7 +507,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         18,
       ),
       decoration: const BoxDecoration(
-        color: darkBlue,
+        gradient: primaryGradient,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(22),
           bottomRight: Radius.circular(22),
@@ -491,13 +525,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             width: 55,
             height: 55,
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: surface,
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.business_rounded,
               size: 31,
-              color: darkBlue,
+              color: primaryNavy,
             ),
           ),
 
@@ -576,7 +610,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                       horizontal: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: danger,
                       shape: unreadCount < 10
                           ? BoxShape.circle
                           : BoxShape.rectangle,
@@ -584,7 +618,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                           ? BorderRadius.circular(10)
                           : null,
                       border: Border.all(
-                        color: darkBlue,
+                        color: darkNavy,
                         width: 2,
                       ),
                     ),
@@ -627,10 +661,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: lightBlueGradient,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: const Color(0xFFE0E8EE),
+            color: borderColor,
           ),
           boxShadow: [
             BoxShadow(
@@ -664,7 +698,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                       overflow:
                           TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: navy,
+                        color: primaryNavy,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
@@ -675,7 +709,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                       overflow:
                           TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: navy,
+                        color: primaryNavy,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
@@ -709,7 +743,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                                 10,
                               ),
                               color: const Color(
-                                0xFFFFC66D,
+                                0xFFF28C28,
                               ),
                             ),
                           ),
@@ -727,7 +761,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                                 10,
                               ),
                               color: const Color(
-                                0xFF54B96B,
+                                0xFF138A4B,
                               ),
                             ),
                           ),
@@ -742,7 +776,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
               // RIGHT TEXT
               // ==================================================
 
-              const Expanded(
+              Expanded(
                 flex: 4,
                 child: Column(
                   mainAxisAlignment:
@@ -756,7 +790,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                           TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9,
-                        color: Colors.grey,
+                        color: textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -768,7 +802,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                           TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9,
-                        color: Colors.grey,
+                        color: textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -780,7 +814,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                           TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9,
-                        color: Colors.grey,
+                        color: textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -818,11 +852,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 Expanded(
                   child: _buildStatusCard(
                     icon: Icons.groups_rounded,
-                    iconColor: green,
+                    iconColor: success,
+                    iconBg: successBg,
+                    background: _tintedGradient(successBg),
                     title: 'Attendance',
                     bottomText:
                         '$_totalAttendance Submitted',
-                    bottomColor: green,
+                    bottomColor: success,
                     showCheck:
                         _totalAttendance > 0,
                     onTap: _openAttendance,
@@ -835,11 +871,13 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                   child: _buildStatusCard(
                     icon:
                         Icons.description_rounded,
-                    iconColor: darkBlue,
+                    iconColor: info,
+                    iconBg: infoBg,
+                    background: _tintedGradient(infoBg),
                     title: 'Reports',
                     bottomText:
                         '$_totalReports Submitted',
-                    bottomColor: green,
+                    bottomColor: success,
                     showCheck:
                         _totalReports > 0,
                     onTap: _openReports,
@@ -851,10 +889,12 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 Expanded(
                   child: _buildStatusCard(
                     icon: Icons.notifications_active_rounded,
-                    iconColor: orange,
+                    iconColor: warning,
+                    iconBg: warningBg,
+                    background: _tintedGradient(warningBg),
                     title: 'Notices',
                     bottomText: 'View',
-                    bottomColor: darkBlue,
+                    bottomColor: primaryNavy,
                     showCheck: false,
                     onTap: _openNotices,
                   ),
@@ -874,6 +914,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   Widget _buildStatusCard({
     required IconData icon,
     required Color iconColor,
+    required Color iconBg,
+    required Gradient background,
     required String title,
     required String bottomText,
     required Color bottomColor,
@@ -897,7 +939,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             vertical: 10,
           ),
           decoration: BoxDecoration(
-            color: cardBackground,
+            gradient: background,
             borderRadius:
                 BorderRadius.circular(9),
             border: Border.all(
@@ -921,7 +963,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 width: 39,
                 height: 39,
                 decoration: BoxDecoration(
-                  color: softBlueGrey,
+                  color: iconBg,
                   borderRadius:
                       BorderRadius.circular(11),
                 ),
@@ -941,7 +983,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 overflow:
                     TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: navy,
+                  color: primaryNavy,
                   fontSize: 10,
                   fontWeight:
                       FontWeight.w700,
@@ -1007,10 +1049,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.access_time_rounded,
                 size: 14,
-                color: Colors.grey,
+                color: textSecondary,
               ),
 
               const SizedBox(width: 4),
@@ -1022,7 +1064,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                   overflow:
                       TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Colors.grey,
+                    color: textSecondary,
                     fontSize: 11,
                     fontWeight:
                         FontWeight.w500,
@@ -1042,7 +1084,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 Expanded(
                   child: _buildOverviewCard(
                     icon: Icons.groups_rounded,
-                    iconColor: green,
+                    iconColor: success,
+                    background: _tintedGradient(successBg),
                     number:
                         '$_todayBeneficiaries',
                     label:
@@ -1055,7 +1098,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 Expanded(
                   child: _buildOverviewCard(
                     icon: Icons.badge_rounded,
-                    iconColor: darkBlue,
+                    iconColor: info,
+                    background: _tintedGradient(infoBg),
                     number:
                         '$_todayStaff',
                     label:
@@ -1069,7 +1113,8 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                   child: _buildOverviewCard(
                     icon:
                         Icons.description_rounded,
-                    iconColor: darkBlue,
+                    iconColor: info,
+                    background: _tintedGradient(infoBg),
                     number:
                         '$_todayReports',
                     label:
@@ -1091,6 +1136,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   Widget _buildOverviewCard({
     required IconData icon,
     required Color iconColor,
+    required Gradient background,
     required String number,
     required String label,
   }) {
@@ -1107,7 +1153,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         8,
       ),
       decoration: BoxDecoration(
-        color: cardBackground,
+        gradient: background,
         borderRadius:
             BorderRadius.circular(9),
         border: Border.all(
@@ -1146,7 +1192,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                 number,
                 maxLines: 1,
                 style: const TextStyle(
-                  color: navy,
+                  color: primaryNavy,
                   fontSize: 20,
                   fontWeight:
                       FontWeight.w900,
@@ -1164,7 +1210,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
               overflow:
                   TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Colors.grey,
+                color: textSecondary,
                 fontSize: 9,
                 height: 1.2,
                 fontWeight:
@@ -1323,7 +1369,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             minHeight: 86,
           ),
           decoration: BoxDecoration(
-            color: cardBackground,
+            color: surface,
             borderRadius:
                 BorderRadius.circular(9),
             border: Border.all(
@@ -1346,7 +1392,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
               Icon(
                 icon,
                 size: 31,
-                color: darkBlue,
+                color: primaryNavy,
               ),
 
               const SizedBox(height: 8),
@@ -1364,7 +1410,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
                   overflow:
                       TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: navy,
+                    color: primaryNavy,
                     fontSize: 11,
                     fontWeight:
                         FontWeight.w700,
@@ -1391,7 +1437,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       overflow:
           TextOverflow.ellipsis,
       style: const TextStyle(
-        color: navy,
+        color: primaryNavy,
         fontSize: 15,
         fontWeight:
             FontWeight.w800,

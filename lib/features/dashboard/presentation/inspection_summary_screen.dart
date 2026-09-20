@@ -165,13 +165,13 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
   Color _riskColor(String risk) {
     switch (risk.toLowerCase()) {
       case 'high':
-        return Colors.red;
+        return const Color(0xFFC0392B);
       case 'medium':
-        return Colors.orange;
+        return const Color(0xFFB7791F);
       case 'low':
-        return Colors.green;
+        return const Color(0xFF2E7D5B);
       default:
-        return Colors.blueGrey;
+        return const Color(0xFF5F6368);
     }
   }
 
@@ -316,7 +316,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: isError ? Colors.red : null,
+          backgroundColor: isError ? const Color(0xFFC0392B) : null,
         ),
       );
   }
@@ -328,12 +328,12 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         children: [
           const Text(
             'Inspection Assignment',
-            style: TextStyle(fontSize: 12, color: Colors.black54),
+            style: TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
           ),
           const SizedBox(height: 6),
           Text(
             widget.assignment.displayName,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
           ),
           const SizedBox(height: 8),
           Row(
@@ -342,13 +342,13 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
               const Icon(
                 Icons.location_on_outlined,
                 size: 18,
-                color: Colors.black54,
+                color: Color(0xFF5F6368),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   widget.assignment.displayLocation,
-                  style: const TextStyle(color: Colors.black54),
+                  style: const TextStyle(color: Color(0xFF5F6368)),
                 ),
               ),
             ],
@@ -359,13 +359,13 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
               const Icon(
                 Icons.schedule_outlined,
                 size: 18,
-                color: Colors.black54,
+                color: Color(0xFF5F6368),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   _formatDateTime(widget.assignment.scheduledDateTime),
-                  style: const TextStyle(color: Colors.black54),
+                  style: const TextStyle(color: Color(0xFF5F6368)),
                 ),
               ),
             ],
@@ -384,17 +384,17 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, color: Colors.indigo),
+              const Icon(Icons.location_on_outlined, color: Color(0xFF174A7E)),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
                   'Arrival Verification',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
                 ),
               ),
               StatusBadge(
                 label: verified ? 'VERIFIED' : 'NOT VERIFIED',
-                color: verified ? Colors.green : Colors.red,
+                color: verified ? const Color(0xFF2E7D5B) : const Color(0xFFC0392B),
               ),
             ],
           ),
@@ -411,7 +411,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
           ] else
             const Text(
               'Arrival verification was not found.',
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(color: Color(0xFF5F6368)),
             ),
         ],
       ),
@@ -427,12 +427,12 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.checklist_outlined, color: Colors.indigo),
+              Icon(Icons.checklist_outlined, color: Color(0xFF174A7E)),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Checklist Results',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
                 ),
               ),
             ],
@@ -445,7 +445,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   label: 'Total',
                   value: total,
                   icon: Icons.list_alt_outlined,
-                  color: Colors.indigo,
+                  color: const Color(0xFF174A7E),
                 ),
               ),
               const SizedBox(width: 10),
@@ -454,7 +454,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   label: 'Yes',
                   value: _yesCount,
                   icon: Icons.check_circle_outline,
-                  color: Colors.green,
+                  color: const Color(0xFF2E7D5B),
                 ),
               ),
               const SizedBox(width: 10),
@@ -463,7 +463,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   label: 'No',
                   value: _noCount,
                   icon: Icons.cancel_outlined,
-                  color: Colors.red,
+                  color: const Color(0xFFC0392B),
                 ),
               ),
             ],
@@ -482,19 +482,19 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
             height: 44,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.indigo.withValues(alpha: 0.08),
+              color: const Color(0xFF174A7E).withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.photo_library_outlined,
-              color: Colors.indigo,
+              color: Color(0xFF174A7E),
             ),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Evidence Uploaded',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF202124)),
             ),
           ),
           // Flexible + FittedBox: the count is an unbounded number (could
@@ -507,7 +507,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
               alignment: Alignment.centerRight,
               child: Text(
                 '${_evidence.length}',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
               ),
             ),
           ),
@@ -523,12 +523,12 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.warning_amber_outlined, color: Colors.indigo),
+              const Icon(Icons.warning_amber_outlined, color: Color(0xFF174A7E)),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
                   'Findings Summary',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
                 ),
               ),
               // Same growing-number risk as the evidence count above.
@@ -541,6 +541,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
+                      color: Color(0xFF202124),
                     ),
                   ),
                 ),
@@ -555,7 +556,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   label: 'High',
                   value: _highFindingCount,
                   icon: Icons.priority_high,
-                  color: Colors.red,
+                  color: const Color(0xFFC0392B),
                 ),
               ),
               const SizedBox(width: 10),
@@ -564,7 +565,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   label: 'Medium',
                   value: _mediumFindingCount,
                   icon: Icons.remove_circle_outline,
-                  color: Colors.orange,
+                  color: const Color(0xFFB7791F),
                 ),
               ),
               const SizedBox(width: 10),
@@ -573,7 +574,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                   label: 'Low',
                   value: _lowFindingCount,
                   icon: Icons.check_circle_outline,
-                  color: Colors.green,
+                  color: const Color(0xFF2E7D5B),
                 ),
               ),
             ],
@@ -598,7 +599,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.black12),
+          border: Border.all(color: const Color(0xFFD5D9DE)),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -614,14 +615,14 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
                     // so a long one can't blow up this preview card.
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF202124)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     category,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
                   ),
                 ],
               ),
@@ -661,12 +662,12 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
               children: [
                 Text(
                   'Overall Risk Level',
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF5F6368)),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Calculated from inspection findings',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
                 ),
               ],
             ),
@@ -687,7 +688,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
         children: [
           const Text(
             'Inspector Remarks',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -697,7 +698,15 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
             maxLines: 6,
             decoration: const InputDecoration(
               hintText: 'Enter any final observations or remarks...',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFD5D9DE)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFD5D9DE)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFF174A7E), width: 1.5),
+              ),
             ),
           ),
         ],
@@ -746,7 +755,7 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF5F6368)),
           ),
         ],
       ),
@@ -763,13 +772,13 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
             width: 100,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF202124)),
             ),
           ),
         ],
@@ -780,22 +789,41 @@ class _InspectionSummaryScreenState extends State<InspectionSummaryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inspection Summary')),
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        title: const Text('Inspection Summary'),
+        backgroundColor: const Color(0xFF174A7E),
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF174A7E),
+                Color(0xFF123A63),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF174A7E)),
+            )
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
                 const Text(
                   'Review Inspection',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
                 ),
                 const SizedBox(height: 6),
                 const Text(
                   'Review all inspection information before submitting the final report.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black54,
+                    color: Color(0xFF5F6368),
                     height: 1.4,
                   ),
                 ),

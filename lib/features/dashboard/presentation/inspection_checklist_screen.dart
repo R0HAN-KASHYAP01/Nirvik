@@ -157,6 +157,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Checklist could not be saved: ${error.message}'),
+          backgroundColor: const Color(0xFFC0392B),
         ),
       );
 
@@ -169,6 +170,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Unable to save checklist. Please try again.'),
+          backgroundColor: Color(0xFFC0392B),
         ),
       );
 
@@ -194,12 +196,12 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.checklist_outlined, color: Colors.indigo),
+              const Icon(Icons.checklist_outlined, color: Color(0xFF174A7E)),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
                   'Inspection Progress',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF202124)),
                 ),
               ),
               Text(
@@ -207,15 +209,22 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
+                  color: Color(0xFF202124),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          LinearProgressIndicator(
-            value: progress,
-            minHeight: 7,
+          ClipRRect(
             borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: const Color(0xFFEAF2F9),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF174A7E),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -224,7 +233,9 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                 : 'Answer every item before continuing.',
             style: TextStyle(
               fontSize: 12,
-              color: _isComplete ? Colors.green : Colors.black54,
+              color: _isComplete
+                  ? const Color(0xFF2E7D5B)
+                  : const Color(0xFF5F6368),
             ),
           ),
         ],
@@ -240,12 +251,12 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
         children: [
           const Text(
             'Current Inspection',
-            style: TextStyle(fontSize: 13, color: Colors.black54),
+            style: TextStyle(fontSize: 13, color: Color(0xFF5F6368)),
           ),
           const SizedBox(height: 6),
           Text(
             widget.assignment.displayName,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF202124)),
           ),
           const SizedBox(height: 8),
           Row(
@@ -254,13 +265,13 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
               const Icon(
                 Icons.location_on_outlined,
                 size: 18,
-                color: Colors.black54,
+                color: Color(0xFF5F6368),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   widget.assignment.displayLocation,
-                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF5F6368)),
                 ),
               ),
             ],
@@ -286,7 +297,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                 height: 30,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.indigo.withValues(alpha: 0.08),
+                  color: const Color(0xFF174A7E).withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
@@ -294,7 +305,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Colors.indigo,
+                    color: Color(0xFF174A7E),
                   ),
                 ),
               ),
@@ -308,6 +319,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        color: Color(0xFF202124),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -315,7 +327,7 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                       item.description,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.black54,
+                        color: Color(0xFF5F6368),
                         height: 1.4,
                       ),
                     ),
@@ -338,10 +350,15 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                   label: const Text('Yes'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: answer == true
-                        ? Colors.green
-                        : Colors.black54,
+                        ? const Color(0xFF2E7D5B)
+                        : const Color(0xFF5F6368),
+                    backgroundColor: answer == true
+                        ? const Color(0xFFEAF5EF)
+                        : null,
                     side: BorderSide(
-                      color: answer == true ? Colors.green : Colors.black26,
+                      color: answer == true
+                          ? const Color(0xFF2E7D5B)
+                          : const Color(0xFFD5D9DE),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -357,10 +374,15 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
                   label: const Text('No'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: answer == false
-                        ? Colors.red
-                        : Colors.black54,
+                        ? const Color(0xFFC0392B)
+                        : const Color(0xFF5F6368),
+                    backgroundColor: answer == false
+                        ? const Color(0xFFFCEBE9)
+                        : null,
                     side: BorderSide(
-                      color: answer == false ? Colors.red : Colors.black26,
+                      color: answer == false
+                          ? const Color(0xFFC0392B)
+                          : const Color(0xFFD5D9DE),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -376,18 +398,35 @@ class _InspectionChecklistScreenState extends State<InspectionChecklistScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inspection Checklist')),
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        title: const Text('Inspection Checklist'),
+        backgroundColor: const Color(0xFF174A7E),
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF174A7E),
+                Color(0xFF123A63),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
           const Text(
             'Inspection Checklist',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF202124)),
           ),
           const SizedBox(height: 6),
           const Text(
             'Review each requirement and record your observation for the assigned institute.',
-            style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+            style: TextStyle(fontSize: 14, color: Color(0xFF5F6368), height: 1.4),
           ),
           const SizedBox(height: 20),
           _buildAssignmentCard(),

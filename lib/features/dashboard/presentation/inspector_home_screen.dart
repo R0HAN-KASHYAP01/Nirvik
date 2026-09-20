@@ -18,6 +18,108 @@ import 'widgets/assignment_card.dart';
 import '../../calls/presentation/widgets/random_call_button.dart';
 import '../../calls/presentation/call_history_screen.dart';
 
+/// =========================================
+/// SIH / GOVERNMENT OF INDIA — UI COLOR SYSTEM
+/// Applied inline throughout this file.
+/// =========================================
+class _Palette {
+  // Primary
+  static const Color primaryNavy = Color(0xFF174A7E);
+  static const Color darkNavy = Color(0xFF123A63);
+  static const Color lightBlue = Color(0xFFEAF2F9);
+
+  // Backgrounds
+  static const Color appBackground = Color(0xFFF7F8FA);
+  static const Color sectionBackground = Color(0xFFF4F8FC);
+  static const Color surface = Color(0xFFFFFFFF);
+
+  // Text
+  static const Color textPrimary = Color(0xFF202124);
+  static const Color textSecondary = Color(0xFF5F6368);
+
+  // Border
+  static const Color border = Color(0xFFD5D9DE);
+
+  // Success
+  static const Color success = Color(0xFF2E7D5B);
+  static const Color successBg = Color(0xFFEAF5EF);
+
+  // Warning
+  static const Color warning = Color(0xFFB7791F);
+  static const Color warningBg = Color(0xFFFFF4DC);
+
+  // Danger
+  static const Color danger = Color(0xFFC0392B);
+  static const Color dangerBg = Color(0xFFFCEBE9);
+
+  // Info
+  static const Color info = Color(0xFF2468A8);
+  static const Color infoBg = Color(0xFFEAF3FB);
+
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryNavy, darkNavy],
+  );
+
+  static const LinearGradient lightBlueGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [sectionBackground, lightBlue],
+  );
+
+  static const LinearGradient appBackgroundGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [appBackground, sectionBackground, lightBlue],
+  );
+
+  /// Returns the (foreground, background) gradient pair for a given
+  /// semantic status, used for notification icons, badges and banners.
+  static ({Color fg, LinearGradient bg}) statusColors(String kind) {
+    switch (kind) {
+      case 'success':
+        return (
+          fg: success,
+          bg: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [successBg, Color(0xFFDCF0E5)],
+          ),
+        );
+      case 'warning':
+        return (
+          fg: warning,
+          bg: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [warningBg, Color(0xFFFCE9C4)],
+          ),
+        );
+      case 'danger':
+        return (
+          fg: danger,
+          bg: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [dangerBg, Color(0xFFF8D9D6)],
+          ),
+        );
+      case 'info':
+      default:
+        return (
+          fg: info,
+          bg: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [infoBg, Color(0xFFDDEBF8)],
+          ),
+        );
+    }
+  }
+}
+
 class InspectorHomeScreen extends StatefulWidget {
   const InspectorHomeScreen({super.key});
 
@@ -268,7 +370,7 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
           message:
               '${assignment.instituteName} has been assigned to you.',
           iconType: _NotificationIconType.assignment,
-          colorValue: 0xFF123E68,
+          statusKind: 'info',
           status: AssignmentStatus.assigned,
           createdAt: createdAt,
           readAt: readAt,
@@ -281,7 +383,7 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
           message:
               '${assignment.instituteName} inspection is currently in progress.',
           iconType: _NotificationIconType.progress,
-          colorValue: 0xFF3157B7,
+          statusKind: 'info',
           status: AssignmentStatus.inProgress,
           createdAt: createdAt,
           readAt: readAt,
@@ -294,7 +396,7 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
           message:
               '${assignment.instituteName} inspection has expired.',
           iconType: _NotificationIconType.error,
-          colorValue: 0xFFD64545,
+          statusKind: 'danger',
           status: AssignmentStatus.expired,
           createdAt: createdAt,
           readAt: readAt,
@@ -307,7 +409,7 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
           message:
               '${assignment.instituteName} inspection is completed.',
           iconType: _NotificationIconType.completed,
-          colorValue: 0xFF159447,
+          statusKind: 'success',
           status: AssignmentStatus.completed,
           createdAt: createdAt,
           readAt: readAt,
@@ -501,337 +603,353 @@ class _InspectorHomeScreenState extends State<InspectorHomeScreen> {
         SessionService.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF1F6),
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: const Color(0xFF123E68),
-          backgroundColor: Colors.white,
-          onRefresh: _loadAssignments,
-          child: ListView(
-            physics:
-                const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              16,
-              20,
-              24,
-            ),
-            children: [
-              _InspectorHeader(
-                userName:
-                    user?.name ?? 'PMU Inspector',
-                unreadCount:
-                    _unreadNotificationCount,
-                onNotificationTap:
-                    _openNotifications,
+      // Subtle SIH light-blue gradient across the whole screen background
+      // instead of a flat fill.
+      backgroundColor: _Palette.appBackground,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: _Palette.appBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: RefreshIndicator(
+            color: _Palette.primaryNavy,
+            backgroundColor: _Palette.surface,
+            onRefresh: _loadAssignments,
+            child: ListView(
+              physics:
+                  const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                24,
               ),
-
-              const SizedBox(height: 20),
-
-              PrimaryButton(
-                label:
-                    'Start Assigned Inspection',
-                onPressed: () {
-                  Navigator.of(context).pushNamed(
-                    AppRoutes
-                        .inspectionWorkflowPlaceholder,
-                  );
-                },
-              ),
-
-              const SizedBox(height: 12),
-
-              const SizedBox(
-                width: double.infinity,
-                child: RandomVideoCallButton(),
-              ),
-
-              if (_unreadNotifications
-                  .isNotEmpty) ...[
-                const SizedBox(height: 14),
-                _NotificationBanner(
-                  notification:
-                      _unreadNotifications.first,
-                  count:
+              children: [
+                _InspectorHeader(
+                  userName:
+                      user?.name ?? 'PMU Inspector',
+                  unreadCount:
                       _unreadNotificationCount,
-                  onTap: _openNotifications,
-                ),
-              ],
-
-              const SizedBox(height: 24),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: SummaryStatCard(
-                      icon: Icons.today,
-                      label: 'Today',
-                      count: _isLoading
-                          ? '—'
-                          : '$_todayCount',
-                      onTap: () =>
-                          _openAssignments(
-                        filter: 'today',
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  Expanded(
-                    child: SummaryStatCard(
-                      icon:
-                          Icons.pending_actions_outlined,
-                      label: 'Active',
-                      count: _isLoading
-                          ? '—'
-                          : '$_activeCount',
-                      accentColor: Colors.indigo,
-                      onTap: () =>
-                          _openAssignments(
-                        status:
-                            AssignmentStatus.assigned,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  Expanded(
-                    child: SummaryStatCard(
-                      icon:
-                          Icons.check_circle_outline,
-                      label: 'Done',
-                      count: _isLoading
-                          ? '—'
-                          : '$_completedCount',
-                      accentColor:
-                          const Color(0xFF159447),
-                      onTap: () =>
-                          _openAssignments(
-                        status:
-                            AssignmentStatus.completed,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: SummaryStatCard(
-                      icon:
-                          Icons.error_outline,
-                      label: 'Expired',
-                      count: _isLoading
-                          ? '—'
-                          : '$_expiredCount',
-                      accentColor:
-                          const Color(0xFFD64545),
-                      onTap: () =>
-                          _openAssignments(
-                        status:
-                            AssignmentStatus.expired,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  const Expanded(
-                    child: SizedBox(),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  const Expanded(
-                    child: SizedBox(),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 26),
-
-              SectionHeader(
-                title:
-                    "Today's Assignments",
-                actionLabel: 'View all',
-                onActionTap:
-                    _openAssignments,
-              ),
-
-              const SizedBox(height: 10),
-
-              if (_isLoading)
-                const AppCard(
-                  child: Padding(
-                    padding:
-                        EdgeInsets.all(20),
-                    child: Center(
-                      child:
-                          CircularProgressIndicator(
-                        color:
-                            Color(0xFF123E68),
-                      ),
-                    ),
-                  ),
-                )
-              else if (_errorMessage != null)
-                AppCard(
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons
-                              .cloud_off_outlined,
-                          size: 40,
-                          color:
-                              Color(0xFF667788),
-                        ),
-
-                        const SizedBox(
-                          height: 10,
-                        ),
-
-                        Text(
-                          _errorMessage!,
-                          textAlign:
-                              TextAlign.center,
-                          style:
-                              const TextStyle(
-                            fontSize: 13,
-                            color:
-                                Color(0xFF667788),
-                          ),
-                        ),
-
-                        const SizedBox(
-                          height: 12,
-                        ),
-
-                        OutlinedButton.icon(
-                          onPressed:
-                              _loadAssignments,
-                          icon:
-                              const Icon(
-                            Icons.refresh,
-                            color:
-                                Color(0xFF123E68),
-                          ),
-                          label:
-                              const Text(
-                            'Retry',
-                            style:
-                                TextStyle(
-                              color:
-                                  Color(
-                                0xFF123E68,
-                              ),
-                            ),
-                          ),
-                          style:
-                              OutlinedButton
-                                  .styleFrom(
-                            side:
-                                const BorderSide(
-                              color:
-                                  Color(
-                                0xFFB8CBD8,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (_todaysAssignments
-                  .isEmpty)
-                const EmptyState(
-                  icon:
-                      Icons.assignment_outlined,
-                  title:
-                      'No assignments today',
-                  message:
-                      'New assignments will appear here once scheduled.',
-                )
-              else
-                Column(
-                  children:
-                      _todaysAssignments
-                          .map(
-                    (assignment) =>
-                        Padding(
-                      padding:
-                          const EdgeInsets.only(
-                        bottom: 10,
-                      ),
-                      child:
-                          AssignmentCard(
-                        assignment:
-                            assignment,
-                      ),
-                    ),
-                  )
-                          .toList(),
+                  onNotificationTap:
+                      _openNotifications,
                 ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-              AppCard(
-                child: Row(
+                PrimaryButton(
+                  label:
+                      'Start Assigned Inspection',
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRoutes
+                          .inspectionWorkflowPlaceholder,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                const SizedBox(
+                  width: double.infinity,
+                  child: RandomVideoCallButton(),
+                ),
+
+                if (_unreadNotifications
+                    .isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _NotificationBanner(
+                    notification:
+                        _unreadNotifications.first,
+                    count:
+                        _unreadNotificationCount,
+                    onTap: _openNotifications,
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+
+                Row(
                   children: [
-                    const Icon(
-                      Icons.map_outlined,
-                      size: 24,
-                      color:
-                          Color(0xFF123E68),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    const Expanded(
-                      child: Text(
-                        'Nearby assignments on map',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight:
-                              FontWeight.w600,
-                          color:
-                              Color(0xFF17324D),
+                    Expanded(
+                      child: SummaryStatCard(
+                        icon: Icons.today,
+                        label: 'Today',
+                        count: _isLoading
+                            ? '—'
+                            : '$_todayCount',
+                        onTap: () =>
+                            _openAssignments(
+                          filter: 'today',
                         ),
                       ),
                     ),
 
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(
-                          context,
-                        ).pushNamed(
-                          AppRoutes.instituteMap,
-                        );
-                      },
-                      child:
-                          const Text(
-                        'View',
-                        style:
-                            TextStyle(
-                          color:
-                              Color(0xFF123E68),
-                          fontWeight:
-                              FontWeight.w600,
+                    const SizedBox(width: 8),
+
+                    Expanded(
+                      child: SummaryStatCard(
+                        icon:
+                            Icons.pending_actions_outlined,
+                        label: 'Active',
+                        count: _isLoading
+                            ? '—'
+                            : '$_activeCount',
+                        accentColor: _Palette.info,
+                        onTap: () =>
+                            _openAssignments(
+                          status:
+                              AssignmentStatus.assigned,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    Expanded(
+                      child: SummaryStatCard(
+                        icon:
+                            Icons.check_circle_outline,
+                        label: 'Done',
+                        count: _isLoading
+                            ? '—'
+                            : '$_completedCount',
+                        accentColor:
+                            _Palette.success,
+                        onTap: () =>
+                            _openAssignments(
+                          status:
+                              AssignmentStatus.completed,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: SummaryStatCard(
+                        icon:
+                            Icons.error_outline,
+                        label: 'Expired',
+                        count: _isLoading
+                            ? '—'
+                            : '$_expiredCount',
+                        accentColor:
+                            _Palette.danger,
+                        onTap: () =>
+                            _openAssignments(
+                          status:
+                              AssignmentStatus.expired,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Expanded(
+                      child: SizedBox(),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Expanded(
+                      child: SizedBox(),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 26),
+
+                SectionHeader(
+                  title:
+                      "Today's Assignments",
+                  actionLabel: 'View all',
+                  onActionTap:
+                      _openAssignments,
+                ),
+
+                const SizedBox(height: 10),
+
+                if (_isLoading)
+                  AppCard(
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.all(20),
+                      child: Center(
+                        child:
+                            CircularProgressIndicator(
+                          color:
+                              _Palette.primaryNavy,
+                        ),
+                      ),
+                    ),
+                  )
+                else if (_errorMessage != null)
+                  AppCard(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons
+                                .cloud_off_outlined,
+                            size: 40,
+                            color:
+                                _Palette.textSecondary,
+                          ),
+
+                          const SizedBox(
+                            height: 10,
+                          ),
+
+                          Text(
+                            _errorMessage!,
+                            textAlign:
+                                TextAlign.center,
+                            style:
+                                const TextStyle(
+                              fontSize: 13,
+                              color:
+                                  _Palette.textSecondary,
+                            ),
+                          ),
+
+                          const SizedBox(
+                            height: 12,
+                          ),
+
+                          OutlinedButton.icon(
+                            onPressed:
+                                _loadAssignments,
+                            icon:
+                                const Icon(
+                              Icons.refresh,
+                              color:
+                                  _Palette.primaryNavy,
+                            ),
+                            label:
+                                const Text(
+                              'Retry',
+                              style:
+                                  TextStyle(
+                                color:
+                                    _Palette.primaryNavy,
+                              ),
+                            ),
+                            style:
+                                OutlinedButton
+                                    .styleFrom(
+                              side:
+                                  const BorderSide(
+                                color:
+                                    _Palette.border,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_todaysAssignments
+                    .isEmpty)
+                  const EmptyState(
+                    icon:
+                        Icons.assignment_outlined,
+                    title:
+                        'No assignments today',
+                    message:
+                        'New assignments will appear here once scheduled.',
+                  )
+                else
+                  Column(
+                    children:
+                        _todaysAssignments
+                            .map(
+                      (assignment) =>
+                          Padding(
+                        padding:
+                            const EdgeInsets.only(
+                          bottom: 10,
+                        ),
+                        child:
+                            AssignmentCard(
+                          assignment:
+                              assignment,
+                        ),
+                      ),
+                    )
+                            .toList(),
+                  ),
+
+                const SizedBox(height: 16),
+
+                // "Nearby assignments on map" — highlighted card using the
+                // subtle SIH light-blue gradient.
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: _Palette.lightBlueGradient,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _Palette.border,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.map_outlined,
+                        size: 24,
+                        color:
+                            _Palette.primaryNavy,
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      const Expanded(
+                        child: Text(
+                          'Nearby assignments on map',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                FontWeight.w600,
+                            color:
+                                _Palette.textPrimary,
+                          ),
+                        ),
+                      ),
+
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(
+                            AppRoutes.instituteMap,
+                          );
+                        },
+                        child:
+                            const Text(
+                          'View',
+                          style:
+                              TextStyle(
+                            color:
+                                _Palette.primaryNavy,
+                            fontWeight:
+                                FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -851,7 +969,11 @@ class _InspectorNotification {
   final String title;
   final String message;
   final _NotificationIconType iconType;
-  final int colorValue;
+
+  /// One of: 'success', 'warning', 'danger', 'info'.
+  /// Drives both the foreground color and the tinted gradient background
+  /// via [_Palette.statusColors].
+  final String statusKind;
   final AssignmentStatus status;
   final DateTime createdAt;
   final DateTime? readAt;
@@ -861,7 +983,7 @@ class _InspectorNotification {
     required this.title,
     required this.message,
     required this.iconType,
-    required this.colorValue,
+    required this.statusKind,
     required this.status,
     required this.createdAt,
     this.readAt,
@@ -883,7 +1005,10 @@ class _InspectorNotification {
     }
   }
 
-  Color get color => Color(colorValue);
+  Color get color => _Palette.statusColors(statusKind).fg;
+
+  LinearGradient get backgroundGradient =>
+      _Palette.statusColors(statusKind).bg;
 
   _InspectorNotification copyWith({
     DateTime? readAt,
@@ -893,7 +1018,7 @@ class _InspectorNotification {
       title: title,
       message: message,
       iconType: iconType,
-      colorValue: colorValue,
+      statusKind: statusKind,
       status: status,
       createdAt: createdAt,
       readAt: readAt,
@@ -906,7 +1031,7 @@ class _InspectorNotification {
       'title': title,
       'message': message,
       'iconType': iconType.name,
-      'colorValue': colorValue,
+      'statusKind': statusKind,
       'status': status.name,
       'createdAt':
           createdAt.toIso8601String(),
@@ -924,6 +1049,10 @@ class _InspectorNotification {
     final iconName =
         json['iconType'] as String;
 
+    // Backward compatible: older persisted entries stored a raw
+    // `colorValue` instead of a `statusKind`. Fall back sensibly.
+    final statusKind = json['statusKind'] as String? ?? 'info';
+
     return _InspectorNotification(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -931,9 +1060,7 @@ class _InspectorNotification {
       iconType:
           _NotificationIconType.values
               .byName(iconName),
-      colorValue:
-          (json['colorValue'] as num)
-              .toInt(),
+      statusKind: statusKind,
       status:
           AssignmentStatus.values
               .byName(statusName),
@@ -977,12 +1104,12 @@ class _NotificationBanner
             vertical: 12,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _Palette.surface,
             borderRadius:
                 BorderRadius.circular(14),
             border: Border.all(
               color:
-                  const Color(0xFFD1DEE7),
+                  _Palette.border,
             ),
           ),
           child: Row(
@@ -992,8 +1119,7 @@ class _NotificationBanner
                 height: 38,
                 decoration:
                     BoxDecoration(
-                  color: notification.color
-                      .withOpacity(0.10),
+                  gradient: notification.backgroundGradient,
                   borderRadius:
                       BorderRadius.circular(
                     10,
@@ -1027,7 +1153,7 @@ class _NotificationBanner
                         fontWeight:
                             FontWeight.w700,
                         color:
-                            Color(0xFF17324D),
+                            _Palette.textPrimary,
                       ),
                     ),
 
@@ -1044,7 +1170,7 @@ class _NotificationBanner
                           const TextStyle(
                         fontSize: 11,
                         color:
-                            Color(0xFF667788),
+                            _Palette.textSecondary,
                       ),
                     ),
                   ],
@@ -1056,7 +1182,7 @@ class _NotificationBanner
               const Icon(
                 Icons.chevron_right,
                 color:
-                    Color(0xFF667788),
+                    _Palette.textSecondary,
                 size: 20,
               ),
             ],
@@ -1301,21 +1427,25 @@ class _NotificationSheetState
             horizontal: 8,
           ),
           decoration: BoxDecoration(
+            // Primary SIH gradient on the selected filter chip.
+            gradient: selected
+                ? _Palette.primaryGradient
+                : null,
             color: selected
-                ? const Color(0xFF123E68)
-                : Colors.white,
+                ? null
+                : _Palette.surface,
             borderRadius:
                 BorderRadius.circular(16),
             border: Border.all(
               color: selected
-                  ? const Color(0xFF123E68)
-                  : const Color(0xFFD2DEE7),
+                  ? _Palette.primaryNavy
+                  : _Palette.border,
             ),
             boxShadow: selected
                 ? const [
                     BoxShadow(
                       color:
-                          Color(0x22123E68),
+                          Color(0x22174A7E),
                       blurRadius: 10,
                       offset:
                           Offset(0, 4),
@@ -1332,9 +1462,7 @@ class _NotificationSheetState
                 size: 20,
                 color: selected
                     ? Colors.white
-                    : const Color(
-                        0xFF5F7587,
-                      ),
+                    : _Palette.textSecondary,
               ),
 
               const SizedBox(width: 7),
@@ -1351,9 +1479,7 @@ class _NotificationSheetState
                         FontWeight.w700,
                     color: selected
                         ? Colors.white
-                        : const Color(
-                            0xFF36536A,
-                          ),
+                        : _Palette.textPrimary,
                   ),
                 ),
               ),
@@ -1378,9 +1504,7 @@ class _NotificationSheetState
                             .withOpacity(
                             0.18,
                           )
-                        : const Color(
-                            0xFFEAF1F6,
-                          ),
+                        : _Palette.lightBlue,
                     borderRadius:
                         BorderRadius.circular(
                       10,
@@ -1398,9 +1522,7 @@ class _NotificationSheetState
                           FontWeight.w800,
                       color: selected
                           ? Colors.white
-                          : const Color(
-                              0xFF36536A,
-                            ),
+                          : _Palette.textPrimary,
                     ),
                   ),
                 ),
@@ -1441,20 +1563,21 @@ class _NotificationSheetState
           ),
           decoration:
               BoxDecoration(
+            // Unread cards get the tinted SIH gradient; read cards stay
+            // plain white surface.
+            gradient: isRead
+                ? null
+                : notification.backgroundGradient,
             color: isRead
-                ? Colors.white
-                : const Color(
-                    0xFFF7FAFC,
-                  ),
+                ? _Palette.surface
+                : null,
             borderRadius:
                 BorderRadius.circular(
               17,
             ),
             border: Border.all(
               color: isRead
-                  ? const Color(
-                      0xFFDCE6ED,
-                    )
+                  ? _Palette.border
                   : accent.withOpacity(
                       0.25,
                     ),
@@ -1462,7 +1585,7 @@ class _NotificationSheetState
             boxShadow: const [
               BoxShadow(
                 color:
-                    Color(0x0D17324D),
+                    Color(0x0D202124),
                 blurRadius: 8,
                 offset:
                     Offset(0, 3),
@@ -1478,10 +1601,7 @@ class _NotificationSheetState
                 height: 48,
                 decoration:
                     BoxDecoration(
-                  color: accent
-                      .withOpacity(
-                    0.10,
-                  ),
+                  color: _Palette.surface,
                   borderRadius:
                       BorderRadius.circular(
                     14,
@@ -1524,9 +1644,7 @@ class _NotificationSheetState
                                       : FontWeight
                                           .w800,
                               color:
-                                  const Color(
-                                0xFF17324D,
-                              ),
+                                  _Palette.textPrimary,
                             ),
                           ),
                         ),
@@ -1547,9 +1665,7 @@ class _NotificationSheetState
                             decoration:
                                 const BoxDecoration(
                               color:
-                                  Color(
-                                0xFFD64545,
-                              ),
+                                  _Palette.danger,
                               shape:
                                   BoxShape
                                       .circle,
@@ -1571,7 +1687,7 @@ class _NotificationSheetState
                         fontSize: 11,
                         height: 1.35,
                         color:
-                            Color(0xFF667788),
+                            _Palette.textSecondary,
                       ),
                     ),
 
@@ -1584,9 +1700,7 @@ class _NotificationSheetState
                               .schedule_outlined,
                           size: 14,
                           color: isRead
-                              ? const Color(
-                                  0xFF8293A1,
-                                )
+                              ? _Palette.textSecondary
                               : accent,
                         ),
 
@@ -1606,9 +1720,7 @@ class _NotificationSheetState
                                 FontWeight
                                     .w600,
                             color: isRead
-                                ? const Color(
-                                    0xFF8293A1,
-                                  )
+                                ? _Palette.textSecondary
                                 : accent,
                           ),
                         ),
@@ -1626,9 +1738,7 @@ class _NotificationSheetState
                                 FontWeight
                                     .w700,
                             color: isRead
-                                ? const Color(
-                                    0xFF8293A1,
-                                  )
+                                ? _Palette.textSecondary
                                 : accent,
                           ),
                         ),
@@ -1642,9 +1752,7 @@ class _NotificationSheetState
                               .chevron_right,
                           size: 19,
                           color:
-                              Color(
-                            0xFF8293A1,
-                          ),
+                              _Palette.textSecondary,
                         ),
                       ],
                     ),
@@ -1693,13 +1801,12 @@ class _NotificationSheetState
         38,
       ),
       decoration: BoxDecoration(
-        color:
-            const Color(0xFFF5F8FA),
+        gradient: _Palette.lightBlueGradient,
         borderRadius:
             BorderRadius.circular(18),
         border: Border.all(
           color:
-              const Color(0xFFDCE6ED),
+              _Palette.border,
         ),
       ),
       child: Column(
@@ -1710,7 +1817,7 @@ class _NotificationSheetState
             decoration:
                 const BoxDecoration(
               color:
-                  Color(0xFFE5EEF5),
+                  _Palette.lightBlue,
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -1718,7 +1825,7 @@ class _NotificationSheetState
                   .notifications_none_rounded,
               size: 40,
               color:
-                  Color(0xFF7890A2),
+                  _Palette.textSecondary,
             ),
           ),
 
@@ -1734,7 +1841,7 @@ class _NotificationSheetState
               fontWeight:
                   FontWeight.w800,
               color:
-                  Color(0xFF17324D),
+                  _Palette.textPrimary,
             ),
           ),
 
@@ -1749,7 +1856,7 @@ class _NotificationSheetState
               fontSize: 11,
               height: 1.4,
               color:
-                  Color(0xFF667788),
+                  _Palette.textSecondary,
             ),
           ),
         ],
@@ -1771,7 +1878,7 @@ class _NotificationSheetState
         decoration:
             const BoxDecoration(
           color:
-              Color(0xFFF8FBFD),
+              _Palette.appBackground,
           borderRadius:
               BorderRadius.vertical(
             top: Radius.circular(28),
@@ -1795,9 +1902,7 @@ class _NotificationSheetState
                 decoration:
                     BoxDecoration(
                   color:
-                      const Color(
-                    0xFFC5D3DE,
-                  ),
+                      _Palette.border,
                   borderRadius:
                       BorderRadius.circular(
                     10,
@@ -1813,13 +1918,9 @@ class _NotificationSheetState
                     width: 44,
                     height: 44,
                     decoration:
-                        BoxDecoration(
-                      color:
-                          const Color(
-                        0xFF123E68,
-                      ).withOpacity(
-                        0.09,
-                      ),
+                        const BoxDecoration(
+                      // Primary SIH gradient for the sheet's icon avatar.
+                      gradient: _Palette.primaryGradient,
                       shape:
                           BoxShape.circle,
                     ),
@@ -1827,7 +1928,7 @@ class _NotificationSheetState
                       Icons
                           .notifications_none_rounded,
                       color:
-                          Color(0xFF123E68),
+                          Colors.white,
                       size: 24,
                     ),
                   ),
@@ -1851,9 +1952,7 @@ class _NotificationSheetState
                                 FontWeight
                                     .w800,
                             color:
-                                Color(
-                              0xFF17324D,
-                            ),
+                                _Palette.textPrimary,
                           ),
                         ),
 
@@ -1865,9 +1964,7 @@ class _NotificationSheetState
                               TextStyle(
                             fontSize: 10.5,
                             color:
-                                Color(
-                              0xFF718697,
-                            ),
+                                _Palette.textSecondary,
                           ),
                         ),
                       ],
@@ -1881,9 +1978,7 @@ class _NotificationSheetState
                       style:
                           TextButton.styleFrom(
                         foregroundColor:
-                            const Color(
-                          0xFF123E68,
-                        ),
+                            _Palette.primaryNavy,
                         padding:
                             const EdgeInsets
                                 .symmetric(
@@ -1971,9 +2066,7 @@ class _NotificationSheetState
                             FontWeight
                                 .w800,
                         color:
-                            Color(
-                          0xFF17324D,
-                        ),
+                            _Palette.textPrimary,
                       ),
                     ),
 
@@ -1987,9 +2080,7 @@ class _NotificationSheetState
                           const TextStyle(
                         fontSize: 10.5,
                         color:
-                            Color(
-                          0xFF718697,
-                        ),
+                            _Palette.textSecondary,
                       ),
                     ),
                   ],
@@ -2061,12 +2152,12 @@ class _InspectorHeader
           width: 48,
           height: 48,
           decoration:
-              BoxDecoration(
-            color:
-                const Color(0xFF123E68),
+              const BoxDecoration(
+            // Primary SIH gradient for the avatar badge.
+            gradient: _Palette.primaryGradient,
             borderRadius:
-                BorderRadius.circular(
-              14,
+                BorderRadius.all(
+              Radius.circular(14),
             ),
           ),
           child: const Icon(
@@ -2089,7 +2180,7 @@ class _InspectorHeader
                     TextStyle(
                   fontSize: 13,
                   color:
-                      Color(0xFF667788),
+                      _Palette.textSecondary,
                   fontWeight:
                       FontWeight.w500,
                 ),
@@ -2105,7 +2196,7 @@ class _InspectorHeader
                   fontWeight:
                       FontWeight.w700,
                   color:
-                      Color(0xFF17324D),
+                      _Palette.textPrimary,
                 ),
                 overflow:
                     TextOverflow.ellipsis,
@@ -2118,7 +2209,7 @@ class _InspectorHeader
           icon: const Icon(
             Icons.map_outlined,
             color:
-                Color(0xFF17324D),
+                _Palette.textPrimary,
           ),
           tooltip:
               'Institute Map',
@@ -2133,7 +2224,7 @@ class _InspectorHeader
           icon: const Icon(
             Icons.history,
             color:
-                Color(0xFF17324D),
+                _Palette.textPrimary,
           ),
           tooltip:
               'Call History',
@@ -2156,7 +2247,7 @@ class _InspectorHeader
                 Icons
                     .notifications_none,
                 color:
-                    Color(0xFF17324D),
+                    _Palette.textPrimary,
               ),
               tooltip:
                   'Notifications',
@@ -2182,18 +2273,14 @@ class _InspectorHeader
                   decoration:
                       BoxDecoration(
                     color:
-                        const Color(
-                      0xFFD64545,
-                    ),
+                        _Palette.danger,
                     borderRadius:
                         BorderRadius.circular(
                       10,
                     ),
                     border: Border.all(
                       color:
-                          const Color(
-                        0xFFEAF1F6,
-                      ),
+                          _Palette.appBackground,
                       width: 1.5,
                     ),
                   ),

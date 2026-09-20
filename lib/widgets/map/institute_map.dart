@@ -60,6 +60,11 @@ class InstituteMap extends StatefulWidget {
   final double? inspectorLongitude;
   final double radiusKm;
 
+  /// When provided, only institutes whose `profileId` is in this set are
+  /// ever shown — used by the District Admin's map to restrict results to
+  /// their own district without touching the generic (all-India) mode.
+  final Set<String>? allowedProfileIds;
+
   const InstituteMap({
     super.key,
     this.showSchemes = true,
@@ -67,6 +72,7 @@ class InstituteMap extends StatefulWidget {
     this.inspectorLatitude,
     this.inspectorLongitude,
     this.radiusKm = 100,
+    this.allowedProfileIds,
   });
 
   bool get _hasInspectorLocation => inspectorLatitude != null && inspectorLongitude != null;
@@ -174,10 +180,20 @@ class _InstituteMapState extends State<InstituteMap> {
   }
 
   List<InstituteMapPoint> get _visibleInstitutes {
-    if (!widget._hasInspectorLocation || !_restrictToRadius) return _allInstitutes;
+    Iterable<InstituteMapPoint> result = _allInstitutes;
+
+    if (widget.allowedProfileIds != null) {
+      final allowed = widget.allowedProfileIds!;
+      result = result.where((i) => allowed.contains(i.profileId));
+    }
+
+    if (!widget._hasInspectorLocation || !_restrictToRadius) {
+      return result.toList();
+    }
+
     final lat = widget.inspectorLatitude!;
     final lng = widget.inspectorLongitude!;
-    return _allInstitutes
+    return result
         .where((i) => GeoUtils.distanceKm(lat, lng, i.latitude, i.longitude) <= widget.radiusKm)
         .toList();
   }

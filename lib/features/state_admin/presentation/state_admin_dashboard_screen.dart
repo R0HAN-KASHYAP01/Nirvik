@@ -1,13 +1,28 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/routes.dart';
-import '../../../app/theme.dart';
+import '../../../core/widgets/quick_action_card.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/status_badge.dart';
+import '../../../core/widgets/summary_stat_card.dart';
+import '../../../features/calls/presentation/call_history_screen.dart';
+import '../../../features/calls/presentation/video_call_screen.dart';
+import '../../../features/calls/presentation/widgets/incoming_call_listener.dart';
+import '../../../features/projects/data/projects_repository.dart';
+import '../../../features/projects/presentation/project_list_screen.dart';
+import '../../../models/project.dart';
 import '../../../models/user.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/session_service.dart';
+import '../../../services/video_call_service.dart';
+import '../../../utils/call_permission.dart';
+import '../../../utils/india_locations.dart';
+import 'state_district_selection_screen.dart';
 
 class StateAdminDashboardScreen extends StatefulWidget {
   const StateAdminDashboardScreen({super.key});
@@ -24,18 +39,10 @@ class _StateAdminDashboardScreenState
   // ============================================================
 
   static const Color _background = Color(0xFFEAF2F8);
-  static const Color _card = Color(0xFFF8FBFD);
-  static const Color _navy = Color(0xFF123E68);
   static const Color _primaryBlue = Color(0xFF14568A);
-  static const Color _softBlue = Color(0xFFD7E5EE);
-  static const Color _border = Color(0xFFBFD2E0);
-  static const Color _textDark = Color(0xFF17324D);
   static const Color _textGrey = Color(0xFF667788);
 
-  static const Color _green = Color(0xFF20A77A);
   static const Color _red = Color(0xFFE63E4D);
-  static const Color _orange = Color(0xFFFF9D2E);
-  static const Color _purple = Color(0xFF7256C7);
 
   // ============================================================
   // NOTIFICATION STORAGE
@@ -48,7 +55,29 @@ class _StateAdminDashboardScreenState
 
   final Set<String> _readNotificationIds = <String>{};
 
-  bool _notificationsLoaded = false;
+  // ============================================================
+  // STATE MONITORING DATA (real ProjectsRepository — reused,
+  // not duplicated)
+  // ============================================================
+
+  final ProjectsRepository _projectsRepository = ProjectsRepository();
+  late Future<List<Project>> _projectsFuture;
+
+  // Districts come from the existing India-locations dataset for the
+  // admin's assigned state, used to find the right district admin to
+  // call for a given district.
+  String _selectedCallDistrict = 'All Districts';
+
+  bool _startingCall = false;
+
+  List<String> _districtsForCurrentUser() {
+    // resolveStateName tolerates a state admin's profile having a
+    // district name stored where the state name should be (a
+    // registration-time data error) by resolving it to its real state,
+    // instead of returning an empty district list for a typo'd value.
+    final state = resolveStateName(SessionService.instance.currentUser?.state);
+    return districtsForState(state);
+  }
 
   // ============================================================
   // INIT
@@ -58,6 +87,14 @@ class _StateAdminDashboardScreenState
   void initState() {
     super.initState();
     _initializeNotifications();
+    _projectsFuture = _projectsRepository.getProjects();
+  }
+
+  Future<void> _refreshProjects() async {
+    setState(() {
+      _projectsFuture = _projectsRepository.getProjects();
+    });
+    await _projectsFuture;
   }
 
   Future<void> _initializeNotifications() async {
@@ -98,9 +135,7 @@ class _StateAdminDashboardScreenState
     }
 
     if (mounted) {
-      setState(() {
-        _notificationsLoaded = true;
-      });
+      setState(() {});
     }
   }
 
@@ -256,60 +291,194 @@ class _StateAdminDashboardScreenState
   }
 
   // ============================================================
-  // QUICK ACTIONS VIEW ALL
+  // PROJECTS / RISK NAVIGATION (reuses existing ProjectListScreen)
   // ============================================================
 
-  void _openAllQuickActions() {
+  void _openAllProjects() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProjectListScreen()),
+    );
+  }
+
+  void _openHighRiskProjects() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const StateAdminQuickActionsScreen(),
+        builder: (_) => const ProjectListScreen(
+          initialHighRiskFilter: true,
+        ),
       ),
     );
   }
 
   // ============================================================
-  // STATE MONITORING
+  // MAP (reuses existing InstituteMapScreen)
   // ============================================================
 
-  void _openDistrictOverview() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const StateDistrictOverviewScreen(),
-      ),
-    );
+  void _openMap() {
+    Navigator.of(context).pushNamed(AppRoutes.instituteMap);
   }
 
-  void _openProjectMonitoring() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const StateProjectMonitoringScreen(),
-      ),
-    );
-  }
+  // ============================================================
+  // REPORTS (District Performance — moved here from the dashboard
+  // home; same district source and same _DistrictPerformanceList
+  // widget, just relocated)
+  // ============================================================
 
-  void _openInspectionMonitoring() {
+  void _openReports() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const StateInspectionMonitoringScreen(),
+        builder: (_) => StateAdminReportsScreen(
+          districts: _districtsForCurrentUser(),
+        ),
       ),
     );
   }
 
   // ============================================================
-  // LOGOUT
+  // SCHEMES (district -> category -> scheme -> institutes; district is
+  // picked first so everything after it is already scoped — see
+  // StateDistrictSelectionScreen)
   // ============================================================
 
-  Future<void> _logout() async {
-    await AuthService.instance.logout();
+  void _openSchemes() {
+    final state = resolveStateName(SessionService.instance.currentUser?.state) ??
+        (SessionService.instance.currentUser?.state?.trim().isNotEmpty == true
+            ? SessionService.instance.currentUser!.state!.trim()
+            : '');
 
-    SessionService.instance.clear();
+    if (state.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your profile has no state set, so schemes cannot be shown.',
+          ),
+        ),
+      );
+      return;
+    }
 
-    if (!mounted) return;
-
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.login,
-      (route) => false,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StateDistrictSelectionScreen(
+          adminState: state,
+          districts: _districtsForCurrentUser(),
+        ),
+      ),
     );
+  }
+
+  // ============================================================
+  // VIDEO CALL (reuses existing VideoCallService / CallPermission /
+  // VideoCallScreen — no new call architecture)
+  // ============================================================
+
+  void _openCallHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+    );
+  }
+
+  /// Looks up the district admin's profile id + name for a district.
+  ///
+  /// `district_administrators` (district, state, profile_id) and
+  /// `profiles` (full_name) are the same two tables AuthService already
+  /// reads when loading a district admin's own session — this mirrors
+  /// that exact pattern for a lookup instead of a self-read.
+  Future<Map<String, String>?> _lookupDistrictAdmin(
+    String district,
+    String state,
+  ) async {
+    final client = Supabase.instance.client;
+
+    final row = await client
+        .from('district_administrators')
+        .select('profile_id')
+        .eq('district', district)
+        .eq('state', state)
+        .maybeSingle();
+
+    final profileId = row?['profile_id']?.toString();
+    if (profileId == null) return null;
+
+    final profile = await client
+        .from('profiles')
+        .select('full_name')
+        .eq('id', profileId)
+        .maybeSingle();
+
+    final name = profile?['full_name']?.toString() ?? 'District Admin';
+
+    return {'profileId': profileId, 'name': name};
+  }
+
+  Future<void> _callDistrictAdmin(String profileId, String name) async {
+    if (_startingCall) return;
+
+    final me = SessionService.instance.currentUser;
+    if (me == null) return;
+
+    final callType = CallPermission.callTypeFor(
+      from: me.role,
+      to: UserRole.districtAdmin,
+    );
+
+    if (callType == null) {
+      _showComingSoon('Calling this role');
+      return;
+    }
+
+    setState(() => _startingCall = true);
+
+    try {
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
+
+      if (!statuses.values.every((s) => s.isGranted)) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Camera and microphone permissions are required to '
+              'make a call.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final call = await VideoCallService.instance.startCall(
+        calleeId: profileId,
+        callType: callType,
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VideoCallScreen(
+            callId: call.id,
+            channelId: call.channelId,
+            currentUserId: me.id,
+            currentUserName: me.name,
+            isCaller: true,
+            onCallEnded: () {
+              VideoCallService.instance.end(call.id);
+            },
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not start the call. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _startingCall = false);
+    }
   }
 
   // ============================================================
@@ -319,6 +488,14 @@ class _StateAdminDashboardScreenState
   String _locationLabel(AppUser? user) {
     if (user == null) {
       return 'State Level';
+    }
+
+    // Prefer the resolved canonical state name (handles a district name
+    // mistakenly stored in `state`); fall back to the raw value rather
+    // than hiding it if it doesn't match anything in the dataset.
+    final resolved = resolveStateName(user.state);
+    if (resolved != null) {
+      return resolved;
     }
 
     final state = user.state?.trim();
@@ -344,7 +521,8 @@ class _StateAdminDashboardScreenState
 
     final location = _locationLabel(user);
 
-    return Scaffold(
+    return IncomingCallListener(
+      child: Scaffold(
       backgroundColor: _background,
 
       body: SafeArea(
@@ -354,7 +532,12 @@ class _StateAdminDashboardScreenState
               child: RefreshIndicator(
                 color: _primaryBlue,
                 backgroundColor: Colors.white,
-                onRefresh: _initializeNotifications,
+                onRefresh: () async {
+                  await Future.wait([
+                    _initializeNotifications(),
+                    _refreshProjects(),
+                  ]);
+                },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(
@@ -373,7 +556,6 @@ class _StateAdminDashboardScreenState
                       location: location,
                       unreadCount: _unreadCount,
                       onNotificationTap: _openNotifications,
-                      onProfileTap: _openProfile,
                     ),
 
                     const SizedBox(height: 12),
@@ -400,24 +582,6 @@ class _StateAdminDashboardScreenState
                     const SizedBox(height: 16),
 
                     // ==================================================
-                    // QUICK ACTIONS
-                    // ==================================================
-
-                    _SectionHeader(
-                      title: 'Quick Actions',
-                      actionLabel: 'View All',
-                      onActionTap: _openAllQuickActions,
-                    ),
-
-                    const SizedBox(height: 9),
-
-                    _QuickActionsGrid(
-                      onViewAll: _openAllQuickActions,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ==================================================
                     // ASSIGNED STATE
                     // ==================================================
 
@@ -428,20 +592,182 @@ class _StateAdminDashboardScreenState
                     const SizedBox(height: 16),
 
                     // ==================================================
-                    // STATE MONITORING
+                    // STATE OVERVIEW — Total Districts / Total Projects
+                    // (SummaryStatCard reused; districts come from the
+                    // existing India-locations dataset, projects from
+                    // the existing ProjectsRepository)
                     // ==================================================
 
-                    _SectionHeader(
-                      title: 'State Monitoring',
+                    const SectionHeader(title: 'State Overview'),
+
+                    const SizedBox(height: 9),
+
+                    FutureBuilder<List<Project>>(
+                      future: _projectsFuture,
+                      builder: (context, snapshot) {
+                        final projects = snapshot.data;
+                        final totalProjects = projects?.length.toString() ??
+                            (snapshot.connectionState ==
+                                    ConnectionState.waiting
+                                ? '…'
+                                : '—');
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: SummaryStatCard(
+                                icon: Icons.map_outlined,
+                                label: 'Total\nDistricts',
+                                count: _districtsForCurrentUser()
+                                    .length
+                                    .toString(),
+                                subtitle: location,
+                                accentColor: _primaryBlue,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SummaryStatCard(
+                                icon: Icons.domain_outlined,
+                                label: 'Total\nProjects',
+                                count: totalProjects,
+                                subtitle: 'All districts',
+                                accentColor: _primaryBlue,
+                                onTap: _openAllProjects,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ==================================================
+                    // HIGH-RISK PROJECTS (reuses Project.riskLevel +
+                    // ProjectListScreen's existing high-risk filter —
+                    // same source AnalyticsScreen already relies on)
+                    // ==================================================
+
+                    const SectionHeader(title: 'High-Risk Projects'),
+
+                    const SizedBox(height: 9),
+
+                    FutureBuilder<List<Project>>(
+                      future: _projectsFuture,
+                      builder: (context, snapshot) {
+                        final projects = snapshot.data;
+                        final highRiskCount = projects
+                            ?.where((p) => p.riskLevel == RiskLevel.high)
+                            .length
+                            .toString();
+
+                        return SummaryStatCard(
+                          icon: Icons.warning_amber_outlined,
+                          label: 'High-Risk Projects',
+                          count: highRiskCount ??
+                              (snapshot.connectionState ==
+                                      ConnectionState.waiting
+                                  ? '…'
+                                  : '—'),
+                          subtitle: 'Tap to view flagged projects',
+                          accentColor: _red,
+                          onTap: _openHighRiskProjects,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ==================================================
+                    // MAP FEATURES (reuses existing InstituteMapScreen)
+                    // ==================================================
+
+                    const SectionHeader(title: 'Map & Video Call'),
+
+                    const SizedBox(height: 9),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: QuickActionCard(
+                            icon: Icons.map_outlined,
+                            label: 'Map Features',
+                            onTap: _openMap,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: QuickActionCard(
+                            icon: Icons.call_outlined,
+                            label: 'Call History',
+                            onTap: _openCallHistory,
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 8),
 
-                    _StateMonitoringCard(
-                      onDistrictTap: _openDistrictOverview,
-                      onProjectTap: _openProjectMonitoring,
-                      onInspectionTap: _openInspectionMonitoring,
+                    _DistrictFilterDropdown(
+                      label: 'Video call district filter',
+                      districts: _districtsForCurrentUser(),
+                      value: _selectedCallDistrict,
+                      onChanged: (value) {
+                        setState(() => _selectedCallDistrict = value);
+                      },
                     ),
+
+                    const SizedBox(height: 8),
+
+                    if (_selectedCallDistrict == 'All Districts')
+                      const Text(
+                        'Select a district above to find its district '
+                        'admin and start a call.',
+                        style: TextStyle(fontSize: 11, color: _textGrey),
+                      )
+                    else
+                      FutureBuilder<Map<String, String>?>(
+                        future: _lookupDistrictAdmin(
+                          _selectedCallDistrict,
+                          location,
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: LinearProgressIndicator(),
+                            );
+                          }
+
+                          final target = snapshot.data;
+                          if (target == null) {
+                            return Text(
+                              'No district admin found for '
+                              '$_selectedCallDistrict.',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: _textGrey,
+                              ),
+                            );
+                          }
+
+                          return QuickActionCard(
+                            icon: Icons.video_call_outlined,
+                            label: _startingCall
+                                ? 'Calling…'
+                                : 'Call ${target['name']}',
+                            onTap: _startingCall
+                                ? () {}
+                                : () => _callDistrictAdmin(
+                                      target['profileId']!,
+                                      target['name']!,
+                                    ),
+                          );
+                        },
+                      ),
 
                     const SizedBox(height: 14),
                   ],
@@ -456,18 +782,13 @@ class _StateAdminDashboardScreenState
             _StateAdminBottomNavigation(
               selectedIndex: 0,
               onHome: () {},
-              onReports: () {
-                _showComingSoon('Reports');
-              },
-              onSchemes: () {
-                _showComingSoon('Schemes');
-              },
-              onAlerts: _openNotifications,
+              onReports: _openReports,
+              onSchemes: _openSchemes,
               onProfile: _openProfile,
-              unreadCount: _unreadCount,
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -497,14 +818,12 @@ class _StateAdminHeader extends StatelessWidget {
   final String location;
   final int unreadCount;
   final VoidCallback onNotificationTap;
-  final VoidCallback onProfileTap;
 
   const _StateAdminHeader({
     required this.userName,
     required this.location,
     required this.unreadCount,
     required this.onNotificationTap,
-    required this.onProfileTap,
   });
 
   static const Color navy = Color(0xFF123E68);
@@ -640,26 +959,6 @@ class _StateAdminHeader extends StatelessWidget {
                 ),
             ],
           ),
-
-          GestureDetector(
-            onTap: onProfileTap,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.18),
-                ),
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -784,9 +1083,8 @@ class _ProfileSummaryCard extends StatelessWidget {
         ? user!.email
         : '—';
 
-    final state = user?.state?.isNotEmpty == true
-        ? user!.state!
-        : 'State level';
+    final state = resolveStateName(user?.state) ??
+        (user?.state?.isNotEmpty == true ? user!.state! : 'State level');
 
     return InkWell(
       onTap: onTap,
@@ -939,259 +1237,6 @@ class _ProfileSummaryCard extends StatelessWidget {
 }
 
 // ============================================================================
-// SECTION HEADER
-// ============================================================================
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onActionTap;
-
-  const _SectionHeader({
-    required this.title,
-    this.actionLabel,
-    this.onActionTap,
-  });
-
-  static const Color navy = Color(0xFF123E68);
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: navy,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        if (actionLabel != null)
-          InkWell(
-            onTap: onActionTap,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 3,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    actionLabel!,
-                    style: const TextStyle(
-                      color: Color(0xFF14568A),
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Color(0xFF14568A),
-                    size: 15,
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-// ============================================================================
-// QUICK ACTIONS GRID
-// ============================================================================
-
-class _QuickActionsGrid extends StatelessWidget {
-  final VoidCallback onViewAll;
-
-  const _QuickActionsGrid({
-    required this.onViewAll,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const spacing = 8.0;
-
-        final width = constraints.maxWidth;
-
-        final columns = width >= 600 ? 4 : 2;
-
-        final itemWidth =
-            (width - spacing * (columns - 1)) / columns;
-
-        final actions = [
-          _QuickActionData(
-            title: 'User Management',
-            subtitle: 'Manage state-level users',
-            icon: Icons.groups_rounded,
-            color: const Color(0xFF2876D5),
-            background: const Color(0xFFE7F0FF),
-          ),
-          _QuickActionData(
-            title: 'Reports & Analytics',
-            subtitle: 'View state reports and insights',
-            icon: Icons.description_outlined,
-            color: const Color(0xFF16895D),
-            background: const Color(0xFFE5F6EF),
-          ),
-          _QuickActionData(
-            title: 'State Overview',
-            subtitle: 'Check schemes across districts',
-            icon: Icons.location_on_rounded,
-            color: const Color(0xFF7358D0),
-            background: const Color(0xFFF0EBFF),
-          ),
-          _QuickActionData(
-            title: 'Settings',
-            subtitle: 'State & application settings',
-            icon: Icons.settings_rounded,
-            color: const Color(0xFFC77616),
-            background: const Color(0xFFFFF0E1),
-          ),
-        ];
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final action in actions)
-              SizedBox(
-                width: itemWidth,
-                child: _QuickActionTile(
-                  data: action,
-                  onTap: onViewAll,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _QuickActionData {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final Color background;
-
-  const _QuickActionData({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.background,
-  });
-}
-
-class _QuickActionTile extends StatelessWidget {
-  final _QuickActionData data;
-  final VoidCallback onTap;
-
-  const _QuickActionTile({
-    required this.data,
-    required this.onTap,
-  });
-
-  static const Color navy = Color(0xFF123E68);
-  static const Color border = Color(0xFFBFD2E0);
-  static const Color textGrey = Color(0xFF667788);
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(13),
-      child: Container(
-        height: 126,
-        padding: const EdgeInsets.fromLTRB(
-          10,
-          10,
-          9,
-          9,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 31,
-                  height: 31,
-                  decoration: BoxDecoration(
-                    color: data.background,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    data.icon,
-                    color: data.color,
-                    size: 17,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: data.background,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: data.color,
-                    size: 14,
-                  ),
-                ),
-              ],
-            ),
-
-            const Spacer(),
-
-            Text(
-              data.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: navy,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              data.subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: textGrey,
-                fontSize: 7.5,
-                height: 1.25,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
 // ASSIGNED STATE
 // ============================================================================
 
@@ -1261,52 +1306,83 @@ class _AssignedStateCard extends StatelessWidget {
 }
 
 // ============================================================================
-// STATE MONITORING
+// DISTRICT FILTER DROPDOWN
+//
+// Shared by the Total Projects and Video Call sections. Districts come
+// from the existing India-locations dataset (utils/india_locations.dart)
+// for the admin's assigned state — the same source used for "Total
+// Districts" — so this never duplicates or invents a district list.
 // ============================================================================
 
-class _StateMonitoringCard extends StatelessWidget {
-  final VoidCallback onDistrictTap;
-  final VoidCallback onProjectTap;
-  final VoidCallback onInspectionTap;
+class _DistrictFilterDropdown extends StatelessWidget {
+  final String label;
+  final List<String> districts;
+  final String value;
+  final ValueChanged<String> onChanged;
 
-  const _StateMonitoringCard({
-    required this.onDistrictTap,
-    required this.onProjectTap,
-    required this.onInspectionTap,
+  const _DistrictFilterDropdown({
+    required this.label,
+    required this.districts,
+    required this.value,
+    required this.onChanged,
   });
 
-  static const Color border = Color(0xFFBFD2E0);
+  static const Color _border = Color(0xFFBFD2E0);
+  static const Color _textGrey = Color(0xFF667788);
+  static const Color _navy = Color(0xFF123E68);
 
   @override
   Widget build(BuildContext context) {
+    final options = ['All Districts', ...districts];
+
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
       ),
-      child: Column(
+      child: Row(
         children: [
-          _MonitoringRow(
-            icon: Icons.apartment_rounded,
-            title: 'District Overview',
-            subtitle: 'State-wise district monitoring',
-            onTap: onDistrictTap,
+          const Icon(
+            Icons.filter_alt_outlined,
+            color: _navy,
+            size: 18,
           ),
-          const SizedBox(height: 7),
-          _MonitoringRow(
-            icon: Icons.domain_rounded,
-            title: 'Project Monitoring',
-            subtitle: 'Projects across districts',
-            onTap: onProjectTap,
-          ),
-          const SizedBox(height: 7),
-          _MonitoringRow(
-            icon: Icons.fact_check_outlined,
-            title: 'Inspection Monitoring',
-            subtitle: 'Inspection compliance',
-            onTap: onInspectionTap,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 9.5, color: _textGrey),
+                ),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: value,
+                    isDense: true,
+                    isExpanded: true,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _navy,
+                    ),
+                    items: [
+                      for (final district in options)
+                        DropdownMenuItem(
+                          value: district,
+                          child: Text(district),
+                        ),
+                    ],
+                    onChanged: (selected) {
+                      if (selected != null) onChanged(selected);
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1314,83 +1390,69 @@ class _StateMonitoringCard extends StatelessWidget {
   }
 }
 
-class _MonitoringRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+// ============================================================================
+// DISTRICT PERFORMANCE LIST
+//
+// Districts are real (India-locations dataset for the admin's state).
+// Per-district performance is honestly marked pending: no existing
+// project/inspection record carries a district field to aggregate
+// against, matching the same gap District Admin's own dashboard already
+// discloses for its locked stats.
+// ============================================================================
 
-  const _MonitoringRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+class _DistrictPerformanceList extends StatelessWidget {
+  final List<String> districts;
+
+  const _DistrictPerformanceList({required this.districts});
+
+  static const Color _border = Color(0xFFBFD2E0);
+  static const Color _navy = Color(0xFF123E68);
+  static const Color _textGrey = Color(0xFF667788);
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(11),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 9,
-          vertical: 9,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F8FB),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color: const Color(0xFFD7E3EB),
+    if (districts.isEmpty) {
+      return const Text(
+        'No districts found for the assigned state.',
+        style: TextStyle(fontSize: 11, color: _textGrey),
+      );
+    }
+
+    return Column(
+      children: [
+        for (final district in districts) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 11,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: _border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    district,
+                    style: const TextStyle(
+                      color: _navy,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const StatusBadge(
+                  label: 'Data pending',
+                  color: _textGrey,
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE1EDF6),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: const Color(0xFF14568A),
-                size: 17,
-              ),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF17324D),
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF667788),
-                      fontSize: 7.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Color(0xFF14568A),
-              size: 17,
-            ),
-          ],
-        ),
-      ),
+          if (district != districts.last) const SizedBox(height: 7),
+        ],
+      ],
     );
   }
 }
@@ -1404,18 +1466,14 @@ class _StateAdminBottomNavigation extends StatelessWidget {
   final VoidCallback onHome;
   final VoidCallback onReports;
   final VoidCallback onSchemes;
-  final VoidCallback onAlerts;
   final VoidCallback onProfile;
-  final int unreadCount;
 
   const _StateAdminBottomNavigation({
     required this.selectedIndex,
     required this.onHome,
     required this.onReports,
     required this.onSchemes,
-    required this.onAlerts,
     required this.onProfile,
-    required this.unreadCount,
   });
 
   @override
@@ -1461,20 +1519,10 @@ class _StateAdminBottomNavigation extends StatelessWidget {
           ),
           Expanded(
             child: _NavItem(
-              icon: Icons.notifications_none_outlined,
-              selectedIcon: Icons.notifications_rounded,
-              label: 'Alerts',
-              selected: selectedIndex == 3,
-              onTap: onAlerts,
-              badgeCount: unreadCount,
-            ),
-          ),
-          Expanded(
-            child: _NavItem(
               icon: Icons.person_outline_rounded,
               selectedIcon: Icons.person_rounded,
               label: 'Profile',
-              selected: selectedIndex == 4,
+              selected: selectedIndex == 3,
               onTap: onProfile,
             ),
           ),
@@ -1933,7 +1981,7 @@ class _StateAdminNotificationSheetState
                     20,
                   ),
                   itemCount: _filteredNotifications.length,
-                  separatorBuilder: (_, __) =>
+                  separatorBuilder: (_, _) =>
                       const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final notification =
@@ -2222,6 +2270,65 @@ class _NotificationTile extends StatelessWidget {
 }
 
 // ============================================================================
+// REPORTS PAGE — District Performance
+//
+// Moved here from the dashboard home. Districts still come from the same
+// source as before (StateAdminDashboardScreen._districtsForCurrentUser,
+// backed by utils/india_locations.dart), and this reuses the exact same
+// _DistrictPerformanceList widget already defined above — no new data,
+// no duplicate district/status logic.
+// ============================================================================
+
+class StateAdminReportsScreen extends StatelessWidget {
+  final List<String> districts;
+
+  const StateAdminReportsScreen({
+    super.key,
+    required this.districts,
+  });
+
+  static const Color background = Color(0xFFEAF2F8);
+  static const Color navy = Color(0xFF123E68);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: background,
+      appBar: AppBar(
+        backgroundColor: navy,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          tooltip: 'Back',
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 19,
+          ),
+        ),
+        title: const Text(
+          'Reports',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
+          children: [
+            const SectionHeader(title: 'District Performance'),
+            const SizedBox(height: 9),
+            _DistrictPerformanceList(districts: districts),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
 // PROFILE PAGE
 // ============================================================================
 
@@ -2261,9 +2368,8 @@ class StateAdminProfileScreen extends StatelessWidget {
         ? user!.email
         : '—';
 
-    final state = user?.state?.isNotEmpty == true
-        ? user!.state!
-        : 'State level';
+    final state = resolveStateName(user?.state) ??
+        (user?.state?.isNotEmpty == true ? user!.state! : 'State level');
 
     final status = user?.status.isNotEmpty == true
         ? user!.status
@@ -2505,1283 +2611,6 @@ class _ProfileDetailRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ============================================================================
-// QUICK ACTIONS FULL PAGE
-// ============================================================================
-
-class StateAdminQuickActionsScreen extends StatelessWidget {
-  const StateAdminQuickActionsScreen({
-    super.key,
-  });
-
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = [
-      _QuickActionData(
-        title: 'User Management',
-        subtitle: 'Manage state-level users',
-        icon: Icons.groups_rounded,
-        color: const Color(0xFF2876D5),
-        background: const Color(0xFFE7F0FF),
-      ),
-      _QuickActionData(
-        title: 'Reports & Analytics',
-        subtitle: 'View state reports and insights',
-        icon: Icons.description_outlined,
-        color: const Color(0xFF16895D),
-        background: const Color(0xFFE5F6EF),
-      ),
-      _QuickActionData(
-        title: 'State Overview',
-        subtitle: 'Check schemes across districts',
-        icon: Icons.location_on_rounded,
-        color: const Color(0xFF7358D0),
-        background: const Color(0xFFF0EBFF),
-      ),
-      _QuickActionData(
-        title: 'Settings',
-        subtitle: 'State & application settings',
-        icon: Icons.settings_rounded,
-        color: const Color(0xFFC77616),
-        background: const Color(0xFFFFF0E1),
-      ),
-      _QuickActionData(
-        title: 'Compliance',
-        subtitle: 'Track compliance and approvals',
-        icon: Icons.shield_outlined,
-        color: const Color(0xFF16879A),
-        background: const Color(0xFFE4F6F8),
-      ),
-      _QuickActionData(
-        title: 'Notifications',
-        subtitle: 'View latest updates and alerts',
-        icon: Icons.notifications_rounded,
-        color: const Color(0xFFE63E4D),
-        background: const Color(0xFFFFE7EA),
-      ),
-    ];
-
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: navy,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 19,
-          ),
-        ),
-        title: const Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          16,
-          14,
-          28,
-        ),
-        children: [
-          const Text(
-            'All Actions',
-            style: TextStyle(
-              color: navy,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          const Text(
-            'State-level administrative tools and modules.',
-            style: TextStyle(
-              color: Color(0xFF667788),
-              fontSize: 10,
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          for (final action in actions) ...[
-            _FullQuickActionTile(
-              data: action,
-            ),
-            const SizedBox(height: 9),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// FULL QUICK ACTION TILE
-// ============================================================================
-
-class _FullQuickActionTile extends StatelessWidget {
-  final _QuickActionData data;
-
-  const _FullQuickActionTile({
-    required this.data,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${data.title} will open here.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(13),
-      child: Container(
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(
-            color: const Color(0xFFBFD2E0),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 43,
-              height: 43,
-              decoration: BoxDecoration(
-                color: data.background,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                data.icon,
-                color: data.color,
-                size: 20,
-              ),
-            ),
-
-            const SizedBox(width: 11),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    style: const TextStyle(
-                      color: Color(0xFF123E68),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    data.subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF667788),
-                      fontSize: 8.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Container(
-              width: 31,
-              height: 31,
-              decoration: BoxDecoration(
-                color: data.background,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.arrow_forward_rounded,
-                color: data.color,
-                size: 15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// STATE DISTRICT OVERVIEW PAGE
-// ============================================================================
-
-class StateDistrictOverviewScreen extends StatelessWidget {
-  const StateDistrictOverviewScreen({
-    super.key,
-  });
-
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
-  static const Color blue = Color(0xFF14568A);
-  static const Color border = Color(0xFFBFD2E0);
-  static const Color grey = Color(0xFF667788);
-
-  @override
-  Widget build(BuildContext context) {
-    final user = SessionService.instance.currentUser;
-
-    final state = user?.state?.trim().isNotEmpty == true
-        ? user!.state!
-        : 'State Level';
-
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: navy,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 19,
-          ),
-        ),
-        title: const Text(
-          'District Overview',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          16,
-          14,
-          28,
-        ),
-        children: [
-          _MonitoringPageHeader(
-            icon: Icons.apartment_rounded,
-            title: 'District Overview',
-            subtitle:
-                'State-level view of district performance and monitoring.',
-          ),
-
-          const SizedBox(height: 12),
-
-          _AssignedScopeCard(
-            state: state,
-            title: 'Monitoring Scope',
-            subtitle:
-                'Only districts belonging to the assigned state should appear here.',
-          ),
-
-          const SizedBox(height: 14),
-
-          const _MonitoringSectionTitle(
-            title: 'District Summary',
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.apartment_rounded,
-                  title: 'Total Districts',
-                  value: '—',
-                  color: Color(0xFF2876D5),
-                  background: Color(0xFFE7F0FF),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.domain_rounded,
-                  title: 'Projects',
-                  value: '—',
-                  color: Color(0xFF16895D),
-                  background: Color(0xFFE5F6EF),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.fact_check_outlined,
-                  title: 'Inspections',
-                  value: '—',
-                  color: Color(0xFF7358D0),
-                  background: Color(0xFFF0EBFF),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.warning_amber_rounded,
-                  title: 'High Risk',
-                  value: '—',
-                  color: Color(0xFFE63E4D),
-                  background: Color(0xFFFFE7EA),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          const _MonitoringSectionTitle(
-            title: 'District Performance',
-          ),
-
-          const SizedBox(height: 8),
-
-          _UnavailableDataCard(
-            icon: Icons.bar_chart_rounded,
-            title: 'District-wise data is not available yet',
-            message:
-                'The current database does not expose a reliable district field on institute/project records. District-wise numbers should be connected after the backend adds the state/district mapping.',
-          ),
-
-          const SizedBox(height: 16),
-
-          const _MonitoringSectionTitle(
-            title: 'District List',
-          ),
-
-          const SizedBox(height: 8),
-
-          _UnavailableDataCard(
-            icon: Icons.location_city_rounded,
-            title: 'District list needs backend mapping',
-            message:
-                'Once the district relationship is available, this section can show District → Projects → Inspections → Risk drill-down.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// STATE PROJECT MONITORING PAGE
-// ============================================================================
-
-class StateProjectMonitoringScreen extends StatelessWidget {
-  const StateProjectMonitoringScreen({
-    super.key,
-  });
-
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
-
-  @override
-  Widget build(BuildContext context) {
-    final user = SessionService.instance.currentUser;
-
-    final state = user?.state?.trim().isNotEmpty == true
-        ? user!.state!
-        : 'State Level';
-
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: navy,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 19,
-          ),
-        ),
-        title: const Text(
-          'Project Monitoring',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          16,
-          14,
-          28,
-        ),
-        children: [
-          _MonitoringPageHeader(
-            icon: Icons.domain_rounded,
-            title: 'Project Monitoring',
-            subtitle:
-                'Monitor projects within the assigned state scope.',
-          ),
-
-          const SizedBox(height: 12),
-
-          _AssignedScopeCard(
-            state: state,
-            title: 'Project Scope',
-            subtitle:
-                'Project counts and risk should be restricted to the assigned state.',
-          ),
-
-          const SizedBox(height: 14),
-
-          const _MonitoringSectionTitle(
-            title: 'Project Summary',
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.domain_rounded,
-                  title: 'Total Projects',
-                  value: '—',
-                  color: Color(0xFF2876D5),
-                  background: Color(0xFFE7F0FF),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.warning_amber_rounded,
-                  title: 'High Risk',
-                  value: '—',
-                  color: Color(0xFFE63E4D),
-                  background: Color(0xFFFFE7EA),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.check_circle_outline_rounded,
-                  title: 'Active',
-                  value: '—',
-                  color: Color(0xFF16895D),
-                  background: Color(0xFFE5F6EF),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.pending_actions_rounded,
-                  title: 'Under Review',
-                  value: '—',
-                  color: Color(0xFFC77616),
-                  background: Color(0xFFFFF0E1),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          const _MonitoringSectionTitle(
-            title: 'District Filter',
-          ),
-
-          const SizedBox(height: 8),
-
-          _DisabledDistrictFilter(),
-
-          const SizedBox(height: 16),
-
-          const _MonitoringSectionTitle(
-            title: 'Project List',
-          ),
-
-          const SizedBox(height: 8),
-
-          _UnavailableDataCard(
-            icon: Icons.domain_rounded,
-            title: 'State-wise project list is not connected',
-            message:
-                'ProjectsRepository currently reads project records nationally. It does not yet apply state/district filtering, so showing those records here would risk exposing projects outside the administrator’s assigned state.',
-          ),
-
-          const SizedBox(height: 12),
-
-          _InfoActionCard(
-            icon: Icons.security_rounded,
-            title: 'State-level security',
-            message:
-                'Backend/RLS filtering should be added before real state-wise project data is displayed.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// STATE INSPECTION MONITORING PAGE
-// ============================================================================
-
-class StateInspectionMonitoringScreen extends StatelessWidget {
-  const StateInspectionMonitoringScreen({
-    super.key,
-  });
-
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
-
-  @override
-  Widget build(BuildContext context) {
-    final user = SessionService.instance.currentUser;
-
-    final state = user?.state?.trim().isNotEmpty == true
-        ? user!.state!
-        : 'State Level';
-
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: navy,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 19,
-          ),
-        ),
-        title: const Text(
-          'Inspection Monitoring',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          16,
-          14,
-          28,
-        ),
-        children: [
-          _MonitoringPageHeader(
-            icon: Icons.fact_check_outlined,
-            title: 'Inspection Monitoring',
-            subtitle:
-                'Track inspection progress and compliance at state level.',
-          ),
-
-          const SizedBox(height: 12),
-
-          _AssignedScopeCard(
-            state: state,
-            title: 'Inspection Scope',
-            subtitle:
-                'Inspection metrics should only represent the assigned state.',
-          ),
-
-          const SizedBox(height: 14),
-
-          const _MonitoringSectionTitle(
-            title: 'Inspection Summary',
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.fact_check_outlined,
-                  title: 'Total',
-                  value: '—',
-                  color: Color(0xFF2876D5),
-                  background: Color(0xFFE7F0FF),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.check_circle_outline_rounded,
-                  title: 'Completed',
-                  value: '—',
-                  color: Color(0xFF16895D),
-                  background: Color(0xFFE5F6EF),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.play_circle_outline_rounded,
-                  title: 'In Progress',
-                  value: '—',
-                  color: Color(0xFF7358D0),
-                  background: Color(0xFFF0EBFF),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.pending_actions_rounded,
-                  title: 'Pending',
-                  value: '—',
-                  color: Color(0xFFC77616),
-                  background: Color(0xFFFFF0E1),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.schedule_rounded,
-                  title: 'Overdue',
-                  value: '—',
-                  color: Color(0xFFE63E4D),
-                  background: Color(0xFFFFE7EA),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.rate_review_outlined,
-                  title: 'Under Review',
-                  value: '—',
-                  color: Color(0xFF16879A),
-                  background: Color(0xFFE4F6F8),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          const _MonitoringSectionTitle(
-            title: 'District Filter',
-          ),
-
-          const SizedBox(height: 8),
-
-          _DisabledDistrictFilter(),
-
-          const SizedBox(height: 16),
-
-          const _MonitoringSectionTitle(
-            title: 'Inspection Status',
-          ),
-
-          const SizedBox(height: 8),
-
-          _InspectionStatusList(),
-
-          const SizedBox(height: 14),
-
-          _UnavailableDataCard(
-            icon: Icons.security_rounded,
-            title: 'State-wise inspection data is not connected',
-            message:
-                'The existing inspection tables contain assignment/status information, but the current repository does not safely scope those records by the State Administrator’s assigned state.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// MONITORING PAGE HEADER
-// ============================================================================
-
-class _MonitoringPageHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _MonitoringPageHeader({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: const Color(0xFFBFD2E0),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE1EDF6),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF14568A),
-              size: 23,
-            ),
-          ),
-
-          const SizedBox(width: 11),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF123E68),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF667788),
-                    fontSize: 9,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// ASSIGNED SCOPE CARD
-// ============================================================================
-
-class _AssignedScopeCard extends StatelessWidget {
-  final String state;
-  final String title;
-  final String subtitle;
-
-  const _AssignedScopeCard({
-    required this.state,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE7F1FF),
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(
-          color: const Color(0xFFC6DDF5),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.verified_user_rounded,
-            color: Color(0xFF1460A1),
-            size: 23,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF173F66),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Assigned state: $state',
-                  style: const TextStyle(
-                    color: Color(0xFF14568A),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF667788),
-                    fontSize: 8,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// MONITORING SECTION TITLE
-// ============================================================================
-
-class _MonitoringSectionTitle extends StatelessWidget {
-  final String title;
-
-  const _MonitoringSectionTitle({
-    required this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: Color(0xFF123E68),
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// METRIC CARD
-// ============================================================================
-
-class _MetricCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  final Color color;
-  final Color background;
-
-  const _MetricCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.color,
-    required this.background,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(
-          color: const Color(0xFFBFD2E0),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: background,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 17,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF123E68),
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 2),
-
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF667788),
-              fontSize: 8.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// UNAVAILABLE DATA CARD
-// ============================================================================
-
-class _UnavailableDataCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-
-  const _UnavailableDataCard({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(
-          color: const Color(0xFFBFD2E0),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEAF2F8),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF14568A),
-              size: 19,
-            ),
-          ),
-
-          const SizedBox(width: 10),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF123E68),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  message,
-                  style: const TextStyle(
-                    color: Color(0xFF667788),
-                    fontSize: 8.5,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// INFO ACTION CARD
-// ============================================================================
-
-class _InfoActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-
-  const _InfoActionCard({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F8FC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFC9DCE8),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: const Color(0xFF14568A),
-            size: 20,
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF123E68),
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    color: Color(0xFF667788),
-                    fontSize: 8,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// DISTRICT FILTER
-// ============================================================================
-
-class _DisabledDistrictFilter extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 12,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFBFD2E0),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.filter_alt_outlined,
-            color: Color(0xFF14568A),
-            size: 19,
-          ),
-          const SizedBox(width: 9),
-          const Expanded(
-            child: Text(
-              'All Districts',
-              style: TextStyle(
-                color: Color(0xFF17324D),
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF2F8),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Awaiting district mapping',
-              style: TextStyle(
-                color: Color(0xFF667788),
-                fontSize: 7,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// INSPECTION STATUS LIST
-// ============================================================================
-
-class _InspectionStatusList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final statuses = [
-      (
-        'Completed',
-        Icons.check_circle_outline_rounded,
-        const Color(0xFF16895D),
-        const Color(0xFFE5F6EF),
-      ),
-      (
-        'In Progress',
-        Icons.play_circle_outline_rounded,
-        const Color(0xFF7358D0),
-        const Color(0xFFF0EBFF),
-      ),
-      (
-        'Pending',
-        Icons.pending_actions_rounded,
-        const Color(0xFFC77616),
-        const Color(0xFFFFF0E1),
-      ),
-      (
-        'Overdue',
-        Icons.schedule_rounded,
-        const Color(0xFFE63E4D),
-        const Color(0xFFFFE7EA),
-      ),
-    ];
-
-    return Column(
-      children: [
-        for (final status in statuses) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 11,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                color: const Color(0xFFBFD2E0),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: status.$4,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    status.$2,
-                    color: status.$3,
-                    size: 17,
-                  ),
-                ),
-
-                const SizedBox(width: 9),
-
-                Expanded(
-                  child: Text(
-                    status.$1,
-                    style: const TextStyle(
-                      color: Color(0xFF17324D),
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-
-                const Text(
-                  '—',
-                  style: TextStyle(
-                    color: Color(0xFF123E68),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (status != statuses.last)
-            const SizedBox(height: 7),
-        ],
-      ],
     );
   }
 }

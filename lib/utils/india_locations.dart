@@ -887,3 +887,39 @@ List<String> get kIndiaStates => kIndiaLocations.keys.toList();
 /// Districts of [state] (empty if [state] is null or unknown).
 List<String> districtsForState(String? state) =>
     kIndiaLocations[state] ?? const <String>[];
+
+/// Resolves [rawState] to the exact state name used as a key in
+/// [kIndiaLocations], tolerating two known data issues instead of
+/// silently returning no districts for an admin:
+///
+/// 1. Case differences (e.g. "uttar pradesh" -> "Uttar Pradesh").
+/// 2. A district name stored where the state name should be — a data
+///    entry mistake at registration (e.g. an admin's `state` column
+///    holding "Ghaziabad" instead of "Uttar Pradesh"). In that case the
+///    district's actual state is returned instead.
+///
+/// Returns null if [rawState] is null/empty or matches nothing in the
+/// dataset at all, so callers can still fall back to displaying the
+/// raw value rather than hiding it.
+String? resolveStateName(String? rawState) {
+  final trimmed = rawState?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return null;
+  }
+
+  for (final state in kIndiaLocations.keys) {
+    if (state.toLowerCase() == trimmed.toLowerCase()) {
+      return state;
+    }
+  }
+
+  for (final entry in kIndiaLocations.entries) {
+    for (final district in entry.value) {
+      if (district.toLowerCase() == trimmed.toLowerCase()) {
+        return entry.key;
+      }
+    }
+  }
+
+  return null;
+}

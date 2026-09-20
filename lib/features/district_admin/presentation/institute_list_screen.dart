@@ -8,15 +8,24 @@
 // "Approved" = reviewed_at IS NOT NULL AND rejection_reason IS NULL.
 //
 // Requires district_admin_institutes_rls.sql, otherwise the list is empty.
+//
+// Each institute card has an "Assign Inspector" button. If the institute
+// already has an active assignment, the card shows who it is assigned to
+// instead. Assigning goes through the RPC functions in
+// supabase/district_admin_inspectors.sql.
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../models/district_inspector.dart';
 import '../../../services/session_service.dart';
+import '../data/district_inspector_repository.dart';
+import 'assign_inspector_sheet.dart';
 
 const Color _kBackground = Color(0xFFEAF2F8);
 const Color _kBorder = Color(0xFFD1DEE7);
 const Color _kTextGrey = Color(0xFF667788);
+const Color _kAssignedGreen = Color(0xFF1E7A46);
 
 class InstituteListScreen extends StatefulWidget {
   final String categoryKey;
@@ -34,8 +43,19 @@ class InstituteListScreen extends StatefulWidget {
   State<InstituteListScreen> createState() => _InstituteListScreenState();
 }
 
+/// Institutes plus the active assignments that belong to them.
+class _ListData {
+  final List<Map<String, dynamic>> institutes;
+  final Map<String, InstituteAssignmentInfo> assignments;
+
+  const _ListData(this.institutes, this.assignments);
+}
+
 class _InstituteListScreenState extends State<InstituteListScreen> {
-  late Future<List<Map<String, dynamic>>> _future;
+  final DistrictInspectorRepository _inspectorRepo =
+      DistrictInspectorRepository();
+
+  late Future<_ListData> _future;
 
   String get _district =>
       SessionService.instance.currentUser?.district?.trim() ?? '';
@@ -55,7 +75,7 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
       .replaceAll('%', r'\%')
       .replaceAll('_', r'\_');
 
-  Future<List<Map<String, dynamic>>> _load() async {
+  Future<_ListData> _load() async {
     // Never run an unscoped query: a district admin must only ever see
     // their own district and state.
     if (_district.isEmpty || _state.isEmpty) {
@@ -78,19 +98,51 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
         .isFilter('rejection_reason', null)
         .order('organization_name', ascending: true);
 
-    return List<Map<String, dynamic>>.from(rows);
+    final institutes = List<Map<String, dynamic>>.from(rows);
+
+    // Assignment info is a nice-to-have: if it cannot be loaded (for
+    // example the SQL has not been applied yet) the institutes still show,
+    // and the real error surfaces when the admin taps "Assign Inspector".
+    var assignments = const <String, InstituteAssignmentInfo>{};
+    try {
+      assignments = await _inspectorRepo.fetchActiveAssignments();
+    } catch (_) {}
+
+    return _ListData(institutes, assignments);
   }
 
   void _retry() => setState(() => _future = _load());
 
   String _friendly(Object e) => e.toString().replaceFirst('Exception: ', '');
 
+  Future<void> _assign(Map<String, dynamic> institute) async {
+    final id = institute['profile_id']?.toString();
+    if (id == null || id.isEmpty) return;
+
+    final rawName = (institute['organization_name'] as String?)?.trim();
+    final name = (rawName == null || rawName.isEmpty)
+        ? 'this institute'
+        : rawName;
+
+    final assigned = await showAssignInspectorSheet(
+      context,
+      instituteProfileId: id,
+      instituteName: name,
+    );
+    if (assigned != true || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Inspector assigned.')),
+    );
+    _retry();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBackground,
       appBar: AppBar(title: Text(widget.schemeLabel)),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: FutureBuilder<_ListData>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
@@ -104,7 +156,8 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
               onAction: _retry,
             );
           }
-          final institutes = snapshot.data ?? const [];
+          final data = snapshot.data;
+          final institutes = data?.institutes ?? const <Map<String, dynamic>>[];
           if (institutes.isEmpty) {
             return _Message(
               icon: Icons.apartment_outlined,
@@ -112,6 +165,9 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
                   '$_district, $_state.',
             );
           }
+          final assignments =
+              data?.assignments ?? const <String, InstituteAssignmentInfo>{};
+
           return RefreshIndicator(
             onRefresh: () async {
               final next = _load();
@@ -135,7 +191,9 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
                 final inst = institutes[i - 1];
                 return _InstituteCard(
                   data: inst,
+                  assignment: assignments[inst['profile_id']?.toString()],
                   onTap: () => _showDetails(context, inst),
+                  onAssign: () => _assign(inst),
                 );
               },
             ),
@@ -190,9 +248,16 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
 
 class _InstituteCard extends StatelessWidget {
   final Map<String, dynamic> data;
+  final InstituteAssignmentInfo? assignment;
   final VoidCallback onTap;
+  final VoidCallback onAssign;
 
-  const _InstituteCard({required this.data, required this.onTap});
+  const _InstituteCard({
+    required this.data,
+    required this.assignment,
+    required this.onTap,
+    required this.onAssign,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +265,7 @@ class _InstituteCard extends StatelessWidget {
     final type = (data['organization_type'] as String?) ?? '';
     final address = (data['complete_address'] as String?) ?? '';
     final accent = Theme.of(context).colorScheme.primary;
+    final info = assignment;
 
     return Material(
       color: Colors.white,
@@ -213,53 +279,125 @@ class _InstituteCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: _kBorder),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.apartment_outlined, color: accent, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    if (type.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        type,
-                        style: const TextStyle(
-                            fontSize: 12, color: _kTextGrey),
-                      ),
-                    ],
-                    if (address.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        address,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 11.5, color: _kTextGrey),
-                      ),
-                    ],
-                  ],
-                ),
+                    child: Icon(Icons.apartment_outlined,
+                        color: accent, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        if (type.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            type,
+                            style: const TextStyle(
+                                fontSize: 12, color: _kTextGrey),
+                          ),
+                        ],
+                        if (address.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            address,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 11.5, color: _kTextGrey),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: _kTextGrey),
+                ],
               ),
-              const Icon(Icons.chevron_right, color: _kTextGrey),
+              const SizedBox(height: 10),
+              const Divider(height: 1, color: _kBorder),
+              const SizedBox(height: 10),
+              if (info != null)
+                _AssignedBanner(info: info)
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onAssign,
+                    icon: const Icon(Icons.assignment_ind_outlined, size: 18),
+                    label: const Text('Assign Inspector'),
+                  ),
+                ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AssignedBanner extends StatelessWidget {
+  final InstituteAssignmentInfo info;
+
+  const _AssignedBanner({required this.info});
+
+  @override
+  Widget build(BuildContext context) {
+    final who = info.inspectorName ?? 'an inspector';
+    final visit = info.scheduledDateTime;
+
+    final parts = <String>[
+      info.statusLabel,
+      if (visit != null) 'Visit ${formatDistrictDateTime(visit)}',
+      if (info.priorityLabel.isNotEmpty) '${info.priorityLabel} priority',
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5EE),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFBFE0CD)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.assignment_turned_in_outlined,
+              size: 18, color: _kAssignedGreen),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Assigned to $who',
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  parts.join(' · '),
+                  style: const TextStyle(fontSize: 11.5, color: _kTextGrey),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

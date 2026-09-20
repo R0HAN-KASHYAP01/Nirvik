@@ -4,6 +4,9 @@ import '../models/user.dart';
 /// Encodes who is allowed to initiate a call to whom, and the exact
 /// `video_calls.call_type` string Postgres' CHECK constraint requires
 /// for that pairing.
+///
+/// 'district_admin_to_inspector' is allowed by the constraint update in
+/// supabase/district_admin_inspectors.sql.
 class CallPermission {
   CallPermission._();
 
@@ -25,8 +28,17 @@ class CallPermission {
       case UserRole.ngoInstitute:
         return null; // institutes never initiate calls
       case UserRole.stateAdmin:
+        // NEW: lets a State Admin call the district admin of a district
+        // in their state from the State Admin dashboard. Requires a
+        // matching 'state_admin_to_district_admin' value to be added to
+        // the `video_calls_call_type_check` constraint in Supabase —
+        // this Dart-side change alone does not add it.
+        if (to == UserRole.districtAdmin) {
+          return 'state_admin_to_district_admin';
+        }
         return null;
       case UserRole.districtAdmin:
+        if (to == UserRole.inspector) return 'district_admin_to_inspector';
         return null;
     }
   }

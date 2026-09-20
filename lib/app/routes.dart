@@ -7,7 +7,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/signup_screen.dart';
 import '../features/auth/presentation/role_selection_screen.dart';
 import '../features/district_admin/presentation/institute_category_screen.dart';
-
+import '../features/district_admin/presentation/district_admin_shell_screen.dart';
 import '../features/ngo/presentation/ngo_shell_screen.dart';
 
 import '../features/mosje_admin/presentation/official_shell_screen.dart';
@@ -97,7 +97,7 @@ class AppRoutes {
         // DISTRICT ADMIN
         // ============================================================
 
-        districtAdminDashboard: (context) => const DistrictAdminDashboardScreen(),
+           districtAdminDashboard: (context) => const DistrictAdminShellScreen(),
         districtInstitutes: (context) => const InstituteCategoryScreen(),
         // ============================================================
         // INSPECTOR

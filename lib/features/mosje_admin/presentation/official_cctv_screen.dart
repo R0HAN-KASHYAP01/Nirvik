@@ -7,7 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../models/assignment.dart';
 import '../../../services/ngo_camera_service.dart';
 import '../../../services/ngo_storage_service.dart';
-import '../data/assignments_repository.dart';
+import '../../dashboard/data/assignments_repository.dart';
 
 class OfficialCctvScreen extends StatefulWidget {
   const OfficialCctvScreen({super.key});

@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../app/routes.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/official_service.dart';
+import '../data/official_service.dart';
 import '../../../services/session_service.dart';
 
 class OfficialProfileScreen extends StatefulWidget {

@@ -1,4 +1,3 @@
-// lib/services/ngo_institute_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/ngo_institute_profile.dart';
@@ -6,66 +5,89 @@ import '../models/institute_map_point.dart';
 
 class NgoInstituteService {
   NgoInstituteService._();
+
   static final NgoInstituteService instance = NgoInstituteService._();
 
   final SupabaseClient _client = Supabase.instance.client;
 
-  /// Returns null if the institute hasn't created a profile row yet.
+  // ---------------------------------------------------------------------------
+  // FETCH PROFILE
+  // ---------------------------------------------------------------------------
+
   Future<NgoInstituteProfile?> fetchProfile(String profileId) async {
+    /*
+     * institute_reps is now the source of truth for:
+     * - registration number
+     * - address
+     * - latitude
+     * - longitude
+     *
+     * We intentionally do not remove ngo_institutes support elsewhere in the
+     * application.
+     */
+
     final data = await _client
-        .from('ngo_institutes')
-        .select()
+        .from('institute_reps')
+        .select(
+          'profile_id, registration_number, complete_address, '
+          'latitude, longitude',
+        )
         .eq('profile_id', profileId)
         .maybeSingle();
 
-    if (data == null) return null;
-    return NgoInstituteProfile.fromMap(data);
+    if (data == null) {
+      return null;
+    }
+
+    return NgoInstituteProfile(
+      profileId: data['profile_id'] as String,
+      registrationNumber: data['registration_number'] as String?,
+      address: data['complete_address'] as String?,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
+    );
   }
 
-  /// Fetches the NGO / Institute organization name for a profile.
-  ///
-  /// Flow:
-  /// profiles.id
-  ///   -> ngo_institutes.profile_id
-  ///   -> ngo_institutes.organization_id
-  ///   -> organizations.id
-  ///   -> organizations.name
+  // ---------------------------------------------------------------------------
+  // FETCH ORGANIZATION NAME
+  // ---------------------------------------------------------------------------
+
   Future<String?> fetchOrganizationName(String profileId) async {
     final data = await _client
-        .from('ngo_institutes')
-        .select('organization_id, organizations(name)')
+        .from('institute_reps')
+        .select('organization_name')
         .eq('profile_id', profileId)
         .maybeSingle();
 
-    if (data == null) return null;
+    if (data == null) {
+      return null;
+    }
 
-    final organization = data['organizations'];
+    final name = data['organization_name'];
 
-    if (organization is Map<String, dynamic>) {
-      final name = organization['name'];
-
-      if (name is String && name.trim().isNotEmpty) {
-        return name.trim();
-      }
+    if (name is String && name.trim().isNotEmpty) {
+      return name.trim();
     }
 
     return null;
   }
 
-  /// Read-only lookup of the scheme this institute registered with.
-  /// Source of truth is institute_reps (set at registration, approved
-  /// by admin) — never ngo_institutes, which the self-service profile
-  /// screen must not write scheme data into.
+  // ---------------------------------------------------------------------------
+  // FETCH REGISTERED SCHEME
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, String?>?> fetchRegisteredScheme(
-      String profileId,
-      ) async {
+    String profileId,
+  ) async {
     final data = await _client
         .from('institute_reps')
         .select('scheme_category, scheme_code')
         .eq('profile_id', profileId)
         .maybeSingle();
 
-    if (data == null) return null;
+    if (data == null) {
+      return null;
+    }
 
     return {
       'scheme_category': data['scheme_category'] as String?,
@@ -73,32 +95,67 @@ class NgoInstituteService {
     };
   }
 
-  /// Insert-or-update in one call (profile_id is the primary key).
+  // ---------------------------------------------------------------------------
+  // SAVE PROFILE
+  // ---------------------------------------------------------------------------
+
   Future<NgoInstituteProfile> upsertProfile(
-      NgoInstituteProfile profile,
-      ) async {
+    NgoInstituteProfile profile,
+  ) async {
+    /*
+     * We UPDATE the existing institute_reps record.
+     *
+     * We deliberately do NOT upsert here because the Profile screen should
+     * never create a new institute_reps row.
+     *
+     * The RLS policy:
+     *
+     *   auth.uid() = profile_id
+     *
+     * ensures an institute can update only its own record.
+     */
+
     final data = await _client
-        .from('ngo_institutes')
-        .upsert(profile.toMap())
-        .select()
+        .from('institute_reps')
+        .update({
+          'registration_number': profile.registrationNumber,
+          'complete_address': profile.address,
+          'latitude': profile.latitude,
+          'longitude': profile.longitude,
+        })
+        .eq('profile_id', profile.profileId)
+        .select(
+          'profile_id, registration_number, complete_address, '
+          'latitude, longitude',
+        )
         .single();
 
-    return NgoInstituteProfile.fromMap(data);
+    return NgoInstituteProfile(
+      profileId: data['profile_id'] as String,
+      registrationNumber: data['registration_number'] as String?,
+      address: data['complete_address'] as String?,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
+    );
   }
 
-  /// Fetches every institute with valid coordinates, joined with its
-  /// organization name, for use on the monitoring map.
-  ///
-  /// Requires the `ngo_institutes_select_staff` RLS policy (staff-only
-  /// read-all) to be present — callers without that access will only ever
-  /// get their own row back, per RLS, not an error.
+  // ---------------------------------------------------------------------------
+  // MAP DATA
+  // ---------------------------------------------------------------------------
+
   Future<List<InstituteMapPoint>> fetchAllForMap() async {
+    /*
+     * Keep the existing map implementation based on ngo_institutes.
+     *
+     * We are not changing the map architecture in this step.
+     */
     final rows = await _client
         .from('ngo_institutes')
         .select(
-      'profile_id, organization_id, scheme_category, scheme_code, address, '
-          'registration_number, latitude, longitude, organizations(name)',
-    )
+          'profile_id, organization_id, scheme_category, scheme_code, '
+          'address, registration_number, latitude, longitude, '
+          'organizations(name)',
+        )
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 

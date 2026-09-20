@@ -9,4 +9,4 @@
 // share the dashboard/official_*.dart files if you want a full,
 // safe physical move later.
 
-export '../../dashboard/presentation/official_shell_screen.dart';
+export '../../mosje_admin/presentation/official_shell_screen.dart';

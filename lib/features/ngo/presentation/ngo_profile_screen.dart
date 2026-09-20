@@ -154,6 +154,10 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
         _longitude = position.longitude;
       });
 
+debugPrint('========== LOCATION DETECTED ==========');
+debugPrint('Latitude: $_latitude');
+debugPrint('Longitude: $_longitude');
+debugPrint('========================================');
       // Reverse geocoding — Geocoding() is constructed lazily, right here,
       // instead of as an eager field. The geocoding package has no
       // registered platform implementation on web, so constructing it
@@ -205,74 +209,103 @@ class _NgoProfileScreenState extends State<NgoProfileScreen> {
     }
   }
 
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+ Future<void> _saveProfile() async {
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
 
+  final user = SessionService.instance.currentUser;
 
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('User session not found.'),
+      ),
+    );
+    return;
+  }
 
-    final user = SessionService.instance.currentUser;
+  // Make sure we know exactly what Flutter is about to send.
+  debugPrint('========== NGO PROFILE SAVE ==========');
+  debugPrint('Profile ID: ${user.id}');
+  debugPrint('Registration: ${_registrationController.text.trim()}');
+  debugPrint('Address: ${_addressController.text.trim()}');
+  debugPrint('Latitude: $_latitude');
+  debugPrint('Longitude: $_longitude');
+  debugPrint('======================================');
 
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User session not found.'),
+  setState(() => _saving = true);
+
+  try {
+    final profile = NgoInstituteProfile(
+      profileId: user.id,
+      registrationNumber:
+          _registrationController.text.trim().isEmpty
+              ? null
+              : _registrationController.text.trim(),
+      address:
+          _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+      latitude: _latitude,
+      longitude: _longitude,
+    );
+
+    final savedProfile =
+        await NgoInstituteService.instance.upsertProfile(profile);
+
+    debugPrint('========== NGO PROFILE SAVED ==========');
+    debugPrint('Saved Profile ID: ${savedProfile.profileId}');
+    debugPrint('Saved Latitude: ${savedProfile.latitude}');
+    debugPrint('Saved Longitude: ${savedProfile.longitude}');
+    debugPrint('=======================================');
+
+    if (!mounted) return;
+
+    // Keep the UI state synchronized with what Supabase returned.
+    setState(() {
+      _latitude = savedProfile.latitude;
+      _longitude = savedProfile.longitude;
+      _registrationController.text =
+          savedProfile.registrationNumber ?? '';
+      _addressController.text =
+          savedProfile.address ?? '';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Profile saved successfully.',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
-      );
-      return;
-    }
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (e, stackTrace) {
+    debugPrint('========== NGO PROFILE SAVE ERROR ==========');
+    debugPrint('$e');
+    debugPrint('$stackTrace');
+    debugPrint('============================================');
 
-    setState(() => _saving = true);
+    if (!mounted) return;
 
-    try {
-      final profile = NgoInstituteProfile(
-        profileId: user.id,
-        registrationNumber:
-        _registrationController.text.trim().isEmpty
-            ? null
-            : _registrationController.text.trim(),
-        address:
-        _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
-        latitude: _latitude,
-        longitude: _longitude,
-      );
-
-      await NgoInstituteService.instance.upsertProfile(profile);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Profile saved successfully.',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          behavior: SnackBarBehavior.floating,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Could not save profile: $e',
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not save profile: $e',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() => _saving = false);
     }
   }
+}
 
   // ============================================================
   // LOGOUT

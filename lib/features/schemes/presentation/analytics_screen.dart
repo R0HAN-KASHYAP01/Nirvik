@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../projects/presentation/project_list_screen.dart';
 import '../../schemes/presentation/schemes_screen.dart';
 import '../../dashboard/presentation/assignments_screen.dart';
-import '../../dashboard/presentation/official_cctv_screen.dart';
-import '../../dashboard/presentation/official_profile_screen.dart';
-import '../../dashboard/presentation/official_shell_screen.dart';
+import '../../mosje_admin/presentation/official_cctv_screen.dart';
+import '../../mosje_admin/presentation/official_profile_screen.dart';
+import '../../mosje_admin/presentation/official_shell_screen.dart';
 import '../../dashboard/presentation/pmu_monitoring_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {

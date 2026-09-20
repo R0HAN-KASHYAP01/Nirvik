@@ -10,10 +10,10 @@ import '../features/district_admin/presentation/institute_category_screen.dart';
 
 import '../features/ngo/presentation/ngo_shell_screen.dart';
 
-import '../features/dashboard/presentation/official_shell_screen.dart';
+import '../features/mosje_admin/presentation/official_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_profile_screen.dart';
-import '../features/dashboard/presentation/official_profile_screen.dart';
+import '../features/mosje_admin/presentation/official_profile_screen.dart';
 
 import '../features/dashboard/presentation/assignments_screen.dart';
 
@@ -30,7 +30,7 @@ import '../features/projects/presentation/project_list_screen.dart';
 
 import '../features/schemes/presentation/schemes_screen.dart';
 
-import '../features/dashboard/presentation/official_cctv_screen.dart';
+import '../features/mosje_admin/presentation/official_cctv_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -194,7 +194,12 @@ class AppRoutes {
 // ====================================================================
 // ANALYTICS SCREEN
 // ====================================================================
+class AnalyticsScreen extends StatefulWidget {
+  const AnalyticsScreen({super.key});
 
+  @override
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
 
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {

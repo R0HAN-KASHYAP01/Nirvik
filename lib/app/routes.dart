@@ -14,7 +14,7 @@ import '../features/dashboard/presentation/official_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_shell_screen.dart';
 import '../features/dashboard/presentation/inspector_profile_screen.dart';
 import '../features/dashboard/presentation/official_profile_screen.dart';
-import '../features/dashboard/presentation/pmu_monitoring_screen.dart';
+
 import '../features/dashboard/presentation/assignments_screen.dart';
 
 import '../features/ngo/presentation/ngo_profile_screen.dart';
@@ -59,13 +59,13 @@ class AppRoutes {
   static const String projectsPlaceholder = '/projects';
   static const String inspectionsPlaceholder = '/inspections';
   static const String cctvPlaceholder = '/cctv';
-  static const String analyticsPlaceholder = '/analytics';
+
   static const String assignmentsPlaceholder = '/assignments';
   static const String inspectionWorkflowPlaceholder =
       '/inspection-workflow';
 
   static const String schemes = '/schemes';
-  static const String pmuMonitoring = '/pmu-monitoring';
+
   static const String rvcPlaceholder = '/rvc';
 
   static Map<String, WidgetBuilder> get routes => {
@@ -148,7 +148,6 @@ class AppRoutes {
         // ANALYTICS
         // ============================================================
 
-        analyticsPlaceholder: (context) => const AnalyticsScreen(),
 
         // ============================================================
         // ASSIGNMENTS
@@ -177,7 +176,7 @@ class AppRoutes {
         // PMU MONITORING
         // ============================================================
 
-        pmuMonitoring: (context) => const PmuMonitoringScreen(),
+      
 
         // ============================================================
         // RVC
@@ -196,12 +195,7 @@ class AppRoutes {
 // ANALYTICS SCREEN
 // ====================================================================
 
-class AnalyticsScreen extends StatefulWidget {
-  const AnalyticsScreen({super.key});
 
-  @override
-  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
-}
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   static const Color navy = Color(0xFF123E68);
@@ -274,11 +268,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  void _openSchemes() {
-    Navigator.of(context).pushNamed(
-      AppRoutes.schemes,
-    );
-  }
+  
 
   void _openCctv() {
     Navigator.of(context).pushNamed(
@@ -783,53 +773,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
                   const SizedBox(height: 22),
 
-                  // ==================================================
-                  // SCHEME-WISE MONITORING
-                  // ==================================================
-
-                  _sectionHeading(
-                    'Scheme-wise Monitoring',
-                    trailing: 'View all',
-                    onTrailingTap: _openSchemes,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _analyticsCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        _schemeHeader(),
-                        _schemeRow(
-                          icon: Icons.school_rounded,
-                          iconColor: primaryBlue,
-                          title: 'Education Support Scheme',
-                          institutes: '3',
-                          inspections: '8',
-                          onTap: _openSchemes,
-                        ),
-                        _schemeRow(
-                          icon: Icons.local_hospital_rounded,
-                          iconColor: green,
-                          title: 'Health Infrastructure Scheme',
-                          institutes: '2',
-                          inspections: '3',
-                          onTap: _openSchemes,
-                        ),
-                        _schemeRow(
-                          icon: Icons.eco_rounded,
-                          iconColor: green,
-                          title: 'Skill Development Scheme',
-                          institutes: '1',
-                          inspections: '1',
-                          onTap: _openSchemes,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 22),
-
+                 
                   // ==================================================
                   // INSTITUTE + INSPECTOR
                   // ==================================================
@@ -1006,26 +950,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _quickAction(
-                          icon: Icons.account_balance_rounded,
-                          label: 'Schemes',
-                          onTap: _openSchemes,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _quickAction(
-                          icon: Icons.groups_rounded,
-                          label: 'PMU',
-                          onTap: () {
-                            Navigator.of(context).pushNamed(
-                              AppRoutes.pmuMonitoring,
-                            );
-                          },
-                        ),
-                      ),
+                      
+                    
                       const SizedBox(width: 10),
                       Expanded(
                         child: _quickAction(

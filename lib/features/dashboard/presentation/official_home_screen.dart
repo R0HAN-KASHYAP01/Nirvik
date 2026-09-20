@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/routes.dart';
 import '../../../services/session_service.dart';
 import '../data/national_dashboard_repository.dart';
-import '../../projects/presentation/project_list_screen.dart';
 
 /// Combined national dashboard.
 ///
-/// This screen is now used for both:
-/// - DoSJE Official
+/// Used for:
+/// - DoSJE Officials
 /// - MoSJE / National Admin
 ///
-/// There is intentionally no separate MoSJE Admin dashboard UI.
+/// Institute data comes from approved institute_reps records.
+///
+/// Dashboard intentionally does NOT contain:
+/// - Schemes
+/// - State-wise monitoring
+/// - PMU Monitoring screen
 class OfficialHomeScreen extends StatefulWidget {
   const OfficialHomeScreen({super.key});
 
@@ -31,7 +34,8 @@ class OfficialHomeScreen extends StatefulWidget {
       _OfficialHomeScreenState();
 }
 
-class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
+class _OfficialHomeScreenState
+    extends State<OfficialHomeScreen> {
   final NationalDashboardRepository _repository =
       NationalDashboardRepository();
 
@@ -51,45 +55,36 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     await _future;
   }
 
-  void _openProjects() {
-    Navigator.of(context).pushNamed(
-      AppRoutes.projectsPlaceholder,
-    );
-  }
-
-  void _openHighRiskProjects() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ProjectListScreen(
-          initialHighRiskFilter: true,
-        ),
-      ),
-    );
-  }
-
-  void _openCompliance() {
-    Navigator.of(context).pushNamed(
-      AppRoutes.assignmentsPlaceholder,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final user = SessionService.instance.currentUser;
+    final user =
+        SessionService.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: OfficialHomeScreen.background,
+      backgroundColor:
+          OfficialHomeScreen.background,
       body: SafeArea(
         child: RefreshIndicator(
-          color: OfficialHomeScreen.primaryBlue,
+          color:
+              OfficialHomeScreen.primaryBlue,
           onRefresh: _refresh,
-          child: FutureBuilder<NationalDashboardData>(
+          child:
+              FutureBuilder<NationalDashboardData>(
             future: _future,
-            builder: (context, snapshot) {
+            builder:
+                (context, snapshot) {
               if (snapshot.connectionState ==
                   ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(),
+                return ListView(
+                  physics:
+                      const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 260),
+                    Center(
+                      child:
+                          CircularProgressIndicator(),
+                    ),
+                  ],
                 );
               }
 
@@ -97,16 +92,19 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                 return ListView(
                   physics:
                       const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
+                  padding:
+                      const EdgeInsets.all(20),
                   children: [
                     _Header(
-                      userName: user?.name ?? 'Official',
+                      userName:
+                          user?.name ?? 'Official',
                       onRefresh: _refresh,
                     ),
                     const SizedBox(height: 28),
                     _ErrorCard(
                       message:
-                          'Dashboard data could not be loaded.',
+                          'Dashboard data could not be loaded.\n'
+                          '${snapshot.error}',
                       onRetry: _refresh,
                     ),
                   ],
@@ -119,10 +117,12 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                 return ListView(
                   physics:
                       const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
+                  padding:
+                      const EdgeInsets.all(20),
                   children: [
                     _Header(
-                      userName: user?.name ?? 'Official',
+                      userName:
+                          user?.name ?? 'Official',
                       onRefresh: _refresh,
                     ),
                     const SizedBox(height: 28),
@@ -135,7 +135,8 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
               }
 
               return LayoutBuilder(
-                builder: (context, constraints) {
+                builder:
+                    (context, constraints) {
                   final horizontal =
                       constraints.maxWidth >= 700
                           ? 32.0
@@ -144,7 +145,8 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                   return ListView(
                     physics:
                         const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
+                    padding:
+                        EdgeInsets.fromLTRB(
                       horizontal,
                       16,
                       horizontal,
@@ -152,9 +154,12 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                     ),
                     children: [
                       _Header(
-                        userName: user?.name ?? 'Official',
+                        userName:
+                            user?.name ??
+                                'Official',
                         onRefresh: _refresh,
                       ),
+
                       const SizedBox(height: 22),
 
                       const _PageIntro(),
@@ -163,15 +168,18 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
 
                       _MetricGrid(
                         data: data,
-                        onProjects: _openProjects,
-                        onHighRisk: _openHighRiskProjects,
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      _InstituteCategoryCard(
+                        data: data,
                       ),
 
                       const SizedBox(height: 18),
 
                       _ComplianceCard(
                         data: data,
-                        onTap: _openCompliance,
                       ),
 
                       const SizedBox(height: 18),
@@ -181,11 +189,20 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
                             data.openCriticalFindingsCount,
                       ),
 
-                      if (data.unavailableMetrics
+                      const SizedBox(height: 18),
+
+                      _ApprovedInstitutesCard(
+                        institutes:
+                            data.approvedInstitutes,
+                      ),
+
+                      if (data
+                          .unavailableMetrics
                           .isNotEmpty) ...[
                         const SizedBox(height: 18),
                         _LimitationsCard(
-                          metrics: data.unavailableMetrics,
+                          metrics:
+                              data.unavailableMetrics,
                         ),
                       ],
                     ],
@@ -199,6 +216,10 @@ class _OfficialHomeScreenState extends State<OfficialHomeScreen> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// HEADER
+// ---------------------------------------------------------------------------
 
 class _Header extends StatelessWidget {
   const _Header({
@@ -217,8 +238,10 @@ class _Header extends StatelessWidget {
           width: 46,
           height: 46,
           decoration: BoxDecoration(
-            color: OfficialHomeScreen.navy,
-            borderRadius: BorderRadius.circular(13),
+            color:
+                OfficialHomeScreen.navy,
+            borderRadius:
+                BorderRadius.circular(13),
           ),
           child: const Icon(
             Icons.account_balance,
@@ -235,20 +258,25 @@ class _Header extends StatelessWidget {
               const Text(
                 'DoSJE • National Monitoring',
                 style: TextStyle(
-                  color: OfficialHomeScreen.textDark,
+                  color:
+                      OfficialHomeScreen.textDark,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                      FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 'Welcome, $userName',
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: OfficialHomeScreen.navy,
+                  color:
+                      OfficialHomeScreen.navy,
                   fontSize: 19,
-                  fontWeight: FontWeight.w800,
+                  fontWeight:
+                      FontWeight.w800,
                 ),
               ),
             ],
@@ -259,7 +287,8 @@ class _Header extends StatelessWidget {
           onPressed: onRefresh,
           icon: const Icon(
             Icons.refresh_rounded,
-            color: OfficialHomeScreen.navy,
+            color:
+                OfficialHomeScreen.navy,
           ),
         ),
       ],
@@ -267,25 +296,34 @@ class _Header extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// PAGE INTRO
+// ---------------------------------------------------------------------------
+
 class _PageIntro extends StatelessWidget {
   const _PageIntro();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding:
+          const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: OfficialHomeScreen.cardBackground,
-        borderRadius: BorderRadius.circular(16),
+        color:
+            OfficialHomeScreen.cardBackground,
+        borderRadius:
+            BorderRadius.circular(16),
         border: Border.all(
-          color: OfficialHomeScreen.borderColor,
+          color:
+              OfficialHomeScreen.borderColor,
         ),
       ),
       child: const Row(
         children: [
           Icon(
             Icons.insights_outlined,
-            color: OfficialHomeScreen.primaryBlue,
+            color:
+                OfficialHomeScreen.primaryBlue,
             size: 26,
           ),
           SizedBox(width: 12),
@@ -297,16 +335,21 @@ class _PageIntro extends StatelessWidget {
                 Text(
                   'National Monitoring Overview',
                   style: TextStyle(
-                    color: OfficialHomeScreen.textDark,
+                    color:
+                        OfficialHomeScreen
+                            .textDark,
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    fontWeight:
+                        FontWeight.w800,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Real-time overview of projects, risk and inspection compliance.',
+                  'Real-time overview of approved institutes, inspections and compliance.',
                   style: TextStyle(
-                    color: OfficialHomeScreen.textGrey,
+                    color:
+                        OfficialHomeScreen
+                            .textGrey,
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -320,77 +363,90 @@ class _PageIntro extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// METRIC GRID
+// ---------------------------------------------------------------------------
+
 class _MetricGrid extends StatelessWidget {
   const _MetricGrid({
     required this.data,
-    required this.onProjects,
-    required this.onHighRisk,
   });
 
   final NationalDashboardData data;
-  final VoidCallback onProjects;
-  final VoidCallback onHighRisk;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
+      builder:
+          (context, constraints) {
+        final width =
+            constraints.maxWidth;
 
-        final columns = width >= 1000
-            ? 4
-            : width >= 650
-                ? 2
-                : 2;
+        final columns =
+            width >= 1000 ? 4 : 2;
 
         const gap = 12.0;
 
         final cardWidth =
-            (width - gap * (columns - 1)) /
+            (width -
+                    gap * (columns - 1)) /
                 columns;
 
         final cards = [
           _MetricCard(
-            icon: Icons.apartment_outlined,
-            title: 'TOTAL PROJECTS',
-            value: data.totalProjects.toString(),
-            subtitle: 'Registered institutes',
+            icon:
+                Icons.apartment_outlined,
+            title:
+                'APPROVED INSTITUTES',
+            value:
+                data.totalInstitutes
+                    .toString(),
+            subtitle:
+                'Approved registrations',
             iconColor:
                 OfficialHomeScreen.navy,
-            onTap: onProjects,
           ),
 
           _MetricCard(
-            icon: Icons.warning_amber_rounded,
-            title: 'HIGH-RISK PROJECTS',
-            value:
-                data.highRiskProjectCount.toString(),
-            subtitle: 'Currently flagged',
-            iconColor:
-                OfficialHomeScreen.red,
-            onTap: onHighRisk,
-          ),
-
-          _MetricCard(
-            icon: Icons.fact_check_outlined,
-            title: 'TOTAL INSPECTIONS',
+            icon:
+                Icons.fact_check_outlined,
+            title:
+                'TOTAL INSPECTIONS',
             value:
                 data.totalAssignedInspections
                     .toString(),
-            subtitle: 'Assigned inspections',
+            subtitle:
+                'Assigned inspections',
             iconColor:
-                OfficialHomeScreen.primaryBlue,
+                OfficialHomeScreen
+                    .primaryBlue,
           ),
 
           _MetricCard(
-            icon: Icons.verified_outlined,
-            title: 'INSPECTION COMPLIANCE',
+            icon:
+                Icons.verified_outlined,
+            title:
+                'INSPECTION COMPLIANCE',
             value:
                 '${(data.complianceRate * 100).round()}%',
             subtitle:
                 '${data.completedInspections}/${data.totalAssignedInspections} completed',
             iconColor:
                 OfficialHomeScreen.green,
+          ),
+
+          _MetricCard(
+            icon:
+                Icons.warning_amber_rounded,
+            title:
+                'CRITICAL FINDINGS',
+            value:
+                data.openCriticalFindingsCount
+                    .toString(),
+            subtitle:
+                'High / critical / severe',
+            iconColor:
+                OfficialHomeScreen.red,
           ),
         ];
 
@@ -411,6 +467,10 @@ class _MetricGrid extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// METRIC CARD
+// ---------------------------------------------------------------------------
+
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
     required this.icon,
@@ -418,7 +478,6 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.subtitle,
     required this.iconColor,
-    this.onTap,
   });
 
   final IconData icon;
@@ -426,22 +485,26 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final String subtitle;
   final Color iconColor;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final child = Container(
+    return Container(
       constraints:
-          const BoxConstraints(minHeight: 150),
-      padding: const EdgeInsets.all(16),
+          const BoxConstraints(
+        minHeight: 150,
+      ),
+      padding:
+          const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:
-            OfficialHomeScreen.cardBackground,
+            OfficialHomeScreen
+                .cardBackground,
         borderRadius:
             BorderRadius.circular(16),
         border: Border.all(
           color:
-              OfficialHomeScreen.borderColor,
+              OfficialHomeScreen
+                  .borderColor,
         ),
         boxShadow: const [
           BoxShadow(
@@ -452,18 +515,24 @@ class _MetricCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize:
+            MainAxisSize.min,
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(
+            decoration:
+                BoxDecoration(
+              color: iconColor
+                  .withValues(
                 alpha: 0.11,
               ),
               borderRadius:
-                  BorderRadius.circular(12),
+                  BorderRadius.circular(
+                12,
+              ),
             ),
             child: Icon(
               icon,
@@ -471,7 +540,9 @@ class _MetricCard extends StatelessWidget {
               size: 22,
             ),
           ),
-          const Spacer(),
+
+          const SizedBox(height: 12),
+
           Text(
             title,
             maxLines: 2,
@@ -479,22 +550,30 @@ class _MetricCard extends StatelessWidget {
                 TextOverflow.ellipsis,
             style: const TextStyle(
               color:
-                  OfficialHomeScreen.textGrey,
+                  OfficialHomeScreen
+                      .textGrey,
               fontSize: 10,
-              fontWeight: FontWeight.w800,
+              fontWeight:
+                  FontWeight.w800,
               letterSpacing: 0.4,
             ),
           ),
+
           const SizedBox(height: 3),
+
           Text(
             value,
             style: const TextStyle(
               color:
                   OfficialHomeScreen.navy,
               fontSize: 28,
-              fontWeight: FontWeight.w900,
+              fontWeight:
+                  FontWeight.w900,
             ),
           ),
+
+          const SizedBox(height: 2),
+
           Text(
             subtitle,
             maxLines: 1,
@@ -502,149 +581,329 @@ class _MetricCard extends StatelessWidget {
                 TextOverflow.ellipsis,
             style: const TextStyle(
               color:
-                  OfficialHomeScreen.textGrey,
+                  OfficialHomeScreen
+                      .textGrey,
               fontSize: 10,
             ),
           ),
         ],
       ),
     );
+  }
+}
 
-    if (onTap == null) {
-      return child;
-    }
+// ---------------------------------------------------------------------------
+// INSTITUTE CATEGORY SUMMARY
+// ---------------------------------------------------------------------------
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius:
-          BorderRadius.circular(16),
-      child: child,
+class _InstituteCategoryCard
+    extends StatelessWidget {
+  const _InstituteCategoryCard({
+    required this.data,
+  });
+
+  final NationalDashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color:
+            OfficialHomeScreen
+                .cardBackground,
+        borderRadius:
+            BorderRadius.circular(16),
+        border: Border.all(
+          color:
+              OfficialHomeScreen
+                  .borderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.category_outlined,
+                color:
+                    OfficialHomeScreen
+                        .primaryBlue,
+                size: 22,
+              ),
+              SizedBox(width: 9),
+              Text(
+                'Approved Institutes by Category',
+                style: TextStyle(
+                  color:
+                      OfficialHomeScreen
+                          .textDark,
+                  fontSize: 16,
+                  fontWeight:
+                      FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Row(
+            children: [
+              Expanded(
+                child: _CategoryItem(
+                  label:
+                      'Educational',
+                  value:
+                      data.educationalInstitutes,
+                  icon:
+                      Icons.school_outlined,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CategoryItem(
+                  label:
+                      'Social Empowerment',
+                  value:
+                      data.socialEmpowermentInstitutes,
+                  icon:
+                      Icons.volunteer_activism_outlined,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CategoryItem(
+                  label:
+                      'Economic Development',
+                  value:
+                      data.economicDevelopmentInstitutes,
+                  icon:
+                      Icons.trending_up_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _ComplianceCard extends StatelessWidget {
-  const _ComplianceCard({
-    required this.data,
-    required this.onTap,
+class _CategoryItem
+    extends StatelessWidget {
+  const _CategoryItem({
+    required this.label,
+    required this.value,
+    required this.icon,
   });
 
-  final NationalDashboardData data;
-  final VoidCallback onTap;
+  final String label;
+  final int value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    final rate = data.complianceRate;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius:
-          BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color:
-              OfficialHomeScreen.cardBackground,
-          borderRadius:
-              BorderRadius.circular(16),
-          border: Border.all(
+    return Container(
+      constraints:
+          const BoxConstraints(
+        minHeight: 92,
+      ),
+      padding:
+          const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color:
+            OfficialHomeScreen
+                .background,
+        borderRadius:
+            BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment:
+            MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
             color:
-                OfficialHomeScreen.borderColor,
+                OfficialHomeScreen
+                    .primaryBlue,
+            size: 22,
           ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.fact_check_outlined,
-                  color:
-                      OfficialHomeScreen.navy,
-                  size: 22,
-                ),
-                const SizedBox(width: 9),
-                const Expanded(
-                  child: Text(
-                    'Inspection Compliance',
-                    style: TextStyle(
-                      color:
-                          OfficialHomeScreen.textDark,
-                      fontSize: 16,
-                      fontWeight:
-                          FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${(rate * 100).round()}%',
-                  style: const TextStyle(
-                    color:
-                        OfficialHomeScreen.navy,
-                    fontSize: 20,
-                    fontWeight:
-                        FontWeight.w900,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            value.toString(),
+            style: const TextStyle(
+              color:
+                  OfficialHomeScreen.navy,
+              fontSize: 21,
+              fontWeight:
+                  FontWeight.w900,
             ),
-            const SizedBox(height: 13),
-            ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(8),
-              child:
-                  LinearProgressIndicator(
-                value: rate,
-                minHeight: 9,
-                backgroundColor:
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign:
+                TextAlign.center,
+            maxLines: 2,
+            overflow:
+                TextOverflow.ellipsis,
+            style: const TextStyle(
+              color:
+                  OfficialHomeScreen
+                      .textGrey,
+              fontSize: 9,
+              fontWeight:
+                  FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// INSPECTION COMPLIANCE
+// ---------------------------------------------------------------------------
+
+class _ComplianceCard
+    extends StatelessWidget {
+  const _ComplianceCard({
+    required this.data,
+  });
+
+  final NationalDashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final rate =
+        data.complianceRate;
+
+    return Container(
+      padding:
+          const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color:
+            OfficialHomeScreen
+                .cardBackground,
+        borderRadius:
+            BorderRadius.circular(16),
+        border: Border.all(
+          color:
+              OfficialHomeScreen
+                  .borderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.fact_check_outlined,
+                color:
                     OfficialHomeScreen
-                        .background,
-                valueColor:
-                    const AlwaysStoppedAnimation<
-                        Color>(
-                  OfficialHomeScreen.green,
+                        .navy,
+                size: 22,
+              ),
+              const SizedBox(width: 9),
+              const Expanded(
+                child: Text(
+                  'Inspection Compliance',
+                  style: TextStyle(
+                    color:
+                        OfficialHomeScreen
+                            .textDark,
+                    fontSize: 16,
+                    fontWeight:
+                        FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 15),
-            Wrap(
-              spacing: 18,
-              runSpacing: 10,
-              children: [
-                _ComplianceItem(
-                  label: 'Completed',
-                  value:
-                      data.completedInspections,
-                  color:
-                      OfficialHomeScreen.green,
-                ),
-                _ComplianceItem(
-                  label: 'Pending',
-                  value:
-                      data.pendingInspections,
-                  color:
-                      OfficialHomeScreen.orange,
-                ),
-                _ComplianceItem(
-                  label: 'In Progress',
-                  value:
-                      data.inProgressInspections,
+              Text(
+                '${(rate * 100).round()}%',
+                style:
+                    const TextStyle(
                   color:
                       OfficialHomeScreen
-                          .primaryBlue,
+                          .navy,
+                  fontSize: 20,
+                  fontWeight:
+                      FontWeight.w900,
                 ),
-                _ComplianceItem(
-                  label: 'Overdue',
-                  value:
-                      data.overdueInspections,
-                  color:
-                      OfficialHomeScreen.red,
-                ),
-              ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 13),
+
+          ClipRRect(
+            borderRadius:
+                BorderRadius.circular(
+              8,
             ),
-          ],
-        ),
+            child:
+                LinearProgressIndicator(
+              value: rate,
+              minHeight: 9,
+              backgroundColor:
+                  OfficialHomeScreen
+                      .background,
+              valueColor:
+                  const AlwaysStoppedAnimation<
+                      Color>(
+                OfficialHomeScreen
+                    .green,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          Wrap(
+            spacing: 18,
+            runSpacing: 10,
+            children: [
+              _ComplianceItem(
+                label: 'Completed',
+                value:
+                    data.completedInspections,
+                color:
+                    OfficialHomeScreen
+                        .green,
+              ),
+              _ComplianceItem(
+                label: 'Pending',
+                value:
+                    data.pendingInspections,
+                color:
+                    OfficialHomeScreen
+                        .orange,
+              ),
+              _ComplianceItem(
+                label: 'In Progress',
+                value:
+                    data.inProgressInspections,
+                color:
+                    OfficialHomeScreen
+                        .primaryBlue,
+              ),
+              _ComplianceItem(
+                label: 'Overdue',
+                value:
+                    data.overdueInspections,
+                color:
+                    OfficialHomeScreen
+                        .red,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -671,7 +930,8 @@ class _ComplianceItem
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
+          decoration:
+              BoxDecoration(
             color: color,
             shape: BoxShape.circle,
           ),
@@ -679,9 +939,11 @@ class _ComplianceItem
         const SizedBox(width: 7),
         Text(
           '$label: $value',
-          style: const TextStyle(
+          style:
+              const TextStyle(
             color:
-                OfficialHomeScreen.textGrey,
+                OfficialHomeScreen
+                    .textGrey,
             fontSize: 11,
             fontWeight:
                 FontWeight.w600,
@@ -691,6 +953,10 @@ class _ComplianceItem
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// CRITICAL FINDINGS
+// ---------------------------------------------------------------------------
 
 class _FindingsCard
     extends StatelessWidget {
@@ -707,12 +973,14 @@ class _FindingsCard
           const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color:
-            OfficialHomeScreen.cardBackground,
+            OfficialHomeScreen
+                .cardBackground,
         borderRadius:
             BorderRadius.circular(16),
         border: Border.all(
           color:
-              OfficialHomeScreen.borderColor,
+              OfficialHomeScreen
+                  .borderColor,
         ),
       ),
       child: Row(
@@ -720,12 +988,18 @@ class _FindingsCard
           Container(
             width: 46,
             height: 46,
-            decoration: BoxDecoration(
+            decoration:
+                BoxDecoration(
               color:
-                  OfficialHomeScreen.red
-                      .withValues(alpha: 0.10),
+                  OfficialHomeScreen
+                      .red
+                      .withValues(
+                alpha: 0.10,
+              ),
               borderRadius:
-                  BorderRadius.circular(13),
+                  BorderRadius.circular(
+                13,
+              ),
             ),
             child: const Icon(
               Icons
@@ -742,10 +1016,11 @@ class _FindingsCard
                   CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Open Critical Findings',
+                  'Critical Findings',
                   style: TextStyle(
                     color:
-                        OfficialHomeScreen.textDark,
+                        OfficialHomeScreen
+                            .textDark,
                     fontSize: 15,
                     fontWeight:
                         FontWeight.w800,
@@ -756,7 +1031,8 @@ class _FindingsCard
                   'High, critical and severe inspection findings',
                   style: TextStyle(
                     color:
-                        OfficialHomeScreen.textGrey,
+                        OfficialHomeScreen
+                            .textGrey,
                     fontSize: 11,
                   ),
                 ),
@@ -765,7 +1041,8 @@ class _FindingsCard
           ),
           Text(
             count.toString(),
-            style: const TextStyle(
+            style:
+                const TextStyle(
               color:
                   OfficialHomeScreen.red,
               fontSize: 27,
@@ -778,6 +1055,328 @@ class _FindingsCard
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// APPROVED INSTITUTES
+// ---------------------------------------------------------------------------
+
+class _ApprovedInstitutesCard
+    extends StatelessWidget {
+  const _ApprovedInstitutesCard({
+    required this.institutes,
+  });
+
+  final List<DashboardInstitute>
+      institutes;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible =
+        institutes.take(5).toList();
+
+    return Container(
+      padding:
+          const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color:
+            OfficialHomeScreen
+                .cardBackground,
+        borderRadius:
+            BorderRadius.circular(16),
+        border: Border.all(
+          color:
+              OfficialHomeScreen
+                  .borderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration:
+                    BoxDecoration(
+                  color:
+                      OfficialHomeScreen
+                          .primaryBlue
+                          .withValues(
+                    alpha: 0.10,
+                  ),
+                  borderRadius:
+                      BorderRadius.circular(
+                    12,
+                  ),
+                ),
+                child: const Icon(
+                  Icons
+                      .apartment_outlined,
+                  color:
+                      OfficialHomeScreen
+                          .primaryBlue,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 11),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment
+                          .start,
+                  children: [
+                    Text(
+                      'Approved Institutes',
+                      style: TextStyle(
+                        color:
+                            OfficialHomeScreen
+                                .textDark,
+                        fontSize: 16,
+                        fontWeight:
+                            FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Institutes approved through the registration workflow',
+                      style: TextStyle(
+                        color:
+                            OfficialHomeScreen
+                                .textGrey,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                institutes.length
+                    .toString(),
+                style:
+                    const TextStyle(
+                  color:
+                      OfficialHomeScreen
+                          .navy,
+                  fontSize: 22,
+                  fontWeight:
+                      FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          if (visible.isEmpty)
+            Container(
+              width:
+                  double.infinity,
+              padding:
+                  const EdgeInsets
+                      .symmetric(
+                vertical: 18,
+                horizontal: 12,
+              ),
+              decoration:
+                  BoxDecoration(
+                color:
+                    OfficialHomeScreen
+                        .background,
+                borderRadius:
+                    BorderRadius.circular(
+                  12,
+                ),
+              ),
+              child:
+                  const Column(
+                children: [
+                  Icon(
+                    Icons
+                        .apartment_outlined,
+                    color:
+                        OfficialHomeScreen
+                            .textGrey,
+                    size: 28,
+                  ),
+                  SizedBox(height: 7),
+                  Text(
+                    'No approved institutes found.',
+                    textAlign:
+                        TextAlign.center,
+                    style: TextStyle(
+                      color:
+                          OfficialHomeScreen
+                              .textDark,
+                      fontSize: 12,
+                      fontWeight:
+                          FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...visible.map(
+              (institute) =>
+                  _InstituteRow(
+                institute:
+                    institute,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InstituteRow
+    extends StatelessWidget {
+  const _InstituteRow({
+    required this.institute,
+  });
+
+  final DashboardInstitute
+      institute;
+
+  @override
+  Widget build(BuildContext context) {
+    final location = [
+      institute.district,
+      institute.state,
+    ]
+        .where(
+          (value) =>
+              value.trim().isNotEmpty,
+        )
+        .join(', ');
+
+    return Container(
+      margin:
+          const EdgeInsets.only(
+        bottom: 8,
+      ),
+      padding:
+          const EdgeInsets.all(12),
+      decoration:
+          BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.circular(
+          12,
+        ),
+        border: Border.all(
+          color:
+              OfficialHomeScreen
+                  .borderColor,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration:
+                BoxDecoration(
+              color:
+                  OfficialHomeScreen
+                      .primaryBlue
+                      .withValues(
+                alpha: 0.10,
+              ),
+              borderRadius:
+                  BorderRadius.circular(
+                9,
+              ),
+            ),
+            child: const Icon(
+              Icons
+                  .apartment_outlined,
+              color:
+                  OfficialHomeScreen
+                      .primaryBlue,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
+              children: [
+                Text(
+                  institute
+                      .organizationName,
+                  maxLines: 1,
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                  style:
+                      const TextStyle(
+                    color:
+                        OfficialHomeScreen
+                            .textDark,
+                    fontSize: 12,
+                    fontWeight:
+                        FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  location.isEmpty
+                      ? institute.address
+                      : location,
+                  maxLines: 1,
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                  style:
+                      const TextStyle(
+                    color:
+                        OfficialHomeScreen
+                            .textGrey,
+                    fontSize: 10,
+                  ),
+                ),
+                if (institute
+                    .schemeCode
+                    .trim()
+                    .isNotEmpty) ...[
+                  const SizedBox(
+                    height: 3,
+                  ),
+                  Text(
+                    institute
+                        .schemeCode,
+                    maxLines: 1,
+                    overflow:
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        const TextStyle(
+                      color:
+                          OfficialHomeScreen
+                              .primaryBlue,
+                      fontSize: 9,
+                      fontWeight:
+                          FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DATA AVAILABILITY
+// ---------------------------------------------------------------------------
 
 class _LimitationsCard
     extends StatelessWidget {
@@ -794,12 +1393,14 @@ class _LimitationsCard
           const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:
-            OfficialHomeScreen.cardBackground,
+            OfficialHomeScreen
+                .cardBackground,
         borderRadius:
             BorderRadius.circular(16),
         border: Border.all(
           color:
-              OfficialHomeScreen.borderColor,
+              OfficialHomeScreen
+                  .borderColor,
         ),
       ),
       child: Column(
@@ -810,7 +1411,8 @@ class _LimitationsCard
             'Data availability',
             style: TextStyle(
               color:
-                  OfficialHomeScreen.textDark,
+                  OfficialHomeScreen
+                      .textDark,
               fontSize: 14,
               fontWeight:
                   FontWeight.w800,
@@ -825,7 +1427,8 @@ class _LimitationsCard
               ),
               child: Row(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    CrossAxisAlignment
+                        .start,
                 children: [
                   const Icon(
                     Icons.info_outline,
@@ -857,7 +1460,12 @@ class _LimitationsCard
   }
 }
 
-class _ErrorCard extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// ERROR CARD
+// ---------------------------------------------------------------------------
+
+class _ErrorCard
+    extends StatelessWidget {
   const _ErrorCard({
     required this.message,
     this.onRetry,
@@ -877,7 +1485,8 @@ class _ErrorCard extends StatelessWidget {
             BorderRadius.circular(16),
         border: Border.all(
           color:
-              OfficialHomeScreen.borderColor,
+              OfficialHomeScreen
+                  .borderColor,
         ),
       ),
       child: Column(
@@ -893,9 +1502,11 @@ class _ErrorCard extends StatelessWidget {
             message,
             textAlign:
                 TextAlign.center,
-            style: const TextStyle(
+            style:
+                const TextStyle(
               color:
-                  OfficialHomeScreen.textDark,
+                  OfficialHomeScreen
+                      .textDark,
             ),
           ),
           if (onRetry != null) ...[

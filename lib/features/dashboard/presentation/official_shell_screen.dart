@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'official_home_screen.dart';
-import 'pmu_monitoring_screen.dart';
 import 'official_profile_screen.dart';
-import '../../schemes/presentation/schemes_screen.dart';
 
 class OfficialShellScreen extends StatefulWidget {
   const OfficialShellScreen({super.key});
@@ -22,8 +20,6 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
 
   final _screens = const [
     OfficialHomeScreen(),
-    SchemesScreen(),
-    PmuMonitoringScreen(),
     OfficialProfileScreen(),
   ];
 
@@ -31,12 +27,10 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _background,
-
       body: IndexedStack(
         index: _index,
         children: _screens,
       ),
-
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
@@ -55,7 +49,6 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
               elevation: 0,
               height: 70,
               indicatorColor: _navy.withValues(alpha: 0.12),
-
               labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
                 (states) {
                   if (states.contains(WidgetState.selected)) {
@@ -73,7 +66,6 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
                   );
                 },
               ),
-
               iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
                 (states) {
                   if (states.contains(WidgetState.selected)) {
@@ -90,10 +82,8 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
                 },
               ),
             ),
-
             child: NavigationBar(
               selectedIndex: _index,
-
               onDestinationSelected: (i) {
                 if (_index == i) return;
 
@@ -101,22 +91,11 @@ class _OfficialShellScreenState extends State<OfficialShellScreen> {
                   _index = i;
                 });
               },
-
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home),
                   label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.account_balance_outlined),
-                  selectedIcon: Icon(Icons.account_balance),
-                  label: 'Schemes',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.groups_outlined),
-                  selectedIcon: Icon(Icons.groups),
-                  label: 'PMU',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),

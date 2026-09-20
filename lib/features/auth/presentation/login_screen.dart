@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/widgets/primary_button.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/session_service.dart';
@@ -15,7 +16,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _idController = TextEditingController(); // holds email
+  final _idController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
@@ -58,9 +59,14 @@ class _LoginScreenState extends State<LoginScreen> {
         UserRole.districtAdmin => AppRoutes.districtAdminDashboard,
       };
 
-      Navigator.of(context).pushNamedAndRemoveUntil(destination, (route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        destination,
+        (route) => false,
+      );
     } else {
-      setState(() => _errorMessage = result.errorMessage ?? 'Login failed.');
+      setState(() {
+        _errorMessage = result.errorMessage ?? 'Login failed.';
+      });
     }
   }
 
@@ -73,10 +79,8 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Header banner: emblem, title, decorative dome + tricolor ---
-              _HeaderBanner(),
+              const _HeaderBanner(),
 
-              // --- Login card, overlapping the banner ---
               Transform.translate(
                 offset: const Offset(0, 5),
                 child: Container(
@@ -101,12 +105,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text(
                           'Login',
                           style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 1),
                         const Text(
                           'Access your account to continue',
-                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 10),
 
@@ -119,12 +129,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter your email.';
                             }
+
                             if (!value.contains('@')) {
                               return 'Please enter a valid email.';
                             }
+
                             return null;
                           },
                         ),
+
                         const SizedBox(height: 6),
 
                         _PillTextField(
@@ -134,16 +147,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: Icons.lock_outline,
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
                               size: 20,
                               color: AppColors.textSecondary,
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your password.';
                             }
+
                             return null;
                           },
                         ),
@@ -151,19 +171,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (_errorMessage != null) ...[
                           const SizedBox(height: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.error.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.error_outline, size: 16, color: AppColors.error),
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 16,
+                                  color: AppColors.error,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: const TextStyle(color: AppColors.error, fontSize: 12),
+                                    style: const TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -178,27 +209,78 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _isLoading ? () {} : _handleLogin,
                         ),
 
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
 
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TextButton(onPressed: () {}, child: const Text('Forgot Password?')),
-                            const SizedBox(width: 8),
-                            TextButton(onPressed: () {}, child: const Text('Get Help')),
-                          ],
+                        // Responsive action buttons.
+                        // They wrap instead of overflowing on narrow screens.
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isNarrow = constraints.maxWidth < 330;
+
+                            if (isNarrow) {
+                              return Column(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {},
+                                    child: const Text('Forgot Password?'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {},
+                                    child: const Text('Get Help'),
+                                  ),
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: TextButton(
+                                    onPressed: () {},
+                                    child: const Text(
+                                      'Forgot Password?',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: TextButton(
+                                    onPressed: () {},
+                                    child: const Text(
+                                      'Get Help',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
+
                         Center(
                           child: TextButton(
-                            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.signup),
-                            child: RichText(
-                              text: const TextSpan(
-                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pushNamed(AppRoutes.signup);
+                            },
+                            child: const Text.rich(
+                              TextSpan(
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                                 children: [
-                                  TextSpan(text: "Don't have an account? "),
+                                  TextSpan(
+                                    text: "Don't have an account? ",
+                                  ),
                                   TextSpan(
                                     text: 'Sign up',
-                                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -211,17 +293,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              // --- Footer ---
+              // Responsive footer.
               Padding(
-                padding: const EdgeInsets.fromLTRB(0, 40, 0, 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
-                    Icon(Icons.shield_outlined, size: 14, color: AppColors.textSecondary.withValues(alpha: 0.8)),
-                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 14,
+                      color: AppColors.textSecondary.withValues(
+                        alpha: 0.8,
+                      ),
+                    ),
                     Text(
                       'Secure  |  Transparent  |  Inclusive',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary.withValues(alpha: 0.8)),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary.withValues(
+                          alpha: 0.8,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -234,9 +330,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-/// Top banner: emblem, title/subtitle, and the Parliament + tricolor
-/// illustration, using the project's own asset images.
+/// Top banner: emblem, title/subtitle, and Parliament illustration.
 class _HeaderBanner extends StatelessWidget {
+  const _HeaderBanner();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -247,7 +344,6 @@ class _HeaderBanner extends StatelessWidget {
         alignment: Alignment.topCenter,
         clipBehavior: Clip.hardEdge,
         children: [
-          // Background layer: faded parliament illustration, full screen width.
           Positioned(
             top: 270,
             left: 0,
@@ -265,14 +361,17 @@ class _HeaderBanner extends StatelessWidget {
               ),
             ),
           ),
-          // Foreground layer: emblem + title/subtitle text.
+
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
             child: Column(
               children: [
                 Opacity(
                   opacity: 0.85,
-                  child: Image.asset('assets/images/emblem.png', height: 120),
+                  child: Image.asset(
+                    'assets/images/emblem.png',
+                    height: 120,
+                  ),
                 ),
                 const Text(
                   'Official Smart Monitoring &\nInspection System',
@@ -288,12 +387,18 @@ class _HeaderBanner extends StatelessWidget {
                 const Text(
                   'Department of Social Justice & Empowerment',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const Text(
                   'Government of India',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -304,8 +409,7 @@ class _HeaderBanner extends StatelessWidget {
   }
 }
 
-/// Pill-shaped text field matching the reference design. Local to this
-/// screen only — the shared AppTextField (used on signup, etc.) is untouched.
+/// Pill-shaped text field used only on this screen.
 class _PillTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -332,30 +436,52 @@ class _PillTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+      style: const TextStyle(
+        fontSize: 14,
+        color: AppColors.textPrimary,
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-        prefixIcon: Icon(prefixIcon, size: 20, color: AppColors.textSecondary),
+        hintStyle: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(
+          prefixIcon,
+          size: 20,
+          color: AppColors.textSecondary,
+        ),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: AppColors.background,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(
+            color: AppColors.border,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(
+            color: AppColors.border,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.primary,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: const BorderSide(
+            color: AppColors.error,
+          ),
         ),
       ),
     );

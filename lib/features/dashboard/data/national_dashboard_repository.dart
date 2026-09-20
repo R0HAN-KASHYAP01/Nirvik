@@ -1,30 +1,36 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../models/project.dart';
-import '../../projects/data/projects_repository.dart';
+/// A single approved institute displayed on the national dashboard.
+class DashboardInstitute {
+  final String profileId;
+  final String organizationName;
+  final String address;
+  final String district;
+  final String state;
+  final String schemeCategory;
+  final String schemeCode;
 
-/// Data used by the combined DoSJE / MoSJE Official Dashboard.
-///
-/// This is the single dashboard data source for the national-level
-/// monitoring screen.
-///
-/// Removed from this dashboard:
-/// - Scheme catalog
-/// - Scheme categories
-/// - State/state_name lookup
-/// - PMU Monitoring screen-specific data
-///
-/// Retained:
-/// - Projects
-/// - High-risk projects
-/// - Inspection compliance
-/// - Inspection status breakdown
-/// - Critical findings
+  const DashboardInstitute({
+    required this.profileId,
+    required this.organizationName,
+    required this.address,
+    required this.district,
+    required this.state,
+    required this.schemeCategory,
+    required this.schemeCode,
+  });
+}
+
+/// All data required by the combined national dashboard.
 class NationalDashboardData {
-  final int totalProjects;
-  final int highRiskProjectCount;
-  final List<Project> highRiskProjects;
+  final int totalInstitutes;
+
+  final int educationalInstitutes;
+  final int socialEmpowermentInstitutes;
+  final int economicDevelopmentInstitutes;
+
+  final List<DashboardInstitute> approvedInstitutes;
 
   final int totalAssignedInspections;
   final int completedInspections;
@@ -34,12 +40,15 @@ class NationalDashboardData {
 
   final int openCriticalFindingsCount;
 
+  /// Metrics that could not be loaded.
   final List<String> unavailableMetrics;
 
   const NationalDashboardData({
-    required this.totalProjects,
-    required this.highRiskProjectCount,
-    required this.highRiskProjects,
+    required this.totalInstitutes,
+    required this.educationalInstitutes,
+    required this.socialEmpowermentInstitutes,
+    required this.economicDevelopmentInstitutes,
+    required this.approvedInstitutes,
     required this.totalAssignedInspections,
     required this.completedInspections,
     required this.inProgressInspections,
@@ -50,136 +59,233 @@ class NationalDashboardData {
   });
 
   double get complianceRate {
-    if (totalAssignedInspections == 0) {
+    if (totalAssignedInspections <= 0) {
       return 0;
     }
 
-    return completedInspections / totalAssignedInspections;
+    return (completedInspections / totalAssignedInspections)
+        .clamp(0.0, 1.0);
   }
 }
 
-/// Single repository for the combined Official / MoSJE dashboard.
-///
-/// Important:
-/// This repository intentionally does NOT query:
-/// - scheme_catalog
-/// - ngo_institutes.state
-/// - ngo_institutes.state_name
-/// - profiles.state
-/// - profiles.state_name
-///
-/// Therefore the dashboard will no longer generate PostgreSQL
-/// "column does not exist" errors for those fields.
 class NationalDashboardRepository {
   NationalDashboardRepository({
     SupabaseClient? client,
-    ProjectsRepository? projectsRepository,
-  })  : _client = client ?? Supabase.instance.client,
-        _projectsRepository =
-            projectsRepository ?? ProjectsRepository(client: client);
+  }) : _client = client ?? Supabase.instance.client;
 
   final SupabaseClient _client;
-  final ProjectsRepository _projectsRepository;
+
+  // ---------------------------------------------------------------------------
+  // MAIN DASHBOARD LOAD
+  // ---------------------------------------------------------------------------
 
   Future<NationalDashboardData> loadDashboard() async {
-    final unavailable = <String>[];
+    final unavailableMetrics = <String>[];
 
-    // ------------------------------------------------------------
-    // PROJECTS
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 1. APPROVED INSTITUTES
+    // -------------------------------------------------------------------------
 
-    List<Project> projects = const [];
+    var approvedInstitutes = <DashboardInstitute>[];
 
     try {
-      projects = await _projectsRepository.getProjects();
-    } catch (e, st) {
+      /*
+       * APPROVED INSTITUTE LOGIC
+       *
+       * Same logic used by InstituteListScreen:
+       *
+       * reviewed_at IS NOT NULL
+       * AND
+       * rejection_reason IS NULL
+       *
+       * IMPORTANT:
+       * No district filter.
+       * No state filter.
+       * This is the national dashboard.
+       */
+      final instituteRows = await _client
+          .from('institute_reps')
+          .select(
+            'profile_id, '
+            'organization_name, '
+            'complete_address, '
+            'district, '
+            'state, '
+            'scheme_category, '
+            'scheme_code, '
+            'reviewed_at, '
+            'rejection_reason',
+          )
+          .not('reviewed_at', 'is', null)
+          .isFilter('rejection_reason', null);
+
       debugPrint(
-        'NationalDashboardRepository: projects failed: $e\n$st',
+        '==================================================',
+      );
+      debugPrint(
+        'NATIONAL DASHBOARD - APPROVED INSTITUTES',
+      );
+      debugPrint(
+        'Rows returned: ${instituteRows.length}',
+      );
+      debugPrint(
+        'Raw data: $instituteRows',
+      );
+      debugPrint(
+        '==================================================',
       );
 
-      unavailable.add(
-        'Project data could not be loaded.',
+      for (final row in instituteRows) {
+        approvedInstitutes.add(
+          DashboardInstitute(
+            profileId:
+                row['profile_id']?.toString() ?? '',
+            organizationName:
+                row['organization_name']?.toString() ??
+                    'Unknown Institute',
+            address:
+                row['complete_address']?.toString() ?? '',
+            district:
+                row['district']?.toString() ?? '',
+            state:
+                row['state']?.toString() ?? '',
+            schemeCategory:
+                row['scheme_category']?.toString() ?? '',
+            schemeCode:
+                row['scheme_code']?.toString() ?? '',
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint(
+        'NATIONAL DASHBOARD - INSTITUTE ERROR: $e',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      unavailableMetrics.add(
+        'Approved institute data could not be loaded.',
       );
     }
 
-    final highRiskProjects = projects
-        .where(
-          (project) => project.riskLevel == RiskLevel.high,
-        )
-        .toList();
+    final totalInstitutes =
+        approvedInstitutes.length;
 
-    // ------------------------------------------------------------
-    // INSPECTION COMPLIANCE
-    // ------------------------------------------------------------
+    var educationalInstitutes = 0;
+    var socialEmpowermentInstitutes = 0;
+    var economicDevelopmentInstitutes = 0;
 
-    var totalAssigned = 0;
-    var completed = 0;
-    var inProgress = 0;
-    var pending = 0;
-    var overdue = 0;
+    for (final institute in approvedInstitutes) {
+      switch (
+          institute.schemeCategory.trim().toLowerCase()) {
+        case 'educational':
+          educationalInstitutes++;
+          break;
+
+        case 'social_empowerment':
+          socialEmpowermentInstitutes++;
+          break;
+
+        case 'economic_development':
+          economicDevelopmentInstitutes++;
+          break;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. INSPECTION ASSIGNMENTS
+    // -------------------------------------------------------------------------
+
+    var totalAssignedInspections = 0;
+    var completedInspections = 0;
+    var inProgressInspections = 0;
+    var pendingInspections = 0;
+    var overdueInspections = 0;
 
     try {
-      final rows = await _client
+      final assignmentRows = await _client
           .from('pmu_assignments')
           .select('status');
 
-      for (final row in rows as List) {
-        totalAssigned++;
+      debugPrint(
+        'NATIONAL DASHBOARD - INSPECTION ROWS: '
+        '${assignmentRows.length}',
+      );
+
+      for (final row in assignmentRows) {
+        totalAssignedInspections++;
 
         final status = row['status']
-            ?.toString()
-            .trim()
-            .toLowerCase();
+                ?.toString()
+                .trim()
+                .toLowerCase()
+                .replaceAll('-', '_')
+                .replaceAll(' ', '_') ??
+            '';
 
         switch (status) {
           case 'completed':
-            completed++;
+          case 'complete':
+            completedInspections++;
             break;
 
           case 'in_progress':
-          case 'in progress':
-          case 'in-progress':
-            inProgress++;
+          case 'inprogress':
+          case 'ongoing':
+            inProgressInspections++;
             break;
 
-          case 'expired':
           case 'overdue':
-            overdue++;
+            overdueInspections++;
             break;
 
+          case 'pending':
           case 'assigned':
+          case 'scheduled':
+          case 'not_started':
           default:
-            pending++;
+            pendingInspections++;
             break;
         }
       }
-    } catch (e, st) {
+    } catch (e, stackTrace) {
       debugPrint(
-        'NationalDashboardRepository: inspection compliance failed: '
-        '$e\n$st',
+        'NATIONAL DASHBOARD - INSPECTION ERROR: $e',
       );
 
-      unavailable.add(
-        'Inspection compliance could not be loaded.',
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      unavailableMetrics.add(
+        'Inspection assignment data could not be loaded.',
       );
     }
 
-    // ------------------------------------------------------------
-    // CRITICAL FINDINGS
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 3. CRITICAL INSPECTION FINDINGS
+    // -------------------------------------------------------------------------
 
     var criticalFindings = 0;
 
     try {
-      final rows = await _client
+      final findingRows = await _client
           .from('pmu_inspection_findings')
           .select('severity');
 
-      for (final row in rows as List) {
+      debugPrint(
+        'NATIONAL DASHBOARD - FINDING ROWS: '
+        '${findingRows.length}',
+      );
+
+      for (final row in findingRows) {
         final severity = row['severity']
-            ?.toString()
-            .trim()
-            .toLowerCase();
+                ?.toString()
+                .trim()
+                .toLowerCase() ??
+            '';
 
         if (severity == 'high' ||
             severity == 'critical' ||
@@ -187,28 +293,88 @@ class NationalDashboardRepository {
           criticalFindings++;
         }
       }
-    } catch (e, st) {
+    } catch (e, stackTrace) {
       debugPrint(
-        'NationalDashboardRepository: critical findings failed: '
-        '$e\n$st',
+        'NATIONAL DASHBOARD - FINDINGS ERROR: $e',
       );
 
-      unavailable.add(
-        'Critical findings could not be loaded.',
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      unavailableMetrics.add(
+        'Inspection finding data could not be loaded.',
       );
     }
 
+    // -------------------------------------------------------------------------
+    // FINAL RESULT
+    // -------------------------------------------------------------------------
+
+    debugPrint(
+      '==================================================',
+    );
+    debugPrint(
+      'NATIONAL DASHBOARD SUMMARY',
+    );
+    debugPrint(
+      'Approved institutes: $totalInstitutes',
+    );
+    debugPrint(
+      'Educational: $educationalInstitutes',
+    );
+    debugPrint(
+      'Social empowerment: $socialEmpowermentInstitutes',
+    );
+    debugPrint(
+      'Economic development: $economicDevelopmentInstitutes',
+    );
+    debugPrint(
+      'Total inspections: $totalAssignedInspections',
+    );
+    debugPrint(
+      'Completed: $completedInspections',
+    );
+    debugPrint(
+      'In progress: $inProgressInspections',
+    );
+    debugPrint(
+      'Pending: $pendingInspections',
+    );
+    debugPrint(
+      'Overdue: $overdueInspections',
+    );
+    debugPrint(
+      'Critical findings: $criticalFindings',
+    );
+    debugPrint(
+      '==================================================',
+    );
+
     return NationalDashboardData(
-      totalProjects: projects.length,
-      highRiskProjectCount: highRiskProjects.length,
-      highRiskProjects: highRiskProjects,
-      totalAssignedInspections: totalAssigned,
-      completedInspections: completed,
-      inProgressInspections: inProgress,
-      pendingInspections: pending,
-      overdueInspections: overdue,
-      openCriticalFindingsCount: criticalFindings,
-      unavailableMetrics: unavailable,
+      totalInstitutes: totalInstitutes,
+      educationalInstitutes:
+          educationalInstitutes,
+      socialEmpowermentInstitutes:
+          socialEmpowermentInstitutes,
+      economicDevelopmentInstitutes:
+          economicDevelopmentInstitutes,
+      approvedInstitutes:
+          approvedInstitutes,
+      totalAssignedInspections:
+          totalAssignedInspections,
+      completedInspections:
+          completedInspections,
+      inProgressInspections:
+          inProgressInspections,
+      pendingInspections:
+          pendingInspections,
+      overdueInspections:
+          overdueInspections,
+      openCriticalFindingsCount:
+          criticalFindings,
+      unavailableMetrics:
+          unavailableMetrics,
     );
   }
 }

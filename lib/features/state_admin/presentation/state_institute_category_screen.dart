@@ -14,6 +14,44 @@ import 'package:flutter/material.dart';
 
 import 'state_institute_scheme_list_screen.dart';
 
+// NIRIKSHA theme gradients (file-private)
+const LinearGradient _kPrimaryGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFF0B5AA0),
+    Color(0xFF084482),
+    Color(0xFF063A77),
+  ],
+  stops: [0.0, 0.55, 1.0],
+);
+
+const LinearGradient _kBackgroundGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFF7FAFD),
+    Color(0xFFEAF4FD),
+  ],
+);
+
+const LinearGradient _kCardGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFFFFFFF),
+    Color(0xFFFBFDFF),
+  ],
+);
+
+const List<BoxShadow> _kSoftShadow = [
+  BoxShadow(
+    color: Color(0x14084482),
+    blurRadius: 12,
+    offset: Offset(0, 4),
+  ),
+];
+
 class StateInstituteCategoryScreen extends StatelessWidget {
   final String adminState;
   final String selectedDistrict;
@@ -24,9 +62,11 @@ class StateInstituteCategoryScreen extends StatelessWidget {
     required this.selectedDistrict,
   });
 
-  static const Color _background = Color(0xFFEAF2F8);
-  static const Color _border = Color(0xFFD1DEE7);
-  static const Color _textGrey = Color(0xFF667788);
+  static const Color _background = Color(0xFFF1F7FC);
+  static const Color _border = Color(0xFFDCE8F2);
+  static const Color _textGrey = Color(0xFF5F7285);
+  static const Color _textPrimary = Color(0xFF173B63);
+  static const Color _primaryBlue = Color(0xFF084482);
 
   static const List<_Category> _categories = [
     _Category(
@@ -53,36 +93,55 @@ class StateInstituteCategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _background,
-      appBar: AppBar(title: const Text('Schemes')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-        children: [
-          Text(
-            selectedDistrict == 'All Districts'
-                ? 'Select a category · institutes across $adminState'
-                : 'Select a category · institutes in $selectedDistrict, '
-                    '$adminState',
-            style: const TextStyle(fontSize: 13, color: _textGrey),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: _kPrimaryGradient),
+        ),
+        title: const Text(
+          'Schemes',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
-          const SizedBox(height: 10),
-          for (final c in _categories)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _CategoryTile(
-                category: c,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => StateInstituteSchemeListScreen(
-                      categoryKey: c.key,
-                      categoryTitle: c.title,
-                      adminState: adminState,
-                      selectedDistrict: selectedDistrict,
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: _kBackgroundGradient),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+          children: [
+            Text(
+              selectedDistrict == 'All Districts'
+                  ? 'Select a category · institutes across $adminState'
+                  : 'Select a category · institutes in $selectedDistrict, '
+                      '$adminState',
+              style: const TextStyle(fontSize: 13, color: _textGrey),
+            ),
+            const SizedBox(height: 10),
+            for (final c in _categories)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _CategoryTile(
+                  category: c,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StateInstituteSchemeListScreen(
+                        categoryKey: c.key,
+                        categoryTitle: c.title,
+                        adminState: adminState,
+                        selectedDistrict: selectedDistrict,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -110,56 +169,62 @@ class _CategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: StateInstituteCategoryScreen._border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: _kCardGradient,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: StateInstituteCategoryScreen._border),
+          boxShadow: _kSoftShadow,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF4FD),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    category.icon,
+                    color: StateInstituteCategoryScreen._primaryBlue,
+                  ),
                 ),
-                child: Icon(category.icon, color: accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      category.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category.title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: StateInstituteCategoryScreen._textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      category.subtitle,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: StateInstituteCategoryScreen._textGrey,
+                      const SizedBox(height: 2),
+                      Text(
+                        category.subtitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: StateInstituteCategoryScreen._textGrey,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right,
-                  color: StateInstituteCategoryScreen._textGrey),
-            ],
+                const Icon(Icons.chevron_right,
+                    color: StateInstituteCategoryScreen._textGrey),
+              ],
+            ),
           ),
         ),
       ),

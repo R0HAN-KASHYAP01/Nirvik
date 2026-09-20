@@ -23,22 +23,71 @@ class _OfficialProfileScreenState
   bool _loggingOut = false;
 
   // ---------------------------------------------------------------------------
-  // Government Official Blue-Grey Theme
+  // NIRIKSHA Government Blue Theme
   // ---------------------------------------------------------------------------
 
-  static const Color _background = Color(0xFFEAF2F8);
-  static const Color _cardBackground = Color(0xFFE1ECF3);
+  static const Color _background = Color(0xFFF1F7FC);
+  static const Color _cardBackground = Color(0xFFFFFFFF);
 
-  static const Color _primary = Color(0xFF123E68);
-  static const Color _secondary = Color(0xFF14568A);
+  static const Color _primary = Color(0xFF084482);
+  static const Color _primaryDark = Color(0xFF063A77);
+  static const Color _secondary = Color(0xFF0B5AA0);
 
-  static const Color _textPrimary = Color(0xFF17324D);
-  static const Color _textSecondary = Color(0xFF667788);
+  static const Color _textPrimary = Color(0xFF173B63);
+  static const Color _textSecondary = Color(0xFF5F7285);
 
-  static const Color _border = Color(0xFFD1DEE7);
+  static const Color _border = Color(0xFFDCE8F2);
+  static const Color _borderMedium = Color(0xFFC8D9E8);
 
-  static const Color _green = Color(0xFF168A45);
-  static const Color _saffron = Color(0xFFE88A18);
+  static const Color _green = Color(0xFF20A866);
+  static const Color _greenDark = Color(0xFF16834D);
+
+  static const Color _saffron = Color(0xFFF2A51A);
+  static const Color _saffronDark = Color(0xFFC77B00);
+
+  static const Color _red = Color(0xFFC93636);
+
+  // ---- Gradients ----
+
+  static const LinearGradient _primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0B5AA0),
+      Color(0xFF084482),
+      Color(0xFF063A77),
+    ],
+    stops: [0.0, 0.55, 1.0],
+  );
+
+  static const LinearGradient _backgroundGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF7FAFD),
+      Color(0xFFEAF4FD),
+    ],
+  );
+
+  static const LinearGradient _cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF7FAFD),
+      Color(0xFFEFF7FD),
+      Color(0xFFEAF4FD),
+    ],
+    stops: [0.0, 0.5, 1.0],
+  );
+
+  static const LinearGradient _warningGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFFFFBF2),
+      Color(0xFFFFF0D0),
+    ],
+  );
 
   @override
   void initState() {
@@ -121,7 +170,7 @@ class _OfficialProfileScreenState
             child: const Text(
               'Log out',
               style: TextStyle(
-                color: _saffron,
+                color: _saffronDark,
               ),
             ),
           ),
@@ -157,7 +206,7 @@ class _OfficialProfileScreenState
           content: Text(
             'Could not log out. Please try again.',
           ),
-          backgroundColor: _saffron,
+          backgroundColor: _saffronDark,
         ),
       );
     }
@@ -172,10 +221,17 @@ class _OfficialProfileScreenState
     return Scaffold(
       backgroundColor: _background,
       appBar: AppBar(
-        backgroundColor: _primary,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
         titleSpacing: 16,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: _primaryGradient,
+          ),
+        ),
         title: const Text(
           'My Profile',
           style: TextStyle(
@@ -185,8 +241,13 @@ class _OfficialProfileScreenState
           ),
         ),
       ),
-      body: SafeArea(
-        child: _buildBody(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: _backgroundGradient,
+        ),
+        child: SafeArea(
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -224,16 +285,16 @@ class _OfficialProfileScreenState
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: _cardBackground,
+                  gradient: _warningGradient,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _border,
+                    color: const Color(0xFFF2D69A),
                   ),
                 ),
                 child: const Icon(
                   Icons.error_outline,
                   size: 40,
-                  color: _saffron,
+                  color: _saffronDark,
                 ),
               ),
               const SizedBox(height: 12),
@@ -313,15 +374,15 @@ class _OfficialProfileScreenState
 
     return Container(
       decoration: BoxDecoration(
-        color: _cardBackground,
+        gradient: _cardGradient,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _border,
         ),
         boxShadow: [
           BoxShadow(
-            color: _primary.withValues(alpha: 0.07),
-            blurRadius: 10,
+            color: _primary.withValues(alpha: 0.08),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -346,12 +407,12 @@ class _OfficialProfileScreenState
                     width: 58,
                     height: 58,
                     decoration: BoxDecoration(
-                      color: _primary,
+                      gradient: _primaryGradient,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                           color:
-                              _primary.withValues(alpha: 0.18),
+                              _primary.withValues(alpha: 0.22),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -439,7 +500,7 @@ class _OfficialProfileScreenState
 
           Container(
             height: 1,
-            color: _border,
+            color: _borderMedium.withValues(alpha: 0.7),
           ),
 
           const SizedBox(height: 12),
@@ -534,15 +595,15 @@ class _OfficialProfileScreenState
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: _cardBackground,
+        gradient: _cardGradient,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _border,
         ),
         boxShadow: [
           BoxShadow(
-            color: _primary.withValues(alpha: 0.05),
-            blurRadius: 10,
+            color: _primary.withValues(alpha: 0.06),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -594,44 +655,50 @@ class _OfficialProfileScreenState
   // ---------------------------------------------------------------------------
 
   Widget _buildLogoutButton() {
-    return OutlinedButton.icon(
-      onPressed:
-          _loggingOut ? null : _confirmLogout,
-      icon: _loggingOut
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _saffron,
-              ),
-            )
-          : const Icon(
-              Icons.logout,
-              size: 18,
-              color: _saffron,
-            ),
-      label: Text(
-        _loggingOut
-            ? 'Logging out...'
-            : 'Log Out',
-        style: const TextStyle(
-          color: _saffron,
-          fontWeight: FontWeight.w600,
-        ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: _warningGradient,
+        borderRadius: BorderRadius.circular(12),
       ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(
-          double.infinity,
-          48,
+      child: OutlinedButton.icon(
+        onPressed:
+            _loggingOut ? null : _confirmLogout,
+        icon: _loggingOut
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _saffronDark,
+                ),
+              )
+            : const Icon(
+                Icons.logout,
+                size: 18,
+                color: _saffronDark,
+              ),
+        label: Text(
+          _loggingOut
+              ? 'Logging out...'
+              : 'Log Out',
+          style: const TextStyle(
+            color: _saffronDark,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        side: const BorderSide(
-          color: _saffron,
-        ),
-        backgroundColor: _cardBackground,
-        disabledForegroundColor: _saffron,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(
+            double.infinity,
+            48,
+          ),
+          side: const BorderSide(
+            color: _saffron,
+          ),
+          backgroundColor: Colors.transparent,
+          disabledForegroundColor: _saffronDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -650,9 +717,9 @@ class _OfficialProfileScreenState
 
   Color _statusColor(String status) =>
       switch (status) {
-        'approved' => _green,
-        'rejected' => const Color(0xFFB3261E),
-        _ => _saffron,
+        'approved' => _greenDark,
+        'rejected' => _red,
+        _ => _saffronDark,
       };
 
   String _formatDate(DateTime date) {
@@ -695,15 +762,18 @@ class _InfoRow extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF2F8),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: const Color(0xFFDCE8F2),
+              ),
             ),
             child: Icon(
               icon,
               size: 17,
               color:
                   iconColor ??
-                  const Color(0xFF123E68),
+                  const Color(0xFF084482),
             ),
           ),
 
@@ -724,7 +794,7 @@ class _InfoRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF667788),
+                      color: Color(0xFF5F7285),
                     ),
                   ),
                 ),
@@ -747,7 +817,7 @@ class _InfoRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.35,
-                  color: Color(0xFF17324D),
+                  color: Color(0xFF173B63),
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -24,6 +24,67 @@ import '../../../utils/call_permission.dart';
 import '../../../utils/india_locations.dart';
 import 'state_district_selection_screen.dart';
 
+// ============================================================================
+// NIRIKSHA THEME — shared gradients (file-private)
+// ============================================================================
+
+const LinearGradient _kPrimaryGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFF0B5AA0),
+    Color(0xFF084482),
+    Color(0xFF063A77),
+  ],
+  stops: [0.0, 0.55, 1.0],
+);
+
+const LinearGradient _kBackgroundGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFF7FAFD),
+    Color(0xFFEAF4FD),
+  ],
+);
+
+const LinearGradient _kCardGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFF7FAFD),
+    Color(0xFFEFF7FD),
+    Color(0xFFEAF4FD),
+  ],
+  stops: [0.0, 0.5, 1.0],
+);
+
+const LinearGradient _kInfoGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFF1F8FF),
+    Color(0xFFE5F1FF),
+  ],
+);
+
+const LinearGradient _kDangerGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFFFF7F7),
+    Color(0xFFFDE5E5),
+  ],
+);
+
+const List<BoxShadow> _kSoftShadow = [
+  BoxShadow(
+    color: Color(0x14084482),
+    blurRadius: 12,
+    offset: Offset(0, 4),
+  ),
+];
+
 class StateAdminDashboardScreen extends StatefulWidget {
   const StateAdminDashboardScreen({super.key});
 
@@ -35,14 +96,14 @@ class StateAdminDashboardScreen extends StatefulWidget {
 class _StateAdminDashboardScreenState
     extends State<StateAdminDashboardScreen> {
   // ============================================================
-  // BLUE-GREY GOVERNMENT THEME
+  // NIRIKSHA BLUE THEME
   // ============================================================
 
-  static const Color _background = Color(0xFFEAF2F8);
-  static const Color _primaryBlue = Color(0xFF14568A);
-  static const Color _textGrey = Color(0xFF667788);
+  static const Color _background = Color(0xFFF1F7FC);
+  static const Color _primaryBlue = Color(0xFF084482);
+  static const Color _textGrey = Color(0xFF5F7285);
 
-  static const Color _red = Color(0xFFE63E4D);
+  static const Color _red = Color(0xFFC93636);
 
   // ============================================================
   // NOTIFICATION STORAGE
@@ -525,7 +586,11 @@ class _StateAdminDashboardScreenState
       child: Scaffold(
       backgroundColor: _background,
 
-      body: SafeArea(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: _kBackgroundGradient,
+        ),
+        child: SafeArea(
         child: Column(
           children: [
             Expanded(
@@ -738,7 +803,10 @@ class _StateAdminDashboardScreenState
                               ConnectionState.waiting) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 8),
-                              child: LinearProgressIndicator(),
+                              child: LinearProgressIndicator(
+                                color: _primaryBlue,
+                                backgroundColor: Color(0xFFEAF4FD),
+                              ),
                             );
                           }
 
@@ -790,6 +858,7 @@ class _StateAdminDashboardScreenState
         ),
       ),
       ),
+      ),
     );
   }
 
@@ -826,8 +895,8 @@ class _StateAdminHeader extends StatelessWidget {
     required this.onNotificationTap,
   });
 
-  static const Color navy = Color(0xFF123E68);
-  static const Color textGrey = Color(0xFF8FA8BA);
+  static const Color navy = Color(0xFF084482);
+  static const Color textGrey = Color(0xFFCFE0F0);
 
   @override
   Widget build(BuildContext context) {
@@ -838,11 +907,12 @@ class _StateAdminHeader extends StatelessWidget {
         10,
         12,
       ),
-      decoration: const BoxDecoration(
-        color: navy,
-        borderRadius: BorderRadius.all(
+      decoration: BoxDecoration(
+        gradient: _kPrimaryGradient,
+        borderRadius: const BorderRadius.all(
           Radius.circular(17),
         ),
+        boxShadow: _kSoftShadow,
       ),
       child: Row(
         children: [
@@ -850,10 +920,10 @@ class _StateAdminHeader extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: Colors.white.withValues(alpha: 0.10),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.18),
+                color: Colors.white.withValues(alpha: 0.22),
               ),
             ),
             child: const Icon(
@@ -896,7 +966,7 @@ class _StateAdminHeader extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1D9B68),
+                    color: const Color(0xFF20A866),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -936,7 +1006,7 @@ class _StateAdminHeader extends StatelessWidget {
                       horizontal: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE63E4D),
+                      color: const Color(0xFFE84B4B),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: navy,
@@ -976,9 +1046,10 @@ class _WelcomeCard extends StatelessWidget {
     required this.userName,
   });
 
-  static const Color navy = Color(0xFF123E68);
-  static const Color border = Color(0xFFBFD2E0);
-  static const Color textGrey = Color(0xFF667788);
+  static const Color navy = Color(0xFF173B63);
+  static const Color primary = Color(0xFF084482);
+  static const Color border = Color(0xFFDCE8F2);
+  static const Color textGrey = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {
@@ -990,9 +1061,10 @@ class _WelcomeCard extends StatelessWidget {
         14,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.70),
+        gradient: _kCardGradient,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: border),
+        boxShadow: _kSoftShadow,
       ),
       child: Row(
         children: [
@@ -1011,7 +1083,7 @@ class _WelcomeCard extends StatelessWidget {
                 const Text(
                   'State Administrator',
                   style: TextStyle(
-                    color: navy,
+                    color: primary,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1040,12 +1112,13 @@ class _WelcomeCard extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: const Color(0xFFDCE9F2),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: border),
             ),
             child: const Icon(
               Icons.account_balance_rounded,
-              color: navy,
+              color: primary,
               size: 29,
             ),
           ),
@@ -1068,10 +1141,10 @@ class _ProfileSummaryCard extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color navy = Color(0xFF123E68);
-  static const Color border = Color(0xFFBFD2E0);
-  static const Color textGrey = Color(0xFF667788);
-  static const Color green = Color(0xFF20A77A);
+  static const Color navy = Color(0xFF173B63);
+  static const Color border = Color(0xFFDCE8F2);
+  static const Color textGrey = Color(0xFF5F7285);
+  static const Color green = Color(0xFF16834D);
 
   @override
   Widget build(BuildContext context) {
@@ -1092,22 +1165,24 @@ class _ProfileSummaryCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.78),
+          gradient: _kCardGradient,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: border),
+          boxShadow: _kSoftShadow,
         ),
         child: Row(
           children: [
             Container(
               width: 50,
               height: 50,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCEBFA),
+              decoration: BoxDecoration(
+                color: Colors.white,
                 shape: BoxShape.circle,
+                border: Border.all(color: border),
               ),
               child: const Icon(
                 Icons.person_rounded,
-                color: Color(0xFF2776C7),
+                color: Color(0xFF0B5AA0),
                 size: 27,
               ),
             ),
@@ -1214,7 +1289,7 @@ class _ProfileSummaryCard extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE1F5EC),
+                      color: const Color(0xFFE7F8EE),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -1252,10 +1327,10 @@ class _AssignedStateCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFE7F1FF),
+        gradient: _kInfoGradient,
         borderRadius: BorderRadius.circular(13),
         border: Border.all(
-          color: const Color(0xFFC6DDF5),
+          color: const Color(0xFFC8D9E8),
         ),
       ),
       child: Row(
@@ -1264,12 +1339,12 @@ class _AssignedStateCard extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: const BoxDecoration(
-              color: Color(0xFFD7E8FB),
+              color: Colors.white,
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.verified_user_rounded,
-              color: Color(0xFF1460A1),
+              color: Color(0xFF0B5AA0),
               size: 18,
             ),
           ),
@@ -1281,7 +1356,7 @@ class _AssignedStateCard extends StatelessWidget {
                 Text(
                   'Assigned State: $state',
                   style: const TextStyle(
-                    color: Color(0xFF173F66),
+                    color: Color(0xFF173B63),
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1291,7 +1366,7 @@ class _AssignedStateCard extends StatelessWidget {
                   'Your profile is assigned to this state. '
                   'State-level features will use this scope.',
                   style: TextStyle(
-                    color: Color(0xFF667788),
+                    color: Color(0xFF5F7285),
                     fontSize: 8,
                     height: 1.3,
                   ),
@@ -1327,9 +1402,9 @@ class _DistrictFilterDropdown extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const Color _border = Color(0xFFBFD2E0);
-  static const Color _textGrey = Color(0xFF667788);
-  static const Color _navy = Color(0xFF123E68);
+  static const Color _border = Color(0xFFDCE8F2);
+  static const Color _textGrey = Color(0xFF5F7285);
+  static const Color _navy = Color(0xFF084482);
 
   @override
   Widget build(BuildContext context) {
@@ -1405,9 +1480,9 @@ class _DistrictPerformanceList extends StatelessWidget {
 
   const _DistrictPerformanceList({required this.districts});
 
-  static const Color _border = Color(0xFFBFD2E0);
-  static const Color _navy = Color(0xFF123E68);
-  static const Color _textGrey = Color(0xFF667788);
+  static const Color _border = Color(0xFFDCE8F2);
+  static const Color _navy = Color(0xFF173B63);
+  static const Color _textGrey = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {
@@ -1480,13 +1555,20 @@ class _StateAdminBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 62,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
           top: BorderSide(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Color(0xFFDCE8F2),
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x14084482),
+            blurRadius: 12,
+            offset: Offset(0, -3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1556,53 +1638,55 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                selected ? selectedIcon : icon,
-                color: selected
-                    ? const Color(0xFF14568A)
-                    : const Color(0xFF667788),
-                size: 19,
-              ),
-              if (badgeCount > 0)
-                Positioned(
-                  right: -6,
-                  top: -4,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE63E4D),
-                      shape: BoxShape.circle,
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 3,
+            ),
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFFEAF4FD)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  selected ? selectedIcon : icon,
+                  color: selected
+                      ? const Color(0xFF084482)
+                      : const Color(0xFF5F7285),
+                  size: 19,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE84B4B),
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(
               color: selected
-                  ? const Color(0xFF14568A)
-                  : const Color(0xFF667788),
+                  ? const Color(0xFF084482)
+                  : const Color(0xFF5F7285),
               fontSize: 7.5,
               fontWeight:
                   selected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
-          if (selected)
-            Container(
-              margin: const EdgeInsets.only(top: 2),
-              width: 20,
-              height: 2,
-              decoration: BoxDecoration(
-                color: const Color(0xFF14568A),
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
         ],
       ),
     );
@@ -1662,7 +1746,7 @@ class _StateAdminNotification {
           ) ??
           DateTime.now(),
       icon: Icons.notifications_rounded,
-      color: const Color(0xFF14568A),
+      color: const Color(0xFF084482),
     );
   }
 }
@@ -1702,11 +1786,10 @@ class _StateAdminNotificationSheetState
   _StateAdminNotificationFilter _selectedFilter =
       _StateAdminNotificationFilter.today;
 
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
-  static const Color primaryBlue = Color(0xFF14568A);
-  static const Color border = Color(0xFFBFD2E0);
-  static const Color textGrey = Color(0xFF667788);
+  static const Color navy = Color(0xFF173B63);
+  static const Color primaryBlue = Color(0xFF084482);
+  static const Color border = Color(0xFFC8D9E8);
+  static const Color textGrey = Color(0xFF5F7285);
 
   List<_StateAdminNotification> get _filteredNotifications {
     final now = DateTime.now();
@@ -1759,7 +1842,7 @@ class _StateAdminNotificationSheetState
         maxHeight: MediaQuery.sizeOf(context).height * 0.82,
       ),
       decoration: const BoxDecoration(
-        color: background,
+        gradient: _kBackgroundGradient,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
         ),
@@ -1936,7 +2019,7 @@ class _StateAdminNotificationSheetState
                               ? Icons.notifications_none_rounded
                               : Icons.history_toggle_off_rounded,
                       size: 52,
-                      color: const Color(0xFF9EAFBC),
+                      color: const Color(0xFF8191A1),
                     ),
                     const SizedBox(height: 13),
                     Text(
@@ -2030,9 +2113,9 @@ class _NotificationFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF14568A);
-    const navy = Color(0xFF123E68);
-    const border = Color(0xFFBFD2E0);
+    const primaryBlue = Color(0xFF084482);
+    const navy = Color(0xFF173B63);
+    const border = Color(0xFFC8D9E8);
 
     return InkWell(
       onTap: onTap,
@@ -2045,7 +2128,7 @@ class _NotificationFilterButton extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFFD7E8F4)
+              ? const Color(0xFFEAF4FD)
               : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
@@ -2063,7 +2146,7 @@ class _NotificationFilterButton extends StatelessWidget {
               size: 14,
               color: selected
                   ? primaryBlue
-                  : const Color(0xFF667788),
+                  : const Color(0xFF5F7285),
             ),
             const SizedBox(width: 4),
             Flexible(
@@ -2073,7 +2156,7 @@ class _NotificationFilterButton extends StatelessWidget {
                 style: TextStyle(
                   color: selected
                       ? navy
-                      : const Color(0xFF667788),
+                      : const Color(0xFF5F7285),
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -2088,7 +2171,7 @@ class _NotificationFilterButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected
                     ? primaryBlue
-                    : const Color(0xFFE5EDF3),
+                    : const Color(0xFFEAF4FD),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -2096,7 +2179,7 @@ class _NotificationFilterButton extends StatelessWidget {
                 style: TextStyle(
                   color: selected
                       ? Colors.white
-                      : const Color(0xFF667788),
+                      : const Color(0xFF5F7285),
                   fontSize: 7.5,
                   fontWeight: FontWeight.w800,
                 ),
@@ -2143,9 +2226,9 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const navy = Color(0xFF123E68);
-    const textGrey = Color(0xFF667788);
-    const border = Color(0xFFBFD2E0);
+    const navy = Color(0xFF173B63);
+    const textGrey = Color(0xFF5F7285);
+    const border = Color(0xFFDCE8F2);
 
     return InkWell(
       onTap: onTap,
@@ -2155,12 +2238,12 @@ class _NotificationTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: isRead
               ? Colors.white
-              : const Color(0xFFF2F8FC),
+              : const Color(0xFFF1F8FF),
           borderRadius: BorderRadius.circular(13),
           border: Border.all(
             color: isRead
                 ? border
-                : const Color(0xFF9FC5DF),
+                : const Color(0xFFA9CBEA),
           ),
         ),
         child: Row(
@@ -2192,7 +2275,7 @@ class _NotificationTile extends StatelessWidget {
                       width: 9,
                       height: 9,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE63E4D),
+                        color: const Color(0xFFE84B4B),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: Colors.white,
@@ -2256,7 +2339,7 @@ class _NotificationTile extends StatelessWidget {
                 child: Text(
                   'NEW',
                   style: TextStyle(
-                    color: Color(0xFFE63E4D),
+                    color: Color(0xFFC93636),
                     fontSize: 7,
                     fontWeight: FontWeight.w800,
                   ),
@@ -2287,17 +2370,22 @@ class StateAdminReportsScreen extends StatelessWidget {
     required this.districts,
   });
 
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
+  static const Color background = Color(0xFFF1F7FC);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: navy,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: _kPrimaryGradient,
+          ),
+        ),
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
@@ -2311,17 +2399,23 @@ class StateAdminReportsScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
+            color: Colors.white,
           ),
         ),
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
-          children: [
-            const SectionHeader(title: 'District Performance'),
-            const SizedBox(height: 9),
-            _DistrictPerformanceList(districts: districts),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: _kBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
+            children: [
+              const SectionHeader(title: 'District Performance'),
+              const SizedBox(height: 9),
+              _DistrictPerformanceList(districts: districts),
+            ],
+          ),
         ),
       ),
     );
@@ -2337,11 +2431,13 @@ class StateAdminProfileScreen extends StatelessWidget {
     super.key,
   });
 
-  static const Color background = Color(0xFFEAF2F8);
-  static const Color navy = Color(0xFF123E68);
-  static const Color textGrey = Color(0xFF667788);
-  static const Color red = Color(0xFFE63E4D);
-  static const Color green = Color(0xFF20A77A);
+  static const Color background = Color(0xFFF1F7FC);
+  static const Color navy = Color(0xFF173B63);
+  static const Color textGrey = Color(0xFF5F7285);
+  static const Color border = Color(0xFFDCE8F2);
+  static const Color primary = Color(0xFF084482);
+  static const Color green = Color(0xFF16834D);
+  static const Color amber = Color(0xFFC77B00);
 
   Future<void> _logout(BuildContext context) async {
     await AuthService.instance.logout();
@@ -2378,9 +2474,16 @@ class StateAdminProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: navy,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: _kPrimaryGradient,
+          ),
+        ),
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
@@ -2394,152 +2497,254 @@ class StateAdminProfileScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
+            color: Colors.white,
           ),
         ),
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            18,
-            16,
-            30,
-          ),
-          children: [
-            Center(
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFDCEBFA),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: Color(0xFF2776C7),
-                  size: 39,
-                ),
-              ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: _kBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              22,
+              16,
+              30,
             ),
+            children: [
+              // ==============================================
+              // IDENTITY + DETAILS CARD
+              // ==============================================
 
-            const SizedBox(height: 10),
-
-            Center(
-              child: Text(
-                name,
-                style: const TextStyle(
-                  color: navy,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 3),
-
-            Center(
-              child: Text(
-                email,
-                style: const TextStyle(
-                  color: textGrey,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            _ProfileDetailRow(
-              icon: Icons.admin_panel_settings_outlined,
-              label: 'Role',
-              value: 'State Administrator',
-            ),
-
-            const SizedBox(height: 8),
-
-            _ProfileDetailRow(
-              icon: Icons.location_on_outlined,
-              label: 'State',
-              value: state,
-            ),
-
-            const SizedBox(height: 8),
-
-            _ProfileDetailRow(
-              icon: Icons.verified_outlined,
-              label: 'Status',
-              value: status,
-              valueColor: green,
-            ),
-
-            const SizedBox(height: 22),
-
-            InkWell(
-              onTap: () => _logout(context),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF5F5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFFFC8CC),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 35,
-                      height: 35,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFE4E6),
-                        shape: BoxShape.circle,
+              _ProfileCard(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          gradient: _kPrimaryGradient,
+                          shape: BoxShape.circle,
+                          boxShadow: _kSoftShadow,
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
-                      child: const Icon(
+
+                      const SizedBox(width: 13),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: navy,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE7F8EE),
+                                    borderRadius:
+                                        BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    status.isNotEmpty
+                                        ? '${status[0].toUpperCase()}'
+                                            '${status.substring(1)}'
+                                        : 'Approved',
+                                    style: const TextStyle(
+                                      color: green,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Flexible(
+                                  child: Text(
+                                    'State Administrator',
+                                    maxLines: 1,
+                                    overflow:
+                                        TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: textGrey,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  const Divider(
+                    color: border,
+                    height: 1,
+                    thickness: 1,
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  _ProfileDetailRow(
+                    icon: Icons.mail_outline_rounded,
+                    label: 'Email',
+                    value: email,
+                  ),
+
+                  _ProfileDetailRow(
+                    icon: Icons.admin_panel_settings_outlined,
+                    label: 'Role',
+                    value: 'State Administrator',
+                  ),
+
+                  _ProfileDetailRow(
+                    icon: Icons.location_on_outlined,
+                    label: 'State',
+                    value: state,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // ==============================================
+              // ACCOUNT CARD
+              // ==============================================
+
+              _ProfileCard(
+                children: [
+                  const Text(
+                    'Account',
+                    style: TextStyle(
+                      color: navy,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  _ProfileDetailRow(
+                    icon: Icons.verified_outlined,
+                    label: 'Status',
+                    value: status,
+                    valueColor: green,
+                  ),
+
+                  _ProfileDetailRow(
+                    icon: Icons.account_balance_outlined,
+                    label: 'Scope',
+                    value: '$state level oversight',
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
+
+              // ==============================================
+              // LOG OUT
+              // ==============================================
+
+              InkWell(
+                onTap: () => _logout(context),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFFFFBF2),
+                        Color(0xFFFFF0D0),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFF2D69A),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
                         Icons.logout_rounded,
-                        color: red,
+                        color: amber,
                         size: 18,
                       ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Log out',
-                            style: TextStyle(
-                              color: red,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'Sign out from the State Administrator account',
-                            style: TextStyle(
-                              color: textGrey,
-                              fontSize: 8,
-                            ),
-                          ),
-                        ],
+                      SizedBox(width: 8),
+                      Text(
+                        'Log Out',
+                        style: TextStyle(
+                          color: amber,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: red,
-                      size: 18,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// PROFILE CARD SHELL
+// ============================================================================
+
+class _ProfileCard extends StatelessWidget {
+  final List<Widget> children;
+
+  const _ProfileCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      decoration: BoxDecoration(
+        gradient: _kCardGradient,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFDCE8F2),
+        ),
+        boxShadow: _kSoftShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }
@@ -2564,48 +2769,56 @@ class _ProfileDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F8FC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFFC9DCE8),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: const Color(0xFF14568A),
-            size: 16,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: const Color(0xFFDCE8F2),
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF084482),
+              size: 17,
+            ),
           ),
 
-          const SizedBox(width: 9),
+          const SizedBox(width: 11),
 
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF667788),
-                fontSize: 9,
+          SizedBox(
+            width: 82,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF5F7285),
+                  fontSize: 12,
+                ),
               ),
             ),
           ),
 
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: valueColor ??
-                    const Color(0xFF17324D),
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: valueColor ??
+                      const Color(0xFF173B63),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                ),
               ),
             ),
           ),
